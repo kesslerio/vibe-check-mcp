@@ -22,6 +22,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Docs
+docs/
+
 # PyInstaller
 *.manifest
 *.spec

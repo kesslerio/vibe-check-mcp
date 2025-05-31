@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ShapeScale Documentation
+    url: https://github.com/kesslerio/GPT-Latest/tree/main/docs
+    about: Check the documentation before creating an issue
+  - name: GitHub Discussions
+    url: https://github.com/kesslerio/GPT-Latest/discussions
+    about: Please ask general questions in the discussions section
