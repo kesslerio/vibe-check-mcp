@@ -18,3 +18,10 @@ function loadUsers() {
         message: "Users loaded successfully..."
     };
 }
+
+// Add another function to trigger workflow update
+function processData() {
+    var data = getData();  // should use const/let
+    console.log("Processing data...");  // should use ellipsis
+    return data;
+}
