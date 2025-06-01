@@ -6,7 +6,10 @@ to perform analysis tasks without context blocking issues.
 """
 
 import asyncio
+import json
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
