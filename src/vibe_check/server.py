@@ -45,17 +45,25 @@ mcp = FastMCP("Vibe Check MCP")
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
     """
-    Demo: Analyze text for anti-patterns using validated core detection engine.
-    
-    This is a demonstration tool showing FastMCP integration with the proven
-    Phase 1 core engine. Full tools will be implemented in issues #22-25.
-    
+    VIBE CHECK TEXT DEMO - Test vibe check analysis on any text content.
+
+    Demo tool for testing the vibe check framework without GitHub. Perfect for
+    "vibe check this text", "analyze this text for patterns", and testing commands.
+
+    Features:
+    - 🧪 Test anti-pattern detection on any content
+    - 🎯 Friendly vibe check analysis without GitHub dependencies
+    - 🤝 Educational coaching recommendations
+    - 📊 Pattern detection with confidence scoring
+
+    Use this tool for: "vibe check this text", "analyze this content", "test pattern detection"
+
     Args:
         text: Text content to analyze for anti-patterns
         detail_level: Educational detail level (brief/standard/comprehensive)
         
     Returns:
-        Analysis results with detected patterns and educational content
+        Vibe check analysis results with coaching recommendations
     """
     logger.info(f"Demo analysis requested for {len(text)} characters")
     return demo_analyze_text(text, detail_level)
@@ -69,20 +77,30 @@ def analyze_github_issue(
     post_comment: bool = None
 ) -> Dict[str, Any]:
     """
-    Analyze GitHub issue for anti-patterns with quick or comprehensive modes.
-    
-    QUICK MODE: Fast analysis for immediate feedback during development
-    COMPREHENSIVE MODE: Detailed analysis with automatic GitHub comment posting
-    
+    VIBE CHECK ISSUE ANALYSIS - Enhanced GitHub issue vibe check with friendly coaching.
+
+    The definitive vibe check tool for GitHub issues. Perfect for "vibe check issue [number]",
+    "analyze issue [number]", and anti-pattern detection commands.
+
+    Features:
+    - 🧠 Claude-powered comprehensive reasoning and analysis
+    - 🤝 Friendly coaching-oriented guidance instead of technical jargon
+    - 🔍 Anti-pattern detection with prevention recommendations
+    - 🎓 Educational content and real-world examples
+    - 📊 Five vibe levels: Good, Research, POC, Complex, Bad Vibes
+    - ✅ Clear-Thought systematic analysis integration
+
+    Use this tool for: "vibe check issue 23", "analyze issue 42", "deep vibe issue 31"
+
     Args:
         issue_number: GitHub issue number to analyze
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
-        analysis_mode: "quick" for immediate analysis or "comprehensive" for detailed review
+        analysis_mode: "quick" for fast pattern detection, "comprehensive" for Claude analysis
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         post_comment: Post analysis as GitHub comment (auto-enabled for comprehensive mode, disabled for quick mode)
         
     Returns:
-        Analysis results with detected patterns and recommendations
+        Friendly vibe check analysis with coaching recommendations
     """
     # Auto-enable comment posting for comprehensive mode unless explicitly disabled
     if post_comment is None:
@@ -106,16 +124,21 @@ def review_pull_request(
     detail_level: str = "standard"
 ) -> Dict[str, Any]:
     """
-    Comprehensive PR review incorporating ALL functionality from scripts/review-pr.sh.
-    
-    Enterprise-grade PR review with:
-    - Multi-dimensional size classification
-    - Re-review detection and progress tracking
-    - Linked issue analysis and validation
-    - Clear-Thought integration for systematic analysis
-    - Comprehensive GitHub integration
-    - Permanent logging and review tracking
-    
+    VIBE CHECK PR REVIEW - Comprehensive pull request vibe check and analysis.
+
+    Enhanced vibe check framework for PR reviews with Claude CLI integration.
+    Perfect for "vibe check PR [number]", "review PR [number]", and PR analysis commands.
+
+    Features:
+    - 🧠 Claude CLI enhanced analysis with sophisticated reasoning
+    - 🔍 Anti-pattern detection and prevention guidance
+    - 📊 Multi-dimensional PR size classification
+    - 🔄 Re-review tracking and progress assessment
+    - 🎯 Issue linkage validation and acceptance criteria checking
+    - ✅ Comprehensive GitHub integration with automated commenting
+
+    Use this tool for: "vibe check PR 44", "review pull request 42", "analyze PR comprehensively"
+
     Args:
         pr_number: PR number to review
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
@@ -124,7 +147,7 @@ def review_pull_request(
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         
     Returns:
-        Complete review results with GitHub integration status and permanent logging
+        Complete vibe check analysis with GitHub integration status
     """
     logger.info(f"Comprehensive PR review requested: #{pr_number} in {repository} (mode: {analysis_mode})")
     return pr_review_tool(
