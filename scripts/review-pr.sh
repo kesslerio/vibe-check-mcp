@@ -148,15 +148,15 @@ IS_RE_REVIEW=false
 PREVIOUS_AUTOMATED_REVIEWS=""
 REVIEW_COUNT=0
 
-if [ "$FORCE_RE_REVIEW" = true ] || echo "$EXISTING_COMMENTS" | grep -q "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review"; then
+if [ "$FORCE_RE_REVIEW" = true ] || echo "$EXISTING_COMMENTS" | grep -q "🎯.*Overview\|## 🎯\|🔍.*Analysis\|⚠️.*Critical Issues\|💡.*Suggestions\|Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review"; then
     IS_RE_REVIEW=true
     echo "🔄 Re-review mode detected"
     
     # Extract previous automated review comments
-    PREVIOUS_AUTOMATED_REVIEWS=$(echo "$EXISTING_COMMENTS" | grep -A 50 -B 2 "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "Previous automated reviews found but could not extract details")
+    PREVIOUS_AUTOMATED_REVIEWS=$(echo "$EXISTING_COMMENTS" | grep -A 50 -B 2 "🎯.*Overview\|## 🎯\|🔍.*Analysis\|⚠️.*Critical Issues\|💡.*Suggestions\|Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "Previous automated reviews found but could not extract details")
     
-    # Count previous reviews
-    REVIEW_COUNT=$(echo "$EXISTING_COMMENTS" | grep -c "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "0")
+    # Count previous reviews (look for comprehensive review patterns)
+    REVIEW_COUNT=$(echo "$EXISTING_COMMENTS" | grep -c "🎯.*Overview\|💡.*Suggestions\|⚠️.*Critical Issues" || echo "0")
     echo "📊 Previous automated reviews: $REVIEW_COUNT"
 else
     echo "✨ First automated review for this PR"
@@ -342,6 +342,14 @@ fi)
 - Focus on helping vs. blocking: provide options and considerations rather than dogmatic requirements
 - Validate third-party integrations but recognize their value when well-implemented
 - Consider user experience: optional dependencies and graceful degradation where possible
+
+**CRITICAL: Code Analysis Guidelines**
+- **ONLY analyze the changed files in this PR diff** - do not count unrelated repository files
+- **Focus on NET changes**: If files were deleted and replaced, analyze the complexity reduction vs. addition
+- **Understand refactoring**: File deletions followed by simpler replacements represent complexity reduction
+- **PR Statistics Context**: +${ADDITIONS}/-${DELETIONS} lines may include large deletions of over-engineered code
+- **Validate Claims**: When author claims complexity reduction, look for evidence in deleted vs. added files
+- **Files Changed**: ${FILES_COUNT} files (focus analysis only on these files, not entire repository)
 
 Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, balanced assessment of complexity trade-offs, and actionable feedback enhanced by MCP tool capabilities.
 EOF
