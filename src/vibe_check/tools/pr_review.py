@@ -885,6 +885,9 @@ File too large or binary
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
         logger.info(f"🔍 Data content size: {len(data_content)} chars")
         
+        # Set timeout based on content size
+        timeout_seconds = 300  # 5 minutes for comprehensive analysis
+        
         try:
             # Create combined prompt file
             combined_content = f"{prompt_content}\n\n{data_content}"
@@ -905,11 +908,15 @@ File too large or binary
                 full_command = [claude_command, "-p", temp_file]
                 logger.info(f"📝 Running Claude command: {' '.join(full_command)}")
                 
+                # Increase timeout for large PRs (18KB+ content can take time)
+                timeout_seconds = 300  # 5 minutes for comprehensive analysis
+                logger.info(f"🔍 Using timeout: {timeout_seconds} seconds")
+                
                 result = subprocess.run(
                     full_command,
                     capture_output=True, 
                     text=True, 
-                    timeout=120
+                    timeout=timeout_seconds
                 )
                 
                 logger.info(f"🔍 Claude command completed with return code: {result.returncode}")
@@ -957,7 +964,8 @@ File too large or binary
                     logger.warning(f"⚠️ Failed to cleanup temp file: {cleanup_error}")
                     
         except subprocess.TimeoutExpired:
-            logger.error("❌ Claude analysis timed out after 120 seconds")
+            logger.error(f"❌ Claude analysis timed out after {timeout_seconds} seconds")
+            logger.error("💡 Large PRs may require more time - this is expected behavior")
             return None
         except Exception as e:
             logger.error(f"❌ Claude analysis failed with exception: {e}")
