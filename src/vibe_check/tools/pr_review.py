@@ -907,14 +907,14 @@ File too large or binary
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
         logger.info(f"🔍 Data content size: {len(data_content)} chars")
         
-        # Set timeout based on content size
-        timeout_seconds = 300  # 5 minutes for comprehensive analysis
-        
         try:
-            # Create combined prompt file
+            # Create combined prompt content
             combined_content = f"{prompt_content}\n\n{data_content}"
             combined_size = len(combined_content)
             logger.info(f"🔍 Combined content size: {combined_size} chars")
+            
+            # Set adaptive timeout based on actual content size
+            timeout_seconds = self._calculate_adaptive_timeout(combined_size, pr_number)
             
             # Use stdin approach directly (no temp file needed)
             logger.info(f"🔍 Starting Claude CLI with stdin input (like working script)...")
@@ -1480,6 +1480,39 @@ File too large or binary
             sections.extend([f"- [ ] {item}" for item in action_items["testing_actions"]])
             
         return "\n".join(sections) if sections else "*No specific actions required*"
+    
+    def _calculate_adaptive_timeout(self, content_size: int, pr_number: int) -> int:
+        """
+        Calculate adaptive timeout based on content size and PR characteristics.
+        
+        Args:
+            content_size: Total size of combined prompt + data content in characters
+            pr_number: PR number for context
+            
+        Returns:
+            Timeout in seconds optimized for content size
+        """
+        # Base timeout: 60 seconds (should be sufficient with fixed Claude CLI integration)
+        base_timeout = 60
+        
+        # Size-based adjustments
+        if content_size < 10000:      # Small PRs: <10k chars
+            size_timeout = 45
+        elif content_size < 30000:    # Medium PRs: 10k-30k chars  
+            size_timeout = 60
+        elif content_size < 100000:   # Large PRs: 30k-100k chars
+            size_timeout = 90
+        elif content_size < 200000:   # Very Large PRs: 100k-200k chars
+            size_timeout = 120
+        else:                         # Massive PRs: >200k chars
+            size_timeout = 180
+            
+        # Use the larger of base or size-based timeout
+        adaptive_timeout = max(base_timeout, size_timeout)
+        
+        logger.info(f"🔍 Adaptive timeout: {adaptive_timeout}s for {content_size:,} chars (PR #{pr_number})")
+        
+        return adaptive_timeout
     
     def _save_permanent_log(
         self,
