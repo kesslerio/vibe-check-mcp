@@ -27,6 +27,9 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
+# Import Claude CLI debug/verbose config
+from src.vibe_check.utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+
 logger = logging.getLogger(__name__)
 
 
@@ -884,6 +887,7 @@ File too large or binary
     ) -> Optional[Dict[str, Any]]:
         """
         Run claude -p analysis with comprehensive debug logging.
+        Debug/verbose flags are controlled by src.vibe_check.utils.CLAUDE_CLI_DEBUG/VERBOSE.
         """
         logger.info(f"🔍 Starting Claude analysis for PR #{pr_number}")
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
@@ -906,46 +910,24 @@ File too large or binary
             logger.info(f"🔍 Created temporary file: {temp_file}")
             
             try:
-                # Run claude -p with debug and verbose flags for troubleshooting
                 claude_command = self.claude_cmd or "claude"
-                full_command = [
-                    claude_command, 
-                    "--debug",           # Enable debug mode
-                    "--verbose",         # Enable verbose logging
-                    "-p",               # Print mode
-                    temp_file           # Prompt file
-                ]
-                logger.info(f"📝 Running Claude command with debug flags: {' '.join(full_command)}")
-                
-                # Increase timeout for large PRs (18KB+ content can take time)
-                timeout_seconds = 300  # 5 minutes for comprehensive analysis
-                logger.info(f"🔍 Using timeout: {timeout_seconds} seconds")
-                
-                # Use stdin approach like the working script (claude -p "$(cat file)")
-                logger.info("🔍 Starting Claude CLI with stdin input (like working script)...")
-                
-                # Read file content to pass via stdin (matches review-pr.sh approach)
-                with open(temp_file, 'r') as f:
-                    prompt_content_for_stdin = f.read()
-                
-                # Use the same command structure as working script: claude -p "content"
+                # Build command with config flags
                 stdin_command = [
                     claude_command,
-                    "--dangerously-skip-permissions",  # Keep security bypass
-                    "--debug",           # Enable debug mode  
-                    "--verbose",         # Enable verbose logging
-                    "-p",               # Print mode
-                    prompt_content_for_stdin  # Content as argument, not file path
+                    "--dangerously-skip-permissions"
                 ]
-                
-                logger.info(f"📝 Running Claude command with stdin content: {claude_command} --dangerously-skip-permissions --debug --verbose -p [content: {len(prompt_content_for_stdin)} chars]")
-                
+                if CLAUDE_CLI_DEBUG:
+                    stdin_command.append("--debug")
+                if CLAUDE_CLI_VERBOSE:
+                    stdin_command.append("--verbose")
+                stdin_command.extend(["-p", open(temp_file, 'r').read()])
+                logger.info(f"📝 Running Claude command: {' '.join(stdin_command[:4])} ... [content omitted]")
                 process = subprocess.Popen(
                     stdin_command,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,  # Combine stderr with stdout for unified logging
+                    stderr=subprocess.STDOUT,
                     text=True,
-                    bufsize=1,  # Line buffered for real-time output
+                    bufsize=1,
                     universal_newlines=True
                 )
                 
@@ -966,7 +948,7 @@ File too large or binary
                             process.wait(timeout=5)
                         except subprocess.TimeoutExpired:
                             process.kill()
-                        raise subprocess.TimeoutExpired(full_command, timeout_seconds)
+                        raise subprocess.TimeoutExpired(stdin_command, timeout_seconds)
                     
                     # Read line with timeout
                     
@@ -1036,7 +1018,7 @@ File too large or binary
                     # Save debug output
                     with open(debug_file, 'w') as f:
                         f.write("=== Claude CLI Debug Session ===\n")
-                        f.write(f"Command: {' '.join(full_command)}\n")
+                        f.write(f"Command: {' '.join(stdin_command[:4])} ... [content omitted]\n")
                         f.write(f"Return code: {result.returncode}\n")
                         f.write(f"Timestamp: {__import__('datetime').datetime.now()}\n")
                         f.write(f"Timeout: {timeout_seconds} seconds\n")
