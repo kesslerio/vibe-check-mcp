@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # Main Vibe Compass MCP server
+  vibe-compass-mcp:
+    build:
+      context: .
+      target: development  # Use development stage by default
+    container_name: vibe-compass-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      # GitHub integration (optional)
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      
+      # Server configuration
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8000
+      
+      # Logging configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONPATH=/app/src
+    
+    # Volume mounts for development
+    volumes:
+      # Configuration files (optional)
+      - ./config:/app/config:ro
+      
+      # Development: mount source for hot-reload
+      - ./src:/app/src:ro
+      - ./data:/app/data:ro
+      
+      # Logs directory
+      - ./logs:/app/logs
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_compass.server import run_server; print('Health OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits (optional, adjust based on needs)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Production variant (uncomment to use)
+  # vibe-compass-mcp-prod:
+  #   build:
+  #     context: .
+  #     target: production
+  #   container_name: vibe-compass-mcp-prod
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+  #     - MCP_SERVER_HOST=0.0.0.0
+  #     - MCP_SERVER_PORT=8000
+  #     - LOG_LEVEL=WARNING  # Less verbose for production
+  #     - PYTHONPATH=/app/src
+  #   volumes:
+  #     - ./config:/app/config:ro
+  #     - ./logs:/app/logs
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_compass.server import run_server; print('Health OK')"]
+  #     interval: 60s
+  #     timeout: 15s
+  #     retries: 5
+  #     start_period: 120s
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1G
+  #         cpus: '1.0'
+  #       reservations:
+  #         memory: 512M
+  #         cpus: '0.5'
+
+# Network configuration (optional)
+networks:
+  default:
+    name: vibe-compass-network
+
+# Volume configuration (optional)
+volumes:
+  config:
+    driver: local
+  logs:
+    driver: local
