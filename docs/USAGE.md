@@ -4,7 +4,37 @@ Complete guide for using Vibe Check MCP with Claude Code CLI for anti-pattern de
 
 ## Quick Start
 
-Once you have Vibe Check MCP configured (see [README.md](../README.md)), you can analyze GitHub issues directly through Claude Code.
+Once you have Vibe Check MCP configured (see [README.md](../README.md)), you can analyze GitHub issues using natural language commands.
+
+## Command Line Interface
+
+### Direct CLI Usage
+
+Set up a shell alias for natural command syntax:
+
+```bash
+# Add to your ~/.bashrc, ~/.zshrc, or ~/.fish_config
+alias vibe='python -m vibe_check.cli'
+
+# Now you can use:
+vibe check issue 31
+deep vibe issue 31
+vibe check issue 31 in microsoft/typescript
+```
+
+### Natural Language Commands
+
+**Quick Analysis**:
+```bash
+vibe check issue 31
+vibe check issue 42 in facebook/react
+```
+
+**Deep Analysis** (comprehensive mode with educational content):
+```bash
+deep vibe issue 31
+deep vibe issue 42 in microsoft/typescript
+```
 
 ## GitHub Issue Analysis
 
@@ -15,18 +45,14 @@ The core functionality of Vibe Check MCP is GitHub issue analysis with dual-mode
 **Simple Analysis** (defaults to quick mode):
 ```
 analyze issue 23
+vibe check issue 23
 ```
 
-**Explicit Quick Analysis**:
+**Deep Analysis** (comprehensive mode with automatic GitHub comments):
 ```
-analyze issue 23 in quick mode
-```
-
-**Comprehensive Analysis** (automatically posts GitHub comments):
-```
+deep vibe issue 23
 analyze issue 23 comprehensively
-analyze issue 23 in comprehensive mode
-do a comprehensive review of issue 23
+do a deep vibe check on issue 23
 ```
 
 ### Advanced Usage
@@ -55,24 +81,23 @@ analyze issue 23 in comprehensive mode without GitHub integration
 Vibe Check MCP responds to natural language. Here are various ways to trigger analysis:
 
 ### Quick Analysis Triggers
+- "vibe check issue 23"
 - "analyze issue 23"
 - "check issue 23 for patterns"  
 - "quick review of issue 23"
 - "scan issue 23"
-- "look at issue 23"
 
-### Comprehensive Analysis Triggers  
+### Deep Analysis Triggers (Comprehensive Mode)
+- "deep vibe issue 23"
 - "analyze issue 23 comprehensively"
-- "do a comprehensive review of issue 23"
-- "analyze issue 23 in comprehensive mode"
+- "do a deep vibe check on issue 23"
 - "thoroughly analyze issue 23"
-- "detailed analysis of issue 23"
-- "systematic review of issue 23"
+- "systematic deep review of issue 23"
 
 ### Repository Specification
-- "analyze issue 23 in owner/repo"
-- "check issue 23 in microsoft/typescript"  
-- "review issue 42 from facebook/react"
+- "vibe check issue 23 in owner/repo"
+- "deep vibe issue 23 in microsoft/typescript"  
+- "vibe check issue 42 in facebook/react"
 
 ### Educational Content Control
 - "analyze issue 23 with brief explanations"
