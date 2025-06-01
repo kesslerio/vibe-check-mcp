@@ -141,104 +141,76 @@ docker run -d \
 
 ## 🔗 Claude Code Integration
 
-### Step 1: Configure MCP Server
+### Step 1: Add MCP Server to Claude Code
 
-Add to your Claude Code configuration:
+The correct way to add MCP servers to Claude Code is using the `claude mcp add` command:
 
-#### Project-Level Configuration (`.mcp.json`)
+#### User-Level Configuration (Recommended)
 
-Create `.mcp.json` in your project root:
+Add the server at user level (available across all projects):
 
-```json
-{
-  "mcpServers": {
-    "vibe-compass": {
-      "command": "python",
-      "args": ["-m", "vibe_compass.server"],
-      "cwd": "/path/to/vibe-compass-mcp",
-      "env": {
-        "GITHUB_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
+```bash
+# Navigate to the project directory
+cd /path/to/vibe-compass-mcp
+
+# Add server with user scope
+claude mcp add vibe-compass -s user python -m vibe_compass.server --cwd $(pwd) --env PYTHONPATH=$(pwd)/src
+
+# Optional: Add GitHub token for private repositories
+claude mcp add vibe-compass -s user python -m vibe_compass.server --cwd $(pwd) --env PYTHONPATH=$(pwd)/src --env GITHUB_TOKEN=your_token_here
 ```
 
-#### User-Level Configuration
+#### Project-Level Configuration
 
-Add to your global Claude Code settings:
+Add the server for current project only:
 
-**macOS/Linux**: `~/.config/claude-code/settings.json`
-**Windows**: `%APPDATA%/claude-code/settings.json`
+```bash
+# Navigate to your project directory
+cd /your/project/directory
 
-```json
-{
-  "mcp": {
-    "servers": {
-      "vibe-compass": {
-        "command": "python",
-        "args": ["-m", "vibe_compass.server"],
-        "cwd": "/path/to/vibe-compass-mcp"
-      }
-    }
-  }
-}
+# Add server with local scope
+claude mcp add vibe-compass -s local python -m vibe_compass.server --cwd /path/to/vibe-compass-mcp --env PYTHONPATH=/path/to/vibe-compass-mcp/src
 ```
 
-#### Local Development Configuration
+#### Docker-Based Configuration
 
-For local development with Docker:
+If using Docker:
 
-```json
-{
-  "mcpServers": {
-    "vibe-compass": {
-      "command": "docker",
-      "args": ["run", "--rm", "-p", "8000:8000", "vibe-compass-mcp"],
-      "env": {
-        "GITHUB_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
+```bash
+# Build the Docker image first
+cd /path/to/vibe-compass-mcp
+docker build -t vibe-compass-mcp .
+
+# Add Docker-based MCP server
+claude mcp add vibe-compass -s user docker run --rm -p 8000:8000 vibe-compass-mcp
 ```
 
-### Step 2: Test Connection
+### Step 2: Verify Installation
 
-1. **Start the MCP server**:
+1. **List installed MCP servers**:
    ```bash
-   python -m vibe_compass.server
+   claude mcp list
    ```
 
-2. **Open Claude Code** and test the connection:
-   ```
-   /mcp list
+2. **You should see vibe-compass listed** with status information
+
+3. **Test the server**:
+   ```bash
+   claude mcp call vibe-compass server_status
    ```
 
-3. **You should see**:
-   ```
-   ✅ vibe-compass connected
-   📊 2 tools available: analyze_github_issue, server_status
-   ```
+### Step 3: Test GitHub Issue Analysis
 
-### Step 3: Verify Tools
-
-Test with a simple command:
-```
-/mcp call vibe-compass server_status
+Test the main functionality:
+```bash
+claude mcp call vibe-compass analyze_github_issue --issue_number 22 --repository "kesslerio/vibe-compass-mcp"
 ```
 
-Expected output:
-```json
-{
-  "server_name": "Vibe Compass MCP",
-  "status": "✅ Operational",
-  "core_engine_status": {
-    "detection_accuracy": "87.5%",
-    "false_positive_rate": "0%"
-  }
-}
-```
+Expected output includes:
+- Anti-pattern detection results with confidence scores
+- Educational explanations of detected patterns
+- Remediation recommendations
+- Prevention checklists
 
 ## 🛠️ Available Tools
 
