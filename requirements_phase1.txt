@@ -1,7 +1,0 @@
-# Phase 1: Core Detection Engine Requirements
-
-# Core functionality - uses validated algorithms from Phase 0
-# Still minimal dependencies - no MCP framework until Phase 2
-
-# Standard library only for core detection engine
-# No external dependencies required for Phase 1 implementation
