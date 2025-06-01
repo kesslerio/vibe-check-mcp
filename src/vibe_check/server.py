@@ -204,9 +204,10 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         # Validate detection engine at startup
         from vibe_check.core.pattern_detector import PatternDetector
         detector = PatternDetector()
-        accuracy, false_positive_rate = detector.validate_detection_accuracy()
+        validation_summary = detector.get_validation_summary()
+        phase0 = validation_summary['phase_0_validation']
         
-        logger.info(f"📊 Core detection engine validated: {accuracy:.1%} accuracy, {false_positive_rate:.1%} false positives")
+        logger.info(f"📊 Core detection engine validated: {phase0['comprehensive_tests_accuracy']}, {phase0['false_positive_rate']} false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
         
         # Determine transport mode
