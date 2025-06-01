@@ -1,6 +1,6 @@
 # Vibe Check MCP Usage Guide
 
-Complete guide for using Vibe Check MCP with Claude Code CLI for anti-pattern detection and prevention.
+Complete guide for using the enhanced Vibe Check MCP framework with Claude Code CLI for comprehensive engineering vibe checks and friendly coaching guidance.
 
 ## Quick Start
 
@@ -36,23 +36,25 @@ deep vibe issue 31
 deep vibe issue 42 in microsoft/typescript
 ```
 
-## GitHub Issue Analysis
+## GitHub Issue Vibe Check Analysis
 
-The core functionality of Vibe Check MCP is GitHub issue analysis with dual-mode operation.
+The enhanced Vibe Check MCP provides friendly, coaching-oriented analysis with Claude-powered reasoning and educational guidance.
 
-### Basic Usage
+### Two Analysis Modes
 
-**Simple Analysis** (defaults to quick mode):
+**🚀 Quick Vibe Check** (fast feedback for development workflow):
 ```
-analyze issue 23
 vibe check issue 23
+analyze issue 23
+quick vibe on issue 23
 ```
 
-**Deep Analysis** (comprehensive mode with automatic GitHub comments):
+**🧠 Deep Vibe Check** (Claude-powered analysis with GitHub integration):
 ```
 deep vibe issue 23
-analyze issue 23 comprehensively
+analyze issue 23 comprehensively  
 do a deep vibe check on issue 23
+thorough vibe analysis of issue 23
 ```
 
 ### Advanced Usage
@@ -104,105 +106,151 @@ Vibe Check MCP responds to natural language. Here are various ways to trigger an
 - "analyze issue 23 with detailed educational content"
 - "analyze issue 23 with comprehensive learning materials"
 
-## Understanding the Output
+## Understanding the Enhanced Vibe Check Output
 
-### Quick Mode Output
+### Quick Vibe Check Output
 ```json
 {
-  "analysis_mode": "quick",
-  "issue_title": "Add custom HTTP client for Stripe integration", 
-  "patterns_detected": 1,
-  "anti_patterns": [
-    {
-      "type": "infrastructure_without_implementation",
-      "confidence": 0.85,
-      "evidence": "Custom HTTP client mentioned, No SDK research documented"
-    }
-  ],
-  "status": "patterns_detected",
-  "recommendation": "Review detected patterns before implementation"
+  "status": "vibe_check_complete",
+  "vibe_check": {
+    "overall_vibe": "⚖️ Complex Vibes",
+    "vibe_level": "complex_vibes",
+    "friendly_summary": "⚖️ This feels pretty complex! Have we considered if there's a simpler approach that could achieve the same goals?",
+    "coaching_recommendations": [
+      "🤔 Question if this complexity is really necessary",
+      "💡 Try the simplest approach that could work first",
+      "📝 Document why simple solutions aren't sufficient"
+    ]
+  },
+  "enhanced_features": {
+    "claude_reasoning": false,
+    "clear_thought_analysis": false,
+    "comprehensive_validation": false,
+    "educational_coaching": true,
+    "friendly_language": true
+  }
 }
 ```
 
-### Comprehensive Mode Output
+### Deep Vibe Check Output
 ```json
 {
-  "analysis_mode": "comprehensive",
-  "issue_number": 23,
-  "patterns_detected": 1,
-  "anti_patterns": [
-    {
-      "type": "infrastructure_without_implementation",
-      "confidence": 0.85,
-      "evidence": "Custom HTTP client mentioned, No SDK research documented",
-      "educational_content": {
-        "why_problematic": "Building custom solutions before testing standard APIs leads to 2+ years of technical debt...",
-        "prevention_checklist": ["Research official SDK", "Test basic integration", "Document why standard approach insufficient"]
-      }
-    }
-  ],
-  "risk_assessment": {
-    "third_party_integration": true,
-    "infrastructure_complexity": false,
-    "overall_risk": "medium"
-  },
-  "recommendations": {
-    "overall": "⚠️ Review required before implementation",
-    "specific_actions": [
-      "🔍 API-First Validation Required: Demonstrate basic API functionality with working POC before architectural planning"
+  "status": "vibe_check_complete",
+  "vibe_check": {
+    "overall_vibe": "🔍 Research Vibes",
+    "vibe_level": "needs_research", 
+    "friendly_summary": "🔍 Let's do some homework first! This would benefit from researching existing solutions and checking official documentation before diving in.",
+    "coaching_recommendations": [
+      "🔍 Time to Do Some Homework!: Great question! Let's do some research first to build on what already exists instead of reinventing wheels.",
+      "• Search for existing solutions and libraries in this domain",
+      "• Read official documentation and getting-started guides",
+      "• Find working examples and tutorials",
+      "💡 Real-world insight: Before building a custom authentication system, developers typically research existing solutions like Auth0, Firebase Auth, or Supabase Auth..."
     ]
+  },
+  "technical_analysis": {
+    "detected_patterns": [
+      {
+        "type": "infrastructure_without_implementation", 
+        "confidence": 0.85,
+        "detected": true,
+        "evidence": "Custom solution mentioned without API research"
+      }
+    ],
+    "integration_analysis": {
+      "third_party_services": ["api", "integration"],
+      "complexity_indicators": ["complex", "architecture"]
+    }
+  },
+  "enhanced_features": {
+    "claude_reasoning": true,
+    "clear_thought_analysis": true,
+    "comprehensive_validation": true,
+    "educational_coaching": true,
+    "friendly_language": true
   }
 }
 ```
 
 ## GitHub Integration
 
-### Automatic Comment Posting
+### Enhanced GitHub Comment Posting
 
-When you use **comprehensive mode**, Vibe Check automatically posts a formatted analysis comment to the GitHub issue (if patterns are detected).
+When you use **deep vibe check mode**, the enhanced Vibe Check framework automatically posts a friendly, coaching-oriented comment to the GitHub issue.
 
-**Comment Format**:
+**Enhanced Comment Format**:
 ```markdown
-## 🔍 Vibe Check Anti-Pattern Analysis
+## 🎯 Deep Vibe Check
 
-🟡 **Risk Level**: Medium
+**Overall Vibe:** 🔍 Research Vibes
 
-### 📊 Analysis Summary
-- **Patterns Detected**: 1
-- **Third-Party Integration Risk**: ⚠️ Yes
-- **Infrastructure Complexity Risk**: ✅ No
+### 💫 Vibe Summary
+🔍 Let's do some homework first! This would benefit from researching existing solutions and checking official documentation before diving in.
 
-### 🚨 Detected Anti-Patterns
+### 🎓 Coaching Recommendations
+- 🔍 Time to Do Some Homework!: Great question! Let's do some research first to build on what already exists instead of reinventing wheels.
+- • Search for existing solutions and libraries in this domain
+- • Read official documentation and getting-started guides
+- • Find working examples and tutorials
+- 💡 Real-world insight: Before building a custom authentication system, developers typically research existing solutions like Auth0, Firebase Auth, or Supabase Auth...
+- 🤝 Collaboration and Feedback: Great engineering happens in teams! Here's how to leverage collective wisdom.
 
-**1. infrastructure_without_implementation** (Confidence: 0.85)
-- Evidence: Custom HTTP client mentioned, No SDK research documented
-
-### 🎯 Recommendations
-
-⚠️ Review required before implementation
-
-- 🔍 API-First Validation Required: Demonstrate basic API functionality with working POC before architectural planning
+### 🔍 Technical Analysis Summary
+- **Patterns Detected:** 1
+- **Claude Analysis:** ✅ Available
+- **Clear-Thought Analysis:** ✅ Applied
 
 ---
-*Analysis generated by Vibe Check MCP • [Learn more about anti-patterns](https://github.com/kesslerio/vibe-check-mcp)*
+*This vibe check was generated by the enhanced Vibe Check MCP framework using Claude-powered analytical reasoning and validated pattern detection.*
 ```
 
 ### Issue Labeling
 
-Comprehensive analysis automatically adds the `anti-pattern-review` label to issues with detected patterns.
+Deep vibe check analysis automatically adds helpful labels to issues and provides comprehensive coaching in the comments.
+
+## 🎯 The Five Vibe Levels
+
+The enhanced framework assesses issues across 5 friendly vibe levels:
+
+### ✅ **Good Vibes**
+- **What it means**: "This looks like a solid plan! The approach seems well thought out and appropriately scoped."
+- **When you see this**: Issue has clear requirements, appropriate complexity, good research
+- **What to do**: Proceed with implementation following the plan
+
+### 🔍 **Research Vibes** 
+- **What it means**: "Let's do some homework first! This would benefit from researching existing solutions."
+- **When you see this**: Missing research phase, no existing solution analysis
+- **What to do**: Check documentation, find working examples, research existing tools
+
+### 🧪 **POC Vibes**
+- **What it means**: "Show us it works first! Let's prove the basic functionality with a simple proof-of-concept."
+- **When you see this**: Third-party integration without basic API validation
+- **What to do**: Create minimal POC, test basic functionality, validate assumptions
+
+### ⚖️ **Complex Vibes**
+- **What it means**: "This feels pretty complex! Have we considered if there's a simpler approach?"
+- **When you see this**: High complexity indicators, over-engineering patterns
+- **What to do**: Question necessity, try simple approaches first, justify complexity
+
+### 🚨 **Bad Vibes**
+- **What it means**: "Hold up! This looks like building infrastructure without proving the basics work."
+- **When you see this**: Infrastructure-without-implementation patterns detected
+- **What to do**: Stop and start with basic API usage, focus on fundamentals
 
 ## Best Practices
 
-### When to Use Quick Mode
-- **Development workflow**: Fast feedback during planning
-- **Issue triage**: Quick scanning of multiple issues
-- **No GitHub modification needed**: When you don't want to post comments
+### When to Use Quick Vibe Check
+- **Development workflow**: Fast feedback during issue planning
+- **Daily standup prep**: Quick assessment before discussing issues
+- **Issue triage**: Rapid scanning of multiple issues for risk assessment
+- **Personal development**: Understanding your own engineering approach
 
-### When to Use Comprehensive Mode  
-- **Formal reviews**: When you want documented analysis
-- **Team communication**: Share findings with team members
-- **Anti-pattern education**: When you want full educational content
-- **Issue documentation**: Permanent record of analysis
+### When to Use Deep Vibe Check  
+- **Team code reviews**: When you want to share analysis with team members
+- **Educational moments**: When you want full coaching content and learning opportunities
+- **Issue documentation**: Creating permanent record of engineering guidance
+- **Mentoring sessions**: Teaching junior developers about engineering best practices
+- **Pre-implementation validation**: Before starting complex or risky work
 
 ### Repository Context
 

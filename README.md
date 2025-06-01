@@ -1,8 +1,10 @@
 # 🧭 Vibe Check MCP
 
-**Engineering Anti-Pattern Detection & Prevention via Model Context Protocol**
+**Enhanced Engineering Vibe Check Framework via Model Context Protocol**
 
-A comprehensive MCP server that analyzes code, issues, and development workflows to detect systematic engineering anti-patterns and provide educational guidance for prevention.
+A comprehensive MCP server that provides friendly, coaching-oriented analysis of GitHub issues using Claude-powered reasoning to detect engineering anti-patterns and provide practical guidance for prevention.
+
+🎯 **NEW: Enhanced Vibe Check Framework** - Transforms technical "anti-pattern detection" into friendly "vibe check" coaching with Claude-powered analytical reasoning and comprehensive educational guidance.
 
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
@@ -35,6 +37,8 @@ python -m vibe_check.server
 
 # 3. Connect to Claude Code (see integration section below)
 ```
+
+📖 **[Complete Usage Guide](docs/USAGE.md)** - Detailed examples, vibe levels, and best practices
 
 ## 📦 Installation
 
@@ -246,26 +250,31 @@ Expected output includes:
 
 ## 🛠️ Available Tools
 
-### `analyze_github_issue`
+### `analyze_github_issue` (Enhanced Vibe Check Framework)
 
-Analyzes GitHub issues for anti-patterns and provides educational guidance.
+Provides friendly, coaching-oriented analysis with Claude-powered reasoning and educational guidance.
 
 **Parameters**:
 - `issue_number` (int): GitHub issue number to analyze
 - `repository` (str, optional): Repository in format "owner/repo" (defaults to current repo)
-- `focus_patterns` (str, optional): Comma-separated patterns to focus on ("all" for all patterns)
+- `analysis_mode` (str, optional): "quick" for fast feedback or "comprehensive" for detailed analysis
 - `detail_level` (str, optional): Educational detail level - "brief", "standard", or "comprehensive"
+- `post_comment` (bool, optional): Whether to post analysis as GitHub comment
+
+**Vibe Check Modes**:
+- **Quick Vibe Check**: Fast feedback for development workflow
+- **Deep Vibe Check**: Claude-powered analysis with GitHub integration and comprehensive coaching
 
 **Example Usage**:
 ```bash
-# Analyze issue #22 in current repository
-/mcp call vibe-check analyze_github_issue --issue_number 22
+# Quick vibe check for development workflow
+claude "vibe check issue 22"
 
-# Analyze specific repository with comprehensive detail
-/mcp call vibe-check analyze_github_issue --issue_number 123 --repository "owner/repo" --detail_level "comprehensive"
+# Deep vibe check with comprehensive analysis  
+claude "deep vibe issue 22"
 
-# Focus on specific anti-patterns
-/mcp call vibe-check analyze_github_issue --issue_number 456 --focus_patterns "infrastructure_without_implementation,complexity_escalation"
+# Cross-repository analysis
+claude "vibe check issue 123 in microsoft/typescript"
 ```
 
 ### `server_status`
@@ -558,7 +567,13 @@ This project demonstrates anti-pattern prevention in its own development:
 
 ## 📄 License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+**Why MIT License?**
+- ✅ **Open Source Friendly**: Encourages community contributions and adoption
+- ✅ **Commercial Use**: Allows integration into commercial projects
+- ✅ **Minimal Restrictions**: Simple, permissive license that's developer-friendly
+- ✅ **MCP Ecosystem**: Aligns with Model Context Protocol community standards
 
 ## 🙏 Acknowledgments
 
