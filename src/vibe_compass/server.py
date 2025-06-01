@@ -63,24 +63,28 @@ def analyze_github_issue(
     repository: str = "kesslerio/vibe-compass-mcp", 
     analysis_mode: str = "quick",
     detail_level: str = "standard",
-    post_comment: bool = False
+    post_comment: bool = None
 ) -> Dict[str, Any]:
     """
     Analyze GitHub issue for anti-patterns with quick or comprehensive modes.
     
     QUICK MODE: Fast analysis for immediate feedback during development
-    COMPREHENSIVE MODE: Detailed analysis with optional GitHub comment posting
+    COMPREHENSIVE MODE: Detailed analysis with automatic GitHub comment posting
     
     Args:
         issue_number: GitHub issue number to analyze
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-compass-mcp")
         analysis_mode: "quick" for immediate analysis or "comprehensive" for detailed review
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
-        post_comment: Post analysis as GitHub comment (comprehensive mode only)
+        post_comment: Post analysis as GitHub comment (auto-enabled for comprehensive mode, disabled for quick mode)
         
     Returns:
         Analysis results with detected patterns and recommendations
     """
+    # Auto-enable comment posting for comprehensive mode unless explicitly disabled
+    if post_comment is None:
+        post_comment = (analysis_mode == "comprehensive")
+    
     logger.info(f"GitHub issue analysis ({analysis_mode}): #{issue_number} in {repository}")
     return analyze_github_issue_tool(
         issue_number=issue_number,
