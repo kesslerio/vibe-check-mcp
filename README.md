@@ -2,14 +2,16 @@
 
 **Enhanced Engineering Vibe Check Framework via Model Context Protocol**
 
+> **⚡ Designed for Claude Code** - This MCP server is specifically built to work with Claude Code's MCP integration, providing seamless anti-pattern detection and coaching directly in your development workflow.
+
 A comprehensive MCP server that provides friendly, coaching-oriented analysis of GitHub issues using Claude-powered reasoning to detect engineering anti-patterns and provide practical guidance for prevention.
 
 🎯 **NEW: Enhanced Vibe Check Framework** - Transforms technical "anti-pattern detection" into friendly "vibe check" coaching with Claude-powered analytical reasoning and comprehensive educational guidance.
 
+[![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
-[![Docker](https://img.shields.io/badge/Docker-Ready-green)](https://docker.com)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Integration-purple)](https://claude.ai)
+[![Docker](https://img.shields.io/badge/Docker-Optional-yellow)](https://docker.com)
 
 ## 🎯 What It Does
 
@@ -22,7 +24,9 @@ Vibe Check MCP detects **systematic engineering anti-patterns** that lead to tec
 
 **Validated Results**: 87.5% detection accuracy, 0% false positives in comprehensive testing.
 
-## ⚡ Quick Start
+## ⚡ Quick Start (Claude Code Required)
+
+**Prerequisites**: You must have [Claude Code](https://claude.ai) installed to use this MCP server.
 
 Get running in 5 minutes:
 
@@ -32,22 +36,70 @@ git clone https://github.com/kesslerio/vibe-check-mcp.git
 cd vibe-check-mcp
 pip install -r requirements.txt
 
-# 2. Start the MCP server
-python -m vibe_check.server
+# 2. Add to Claude Code (NATIVE - Recommended)
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "python", 
+  "args": ["-m", "vibe_check.server"],
+  "env": {
+    "PYTHONPATH": "'"$(pwd)"'/src",
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}' -s user
 
-# 3. Connect to Claude Code (see integration section below)
+# 3. Restart Claude Code and start using vibe-check tools!
 ```
 
-📖 **[Complete Usage Guide](docs/USAGE.md)** - Detailed examples, vibe levels, and best practices
+📖 **[Complete Deployment Guide](docs/MCP_DEPLOYMENT_GUIDE.md)** - Native vs Docker vs Bridge deployment options
+
+## 🚀 Deployment Options for Claude Code
+
+### 🥇 **Native Deployment (Recommended)**
+**Best performance, simplest setup, optimal for Claude Code**
+
+```bash
+# Pros: Fast startup (~2s), minimal memory (~50MB), direct integration
+# Cons: Requires Python environment setup
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "python",
+  "args": ["-m", "vibe_check.server"],
+  "env": {"PYTHONPATH": "'"$(pwd)"'/src"}
+}' -s user
+```
+
+### 🥈 **Docker Bridge (Hybrid)**
+**Docker isolation + Claude Code compatibility**
+
+```bash
+# Pros: Docker isolation, still works with Claude Code
+# Cons: Slower startup (~7s), more memory (~120MB), complex setup
+claude mcp add-json vibe-check-bridge '{
+  "type": "stdio",
+  "command": "docker",
+  "args": ["run", "--rm", "-i", "--network", "host", 
+           "vibe-check-mcp", "/app/scripts/mcp-bridge.sh", "localhost", "8001"]
+}' -s user
+```
+
+### 🥉 **Docker HTTP Only**
+**⚠️ Not compatible with Claude Code stdio requirements**
+
+```bash
+# Use case: Web applications, API clients (NOT Claude Code)
+docker-compose up  # Provides HTTP endpoint only
+```
+
+**📋 Recommendation**: Use **Native Deployment** unless you specifically need Docker isolation. See the [Complete Deployment Guide](docs/MCP_DEPLOYMENT_GUIDE.md) for detailed setup instructions.
 
 ## 📦 Installation
 
 ### Prerequisites
 
+- **🔴 Claude Code** - **REQUIRED** for MCP integration ([Download here](https://claude.ai))
 - **Python 3.8+** (Python 3.10+ recommended)
 - **Git** for cloning the repository
-- **Docker** (optional, for containerized deployment)
-- **Claude Code** for MCP integration
+- **Docker** (optional, for containerized deployment - see deployment options below)
 
 ### Local Development Setup
 
@@ -91,15 +143,18 @@ LOG_LEVEL=INFO
 
 ## 🐳 Docker Setup
 
-### Quick Docker Run
+> **⚠️ Important for Claude Code Users**: Standard Docker deployment provides HTTP transport which is **NOT compatible** with Claude Code. For Claude Code integration, use [Native Deployment](#-native-deployment-recommended) or [Docker Bridge](#-docker-bridge-hybrid) instead.
+
+### Docker HTTP Deployment (Web/API Clients Only)
 
 ```bash
-# Build and run with docker-compose (recommended)
+# ⚠️ This does NOT work with Claude Code - use for web applications only
+# Build and run with docker-compose
 docker-compose up --build
 
 # Or build and run manually
 docker build -t vibe-check-mcp .
-docker run -p 8000:8000 vibe-check-mcp
+docker run -p 8001:8001 vibe-check-mcp
 ```
 
 ### Docker Compose (Recommended)
@@ -143,11 +198,13 @@ docker run -d \
   vibe-check-mcp:prod
 ```
 
-## 🔗 Claude Code Integration
+## 🔗 Claude Code Integration (Detailed Setup)
+
+> **📋 Quick Setup**: See [Quick Start](#-quick-start-claude-code-required) above for the fastest way to get started.
 
 ### Step 1: Add MCP Server to Claude Code
 
-The correct way to add MCP servers to Claude Code is using the `claude mcp add` command:
+The correct way to add MCP servers to Claude Code is using the `claude mcp add-json` command with **stdio transport**:
 
 #### User-Level Configuration (Recommended)
 
@@ -394,16 +451,33 @@ python -m vibe_check.server
 export GITHUB_TOKEN=your_token_here
 ```
 
-#### 3. Claude Code Connection Issues
+#### 3. Claude Code MCP Connection Issues
+
+**Most Common Issue: "MCP error -32000: Connection closed"**
 
 ```bash
-# Issue: MCP server not responding
-# Solution: Check server is running and port is correct
-python -m vibe_check.server  # Should show "Server ready for MCP protocol connections"
+# SOLUTION 1: Use Native Deployment (NOT Docker HTTP)
+# Claude Code requires stdio transport, not HTTP
+claude mcp remove vibe-check -s user
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "python",
+  "args": ["-m", "vibe_check.server"],
+  "env": {"PYTHONPATH": "'"$(pwd)"'/src"}
+}' -s user
 
-# Check if port 8000 is in use
-lsof -i :8000
+# SOLUTION 2: Verify server uses stdio transport
+cd /path/to/vibe-check-mcp
+PYTHONPATH=src python -m vibe_check server --stdio --help
+
+# SOLUTION 3: Check Claude Code can see the server
+claude mcp list  # Should show vibe-check as available
 ```
+
+**Why Docker HTTP doesn't work with Claude Code:**
+- Claude Code expects stdio transport (stdin/stdout)
+- Docker HTTP uses streamable-http transport (incompatible)
+- Use Native or Docker Bridge deployment instead
 
 #### 4. Docker Build Issues
 
@@ -575,15 +649,35 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - ✅ **Minimal Restrictions**: Simple, permissive license that's developer-friendly
 - ✅ **MCP Ecosystem**: Aligns with Model Context Protocol community standards
 
+## 📋 Summary
+
+### ✅ **For Claude Code Users (Primary Use Case)**
+- **Required**: Claude Code installed
+- **Recommended**: Native deployment with stdio transport
+- **Setup**: Use `claude mcp add-json` command from Quick Start
+- **Performance**: ~2s startup, ~50MB memory, direct integration
+
+### ⚠️ **Important Compatibility Notes**
+- **Claude Code**: Requires stdio transport (Native or Docker Bridge)
+- **Web Applications**: Use Docker HTTP deployment (not compatible with Claude Code)
+- **Docker HTTP**: Does NOT work with Claude Code due to transport mismatch
+
+### 🚀 **Deployment Decision Tree**
+1. **Using Claude Code?** → Use Native Deployment (fastest, simplest)
+2. **Need Docker isolation + Claude Code?** → Use Docker Bridge (compatible but slower)
+3. **Building web application?** → Use Docker HTTP (Claude Code won't work)
+4. **Not sure?** → Start with Native Deployment
+
 ## 🙏 Acknowledgments
 
 - **FastMCP Framework**: For excellent MCP server development experience
 - **Model Context Protocol**: For enabling seamless AI tool integration
-- **Claude Code**: For powerful MCP client capabilities
+- **Claude Code**: For powerful MCP client capabilities and stdio transport support
 - **Engineering Teams**: For validating anti-pattern detection in real scenarios
 
 ---
 
-**Built with ❤️ for engineering excellence and anti-pattern prevention**
+**Built with ❤️ for engineering excellence and anti-pattern prevention**  
+**🎯 Designed specifically for Claude Code MCP integration**
 
 For questions, issues, or contributions, visit: https://github.com/kesslerio/vibe-check-mcp
