@@ -903,10 +903,16 @@ File too large or binary
             logger.info(f"🔍 Created temporary file: {temp_file}")
             
             try:
-                # Run claude -p with the combined prompt
+                # Run claude -p with debug and verbose flags for troubleshooting
                 claude_command = self.claude_cmd or "claude"
-                full_command = [claude_command, "-p", temp_file]
-                logger.info(f"📝 Running Claude command: {' '.join(full_command)}")
+                full_command = [
+                    claude_command, 
+                    "--debug",           # Enable debug mode
+                    "--verbose",         # Enable verbose logging
+                    "-p",               # Print mode
+                    temp_file           # Prompt file
+                ]
+                logger.info(f"📝 Running Claude command with debug flags: {' '.join(full_command)}")
                 
                 # Increase timeout for large PRs (18KB+ content can take time)
                 timeout_seconds = 300  # 5 minutes for comprehensive analysis
@@ -923,8 +929,48 @@ File too large or binary
                 logger.info(f"🔍 stdout size: {len(result.stdout)} chars")
                 logger.info(f"🔍 stderr size: {len(result.stderr)} chars")
                 
+                # Log Claude debug/verbose output for prompt troubleshooting
                 if result.stderr:
-                    logger.info(f"🔍 stderr content: {result.stderr[:500]}{'...' if len(result.stderr) > 500 else ''}")
+                    logger.info("🔍 Claude CLI debug/verbose output:")
+                    # Split stderr into lines for better readability
+                    stderr_lines = result.stderr.strip().split('\n')
+                    for i, line in enumerate(stderr_lines[:20]):  # Show first 20 lines
+                        logger.info(f"🔍   {i+1:2d}: {line}")
+                    if len(stderr_lines) > 20:
+                        logger.info(f"🔍   ... and {len(stderr_lines) - 20} more lines (truncated for readability)")
+                else:
+                    logger.info("🔍 No debug/verbose output from Claude CLI (clean execution)")
+                
+                # Save full debug output to file for detailed analysis (always save)
+                try:
+                    import tempfile
+                    import time
+                    timestamp = int(time.time())
+                    debug_file = f"/tmp/claude_debug_pr_{pr_number}_{timestamp}.log"
+                    prompt_file = f"/tmp/claude_prompt_pr_{pr_number}_{timestamp}.md"
+                    
+                    # Save debug output
+                    with open(debug_file, 'w') as f:
+                        f.write("=== Claude CLI Debug Session ===\n")
+                        f.write(f"Command: {' '.join(full_command)}\n")
+                        f.write(f"Return code: {result.returncode}\n")
+                        f.write(f"Timestamp: {__import__('datetime').datetime.now()}\n")
+                        f.write(f"Timeout: {timeout_seconds} seconds\n")
+                        f.write(f"Prompt file: {prompt_file}\n")
+                        f.write("\n=== STDERR (Debug/Verbose) ===\n")
+                        f.write(result.stderr)
+                        f.write("\n\n=== STDOUT (Response) ===\n")
+                        f.write(result.stdout)
+                    
+                    # Save the prompt content that was sent to Claude
+                    with open(prompt_file, 'w') as f:
+                        f.write(combined_content)
+                    
+                    logger.info(f"🔍 Full Claude debug output saved to: {debug_file}")
+                    logger.info(f"🔍 Prompt content saved to: {prompt_file}")
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to save debug output: {e}")
                 
                 if result.returncode == 0 and result.stdout.strip():
                     output_size = len(result.stdout)
