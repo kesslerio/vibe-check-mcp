@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
+from .educational_content import EducationalContentGenerator, DetailLevel, EducationalResponse
+
 
 @dataclass
 class DetectionResult:
@@ -50,12 +52,20 @@ class PatternDetector:
         
         with open(case_studies_file) as f:
             self.case_studies = json.load(f)
+        
+        # Initialize educational content generator with comprehensive capabilities
+        self.educational_generator = EducationalContentGenerator(
+            patterns_file=patterns_file,
+            case_studies_file=case_studies_file,
+            default_detail_level=DetailLevel.STANDARD
+        )
     
     def analyze_text_for_patterns(
         self,
         content: str,
         context: Optional[str] = None,
-        focus_patterns: Optional[List[str]] = None
+        focus_patterns: Optional[List[str]] = None,
+        detail_level: DetailLevel = DetailLevel.STANDARD
     ) -> List[DetectionResult]:
         """
         Analyze text content for anti-patterns using validated algorithms.
@@ -84,8 +94,8 @@ class PatternDetector:
             result = self._detect_single_pattern(full_text, pattern_config)
             
             if result.detected:
-                # Add educational content for detected patterns
-                result.educational_content = self._generate_educational_content(pattern_id, result)
+                # Add enhanced educational content for detected patterns
+                result.educational_content = self._generate_educational_content(pattern_id, result, detail_level)
                 detected_patterns.append(result)
         
         return detected_patterns
@@ -93,7 +103,8 @@ class PatternDetector:
     def detect_infrastructure_without_implementation(
         self,
         content: str,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        detail_level: DetailLevel = DetailLevel.STANDARD
     ) -> DetectionResult:
         """
         Detect infrastructure-without-implementation pattern specifically.
@@ -116,7 +127,8 @@ class PatternDetector:
         if result.detected:
             result.educational_content = self._generate_educational_content(
                 "infrastructure_without_implementation", 
-                result
+                result,
+                detail_level
             )
         
         return result
@@ -162,30 +174,59 @@ class PatternDetector:
     def _generate_educational_content(
         self,
         pattern_id: str,
-        result: DetectionResult
+        result: DetectionResult,
+        detail_level: DetailLevel = DetailLevel.STANDARD
     ) -> Dict[str, Any]:
         """
-        Generate educational content explaining WHY the pattern is problematic.
+        Generate comprehensive educational content using the enhanced educational generator.
         
-        This includes case studies, prevention strategies, and remediation guidance.
+        This provides multi-level educational content with comprehensive case studies,
+        remediation guidance, and prevention strategies.
         """
-        pattern_config = self.patterns[pattern_id]
+        # Use the enhanced educational content generator
+        educational_response = self.educational_generator.generate_educational_response(
+            pattern_type=pattern_id,
+            confidence=result.confidence,
+            evidence=result.evidence,
+            detail_level=detail_level
+        )
         
-        # Base educational content
+        # Convert to dictionary format for backward compatibility
         educational_content = {
-            "pattern_name": pattern_config["name"],
-            "description": pattern_config["description"],
-            "severity": pattern_config["severity"],
-            "why_problematic": self._get_why_problematic(pattern_id),
-            "evidence_explanation": self._explain_evidence(result.evidence),
-            "remediation_steps": self._get_remediation_steps(pattern_id),
-            "prevention_checklist": self._get_prevention_checklist(pattern_id)
+            "pattern_name": educational_response.pattern_name,
+            "pattern_type": educational_response.pattern_type,
+            "severity": educational_response.severity,
+            "confidence": educational_response.confidence,
+            "detail_level": educational_response.detail_level.value,
+            
+            # Core educational content
+            "why_problematic": educational_response.why_problematic,
+            "impact_explanation": educational_response.impact_explanation,
+            "evidence_explanation": educational_response.evidence_explanation,
+            
+            # Remediation guidance
+            "immediate_actions": educational_response.immediate_actions,
+            "remediation_steps": educational_response.remediation_steps,
+            "prevention_checklist": educational_response.prevention_checklist,
+            
+            # Case studies and examples
+            "related_examples": educational_response.related_examples,
+            "learning_resources": educational_response.learning_resources,
+            "best_practices": educational_response.best_practices
         }
         
         # Add case study if available
-        case_study = self._get_case_study(pattern_id)
-        if case_study:
-            educational_content["case_study"] = case_study
+        if educational_response.case_study:
+            educational_content["case_study"] = {
+                "title": educational_response.case_study.title,
+                "pattern_type": educational_response.case_study.pattern_type,
+                "timeline": educational_response.case_study.timeline,
+                "outcome": educational_response.case_study.outcome,
+                "impact": educational_response.case_study.impact,
+                "root_cause": educational_response.case_study.root_cause,
+                "lesson": educational_response.case_study.lesson,
+                "prevention_checklist": educational_response.case_study.prevention_checklist
+            }
         
         return educational_content
     
