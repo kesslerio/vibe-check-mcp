@@ -191,6 +191,7 @@ def server_status() -> Dict[str, Any]:
             "test_claude_cli_with_file_input - Test Claude CLI with file input",
             "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
             "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
+            "test_claude_cli_recursion_detection - Diagnose recursion issues with Claude CLI",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [

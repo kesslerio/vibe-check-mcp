@@ -86,18 +86,34 @@ def register_claude_cli_test_tool(mcp: FastMCP) -> None:
             
             def run_claude_command():
                 try:
+                    # Create a modified environment to prevent recursion
+                    env = dict(os.environ)
+                    env["CLAUDE_PARENT_PROCESS"] = "mcp-server"
+                    # Remove any existing Claude-related environment variables that might cause issues
+                    env.pop("CLAUDE_CLI_SESSION", None)
+                    env.pop("CLAUDE_CODE_MODE", None)
+                    
+                    if debug_mode:
+                        logger.info(f"Executing command: {' '.join(command)}")
+                        logger.info(f"Working directory: {Path.cwd()}")
+                        logger.info(f"Environment additions: CLAUDE_PARENT_PROCESS=mcp-server")
+                    
                     result = subprocess.run(
                         command,
                         capture_output=True,
                         text=True,
                         timeout=timeout_seconds,
                         cwd=Path.cwd(),
-                        env=dict(os.environ, CLAUDE_PARENT_PROCESS="mcp-server")
+                        env=env
                     )
                     return result
-                except subprocess.TimeoutExpired:
+                except subprocess.TimeoutExpired as e:
+                    if debug_mode:
+                        logger.warning(f"Command timed out after {timeout_seconds} seconds")
                     return None
                 except Exception as e:
+                    if debug_mode:
+                        logger.error(f"Subprocess error: {str(e)}")
                     raise e
             
             loop = asyncio.get_event_loop()
@@ -112,10 +128,16 @@ def register_claude_cli_test_tool(mcp: FastMCP) -> None:
                     return ClaudeCliTestResponse(
                         success=False,
                         output=None,
-                        error=f"Command timed out after {timeout_seconds} seconds",
+                        error=f"Command timed out after {timeout_seconds} seconds. This may indicate a recursive execution issue when Claude CLI is called from within Claude Code.",
                         exit_code=-1,
                         command_used=command_str,
-                        execution_time_seconds=execution_time
+                        execution_time_seconds=execution_time,
+                        diagnostics={
+                            "timeout_reason": "Likely recursive execution conflict",
+                            "suggested_solution": "Claude CLI may not be designed to run from within Claude Code MCP context",
+                            "environment_check": f"CLAUDE_PARENT_PROCESS={os.environ.get('CLAUDE_PARENT_PROCESS', 'not-set')}",
+                            "recursive_detection": "Claude CLI called from within Claude Code may cause infinite recursion"
+                        }
                     )
                 
                 # Enhanced validation and diagnostics
@@ -548,3 +570,78 @@ if __name__ == "__main__":
                 "execution_time_seconds": execution_time,
                 "test_type": "mcp_permissions"
             }
+
+
+    @mcp.tool()
+    async def test_claude_cli_recursion_detection() -> Dict[str, Any]:
+        """
+        Test to detect and diagnose Claude CLI recursion issues.
+        
+        This tool specifically tests whether Claude CLI can be safely invoked
+        from within a Claude Code MCP context without causing recursion.
+        
+        Returns:
+            Detailed diagnosis of recursion potential and safe execution paths
+        """
+        import time
+        start_time = time.time()
+        
+        # Check environment for recursion indicators
+        env_indicators = {
+            "claude_code_mode": os.environ.get("CLAUDE_CODE_MODE"),
+            "claude_cli_session": os.environ.get("CLAUDE_CLI_SESSION"),
+            "mcp_server": os.environ.get("MCP_SERVER"),
+            "term": os.environ.get("TERM"),
+            "parent_process": os.environ.get("CLAUDE_PARENT_PROCESS"),
+            "pwd": os.getcwd(),
+            "path_has_claude": "/claude" in os.environ.get("PATH", "")
+        }
+        
+        # Test a very simple, non-recursive command first
+        test_command = ["echo", "Claude CLI recursion test"]
+        
+        try:
+            import subprocess
+            result = subprocess.run(
+                test_command,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            echo_success = result.returncode == 0
+            
+        except Exception as e:
+            echo_success = False
+            
+        # Analyze recursion risk
+        recursion_risk = "high"
+        risk_factors = []
+        
+        if env_indicators["claude_code_mode"]:
+            risk_factors.append("Claude Code mode detected")
+        if env_indicators["claude_cli_session"]:
+            risk_factors.append("Claude CLI session active")
+        if "claude" in str(os.getpid()):
+            risk_factors.append("Process appears to be Claude-related")
+            
+        if len(risk_factors) == 0:
+            recursion_risk = "low"
+        elif len(risk_factors) == 1:
+            recursion_risk = "medium"
+            
+        execution_time = time.time() - start_time
+        
+        return {
+            "recursion_risk": recursion_risk,
+            "risk_factors": risk_factors,
+            "environment_indicators": env_indicators,
+            "basic_subprocess_works": echo_success,
+            "recommendation": {
+                "safe_to_test_claude": recursion_risk == "low",
+                "suggested_timeout": 10 if recursion_risk == "low" else 5,
+                "alternative_approach": "Use external script or different process context"
+            },
+            "execution_time_seconds": execution_time,
+            "diagnosis": f"Recursion risk: {recursion_risk}. Claude CLI from Claude Code may cause infinite loops."
+        }
