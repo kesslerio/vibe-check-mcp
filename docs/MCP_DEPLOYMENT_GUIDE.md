@@ -46,7 +46,20 @@ This is the optimal approach for Claude Desktop and Claude Code integration, pro
 }
 ```
 
-**For Claude Code** (`~/.cursor/mcp.json` or project-specific):
+**For Claude Code** (using Claude CLI):
+```bash
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "python", 
+  "args": ["-m", "vibe_check.server"],
+  "env": {
+    "PYTHONPATH": "'"$(pwd)"'/src",
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}' -s user
+```
+
+Or manually edit `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
