@@ -243,11 +243,11 @@ class VibeCheckFramework:
                 # Adaptive timeout based on prompt size
                 prompt_size = len(prompt)
                 if prompt_size < 10000:
-                    timeout_seconds = 30
+                    timeout_seconds = 60  # Increased from 30
                 elif prompt_size < 30000:
-                    timeout_seconds = 45  
+                    timeout_seconds = 90  # Increased from 45
                 else:
-                    timeout_seconds = 60
+                    timeout_seconds = 120  # Increased from 60
                     
                 result = subprocess.run(
                     stdin_command,

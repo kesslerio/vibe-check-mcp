@@ -25,7 +25,8 @@ except ImportError:
     print("❌ FastMCP not installed. Install with: pip install fastmcp")
     sys.exit(1)
 
-from .tools.demo_tool import demo_analyze_text, analyze_github_issue as analyze_github_issue_tool
+from .tools.demo_tool import demo_analyze_text
+from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
 from .tools.pr_review import review_pull_request as pr_review_tool
 
 # Configure logging
