@@ -1,0 +1,59 @@
+# Docker Compose configuration for MCP server with socat bridge support
+# This configuration provides both HTTP and bridge access modes
+# 
+# Usage:
+#   # Start both server and bridge
+#   docker-compose -f docker-compose.bridge.yml up
+#   
+#   # Start only the server
+#   docker-compose -f docker-compose.bridge.yml up vibe-check-server
+#   
+#   # Use bridge in Claude Desktop config:
+#   "command": "docker", "args": ["exec", "-i", "vibe-check-bridge", "socat", "STDIO", "TCP:vibe-check-server:8001"]
+
+version: '3.8'
+
+services:
+  # Main MCP server with HTTP transport
+  vibe-check-server:
+    build: .
+    ports:
+      - "${MCP_SERVER_PORT:-8001}:${MCP_SERVER_PORT:-8001}"
+    environment:
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=${MCP_SERVER_PORT:-8001}
+      - RUNNING_IN_DOCKER=true
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${MCP_SERVER_PORT:-8001}/mcp/", "-H", "Accept: text/event-stream"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mcp-network
+
+  # Socat bridge service for stdio compatibility
+  vibe-check-bridge:
+    build: .
+    depends_on:
+      vibe-check-server:
+        condition: service_healthy
+    environment:
+      - MCP_HOST=vibe-check-server
+      - MCP_PORT=${MCP_SERVER_PORT:-8001}
+    networks:
+      - mcp-network
+    # This service runs as a bridge when executed with socat
+    entrypoint: ["/app/scripts/mcp-bridge.sh", "vibe-check-server", "${MCP_SERVER_PORT:-8001}"]
+    stdin_open: true
+    tty: false
+    restart: "no"  # Don't auto-restart bridge connections
+
+networks:
+  mcp-network:
+    driver: bridge

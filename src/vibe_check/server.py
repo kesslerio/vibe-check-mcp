@@ -16,7 +16,8 @@ Or programmatically:
 import logging
 import os
 import sys
-from typing import Dict, Any
+import argparse
+from typing import Dict, Any, Optional
 
 try:
     from fastmcp import FastMCP
@@ -167,21 +168,55 @@ def server_status() -> Dict[str, Any]:
         "anti_pattern_prevention": "✅ Successfully applied in our own development"
     }
 
-def run_server():
+def detect_transport_mode() -> str:
+    """Auto-detect the best transport mode based on environment."""
+    # Check if running in Docker
+    if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
+        return "streamable-http"
+    
+    # Check if Claude Desktop/Code is the client (stdio preferred)
+    if os.environ.get("MCP_CLAUDE_DESKTOP") or os.environ.get("CLAUDE_CODE_MODE"):
+        return "stdio"
+    
+    # Check for explicit transport override
+    transport_override = os.environ.get("MCP_TRANSPORT")
+    if transport_override in ["stdio", "streamable-http"]:
+        return transport_override
+    
+    # Default to stdio for local development, HTTP for server deployment
+    return "stdio" if os.environ.get("TERM") else "streamable-http"
+
+
+def run_server(transport: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = None):
     """
-    Start the Vibe Check MCP server.
+    Start the Vibe Check MCP server with configurable transport.
+    
+    Args:
+        transport: Override transport mode ('stdio' or 'streamable-http')
+        host: Host for HTTP transport (ignored for stdio)
+        port: Port for HTTP transport (ignored for stdio)
     
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
         logger.info("🚀 Starting Vibe Check MCP Server...")
-        logger.info("📊 Core detection engine validated: 87.5% accuracy, 0% false positives")
+        
+        # Quick engine validation
+        logger.info("📊 Core detection engine: 87.5% accuracy, 0% false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
         
-        # Start the FastMCP server with HTTP transport for Docker
-        host = os.environ.get("MCP_SERVER_HOST", "0.0.0.0")
-        port = int(os.environ.get("MCP_SERVER_PORT", "8001"))
-        mcp.run(transport="streamable-http", host=host, port=port)
+        # Determine transport mode
+        transport_mode = transport or detect_transport_mode()
+        
+        if transport_mode == "stdio":
+            logger.info("🔗 Using stdio transport for Claude Desktop/Code integration")
+            mcp.run()
+        else:
+            # HTTP transport for Docker/server deployment
+            server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")
+            server_port = port or int(os.environ.get("MCP_SERVER_PORT", "8001"))
+            logger.info(f"🌐 Using streamable-http transport on http://{server_host}:{server_port}/mcp")
+            mcp.run(transport="streamable-http", host=server_host, port=server_port)
         
     except KeyboardInterrupt:
         logger.info("🛑 Server shutdown requested by user")
@@ -192,8 +227,34 @@ def run_server():
         logger.info("✅ Vibe Check MCP server shutdown complete")
 
 def main():
-    """Entry point for direct server execution."""
-    run_server()
+    """Entry point for direct server execution with CLI argument support."""
+    parser = argparse.ArgumentParser(description="Vibe Check MCP Server")
+    parser.add_argument(
+        "--transport", 
+        choices=["stdio", "streamable-http"], 
+        help="MCP transport mode (auto-detected if not specified)"
+    )
+    parser.add_argument(
+        "--stdio", 
+        action="store_const", 
+        const="stdio", 
+        dest="transport",
+        help="Use stdio transport (shorthand for --transport stdio)"
+    )
+    parser.add_argument(
+        "--host", 
+        default=None,
+        help="Host for HTTP transport (default: 0.0.0.0)"
+    )
+    parser.add_argument(
+        "--port", 
+        type=int,
+        default=None,
+        help="Port for HTTP transport (default: 8001)"
+    )
+    
+    args = parser.parse_args()
+    run_server(transport=args.transport, host=args.host, port=args.port)
 
 if __name__ == "__main__":
     main()
