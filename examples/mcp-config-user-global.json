@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "servers": {
+      "vibe-compass": {
+        "command": "python",
+        "args": ["-m", "vibe_compass.server"],
+        "cwd": "/Users/username/path/to/vibe-compass-mcp",
+        "env": {
+          "GITHUB_TOKEN": "your_github_token_here",
+          "LOG_LEVEL": "INFO"
+        }
+      }
+    }
+  }
+}

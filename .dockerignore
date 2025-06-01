@@ -1,0 +1,59 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Development files
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+
+# Examples directory (not needed in container)
+examples/
+
+# Validation and review scripts (not needed in container)
+validation/
+reviews/
+scripts/
