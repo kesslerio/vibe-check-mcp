@@ -177,8 +177,8 @@ def run_server():
         logger.info("📊 Core detection engine validated: 87.5% accuracy, 0% false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
         
-        # Start the FastMCP server
-        mcp.run()
+        # Start the FastMCP server with HTTP transport for Docker
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
         
     except KeyboardInterrupt:
         logger.info("🛑 Server shutdown requested by user")
@@ -188,5 +188,9 @@ def run_server():
     finally:
         logger.info("✅ Vibe Check MCP server shutdown complete")
 
-if __name__ == "__main__":
+def main():
+    """Entry point for direct server execution."""
     run_server()
+
+if __name__ == "__main__":
+    main()
