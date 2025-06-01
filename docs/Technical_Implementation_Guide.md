@@ -93,11 +93,16 @@ vibe-check-mcp/                          # ACTUAL REPOSITORY
 ├── tests/                                  # ✅ TESTING INFRASTRUCTURE
 └── scripts/                                # ✅ REVIEW AUTOMATION
 
-### ✅ COMPLETED: Phase 2.1-2.2 MCP Integration 
+### ✅ COMPLETED: Phase 2.1-2.3 MCP Integration + External Claude CLI
 ```
 ├── src/vibe_check/
-│   ├── server.py                          # ✅ COMPLETED: FastMCP server with dual-mode tools
+│   ├── server.py                          # ✅ COMPLETED: FastMCP server with external Claude CLI tools
 │   ├── tools/
+│   │   ├── external_claude_cli.py         # ✅ COMPLETED: External Claude CLI integration (450 lines)
+│   │   ├── external_claude_integration.py # ✅ COMPLETED: MCP tool interfaces (350 lines)
+│   │   ├── pr_review.py                   # ✅ ENHANCED: External Claude CLI integration (1477 lines)
+│   │   ├── analyze_issue.py               # ✅ COMPLETED: GitHub issue analysis
+│   │   └── demo_tool.py                   # ✅ COMPLETED: Text analysis demo
 │   │   └── demo_tool.py                   # ✅ COMPLETED: GitHub issue analysis (dual-mode)
 │   └── # Additional tools pending (Issues #23-25, #35-37)
 ```

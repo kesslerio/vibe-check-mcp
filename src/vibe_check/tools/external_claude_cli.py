@@ -168,7 +168,7 @@ Promote good engineering practices through constructive analysis.""",
         # Add isolation markers
         env["CLAUDE_EXTERNAL_EXECUTION"] = "true"
         env["CLAUDE_MCP_ISOLATED"] = "true"
-        env["CLAUDE_TASK_ID"] = f"external_{int(time.time())}"
+        env["CLAUDE_TASK_ID"] = f"external_{int(time.time() * 1000)}"
         
         # Remove potentially conflicting variables
         for var in ["CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "MCP_SERVER"]:
