@@ -5,12 +5,30 @@
 set -e
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <PR_NUMBER>"
-    echo "Example: $0 407"
+    echo "Usage: $0 <PR_NUMBER> [--re-review]"
+    echo "Examples:"
+    echo "  $0 407              # First review or auto-detect re-review"
+    echo "  $0 407 --re-review  # Force re-review mode"
     exit 1
 fi
 
 PR_NUMBER=$1
+FORCE_RE_REVIEW=false
+
+# Parse additional arguments
+shift
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --re-review)
+            FORCE_RE_REVIEW=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
 
 echo "🤖 Starting automated review for PR #$PR_NUMBER..."
 
@@ -121,16 +139,103 @@ fi
 # Get linked issues from PR body
 LINKED_ISSUES=$(echo "$PR_BODY" | grep -oE "(Fixes|Closes|Resolves) #[0-9]+" | grep -oE "[0-9]+" || echo "")
 
-echo "🔍 Running comprehensive analysis with issue validation ($REVIEW_TYPE)..."
+# Get existing PR comments for analysis
+echo "📝 Fetching existing PR comments..."
+EXISTING_COMMENTS=$(gh pr view $PR_NUMBER --json comments --jq '.comments[] | "**@" + .author.login + "** (" + .createdAt + "): " + .body' 2>/dev/null || echo "No comments found")
 
-# Create comprehensive review prompt with issue validation
+# Detect if this is a re-review (auto-detect or forced)
+IS_RE_REVIEW=false
+PREVIOUS_AUTOMATED_REVIEWS=""
+REVIEW_COUNT=0
+
+if [ "$FORCE_RE_REVIEW" = true ] || echo "$EXISTING_COMMENTS" | grep -q "🎯.*Overview\|## 🎯\|🔍.*Analysis\|⚠️.*Critical Issues\|💡.*Suggestions\|Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review"; then
+    IS_RE_REVIEW=true
+    echo "🔄 Re-review mode detected"
+    
+    # Extract previous automated review comments
+    PREVIOUS_AUTOMATED_REVIEWS=$(echo "$EXISTING_COMMENTS" | grep -A 50 -B 2 "🎯.*Overview\|## 🎯\|🔍.*Analysis\|⚠️.*Critical Issues\|💡.*Suggestions\|Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "Previous automated reviews found but could not extract details")
+    
+    # Count previous reviews (look for comprehensive review patterns)
+    REVIEW_COUNT=$(echo "$EXISTING_COMMENTS" | grep -c "🎯.*Overview\|💡.*Suggestions\|⚠️.*Critical Issues" || echo "0")
+    echo "📊 Previous automated reviews: $REVIEW_COUNT"
+else
+    echo "✨ First automated review for this PR"
+fi
+
+# Get issue details if linked issues exist
+ISSUE_ANALYSIS=""
+if [ -n "$LINKED_ISSUES" ]; then
+    echo "🔗 Analyzing linked issues: #$LINKED_ISSUES"
+    for issue_num in $LINKED_ISSUES; do
+        echo "🔍 Fetching issue #$issue_num details..."
+        ISSUE_DATA=$(gh issue view $issue_num --json title,body,labels 2>/dev/null || echo "Issue not found")
+        if [ "$ISSUE_DATA" != "Issue not found" ]; then
+            ISSUE_TITLE_LINKED=$(echo "$ISSUE_DATA" | jq -r '.title')
+            ISSUE_BODY_LINKED=$(echo "$ISSUE_DATA" | jq -r '.body // ""')
+            ISSUE_LABELS_LINKED=$(echo "$ISSUE_DATA" | jq -r '.labels[]?.name' | tr '\n' ', ' | sed 's/,$//')
+            
+            ISSUE_ANALYSIS="$ISSUE_ANALYSIS
+
+## Issue #$issue_num Analysis
+**Title:** $ISSUE_TITLE_LINKED
+**Labels:** $ISSUE_LABELS_LINKED
+**Body:** 
+$ISSUE_BODY_LINKED
+"
+        else
+            ISSUE_ANALYSIS="$ISSUE_ANALYSIS
+
+## Issue #$issue_num Analysis
+**Status:** Issue not found or inaccessible
+"
+        fi
+    done
+fi
+
+echo "🔍 Running comprehensive analysis with comment and issue validation ($REVIEW_TYPE)..."
+
+# Create comprehensive review prompt with re-review context
 cat > /tmp/pr_review_prompt_${PR_NUMBER}.md << EOF
-You are an expert code reviewer for the ShapeScale AI project with focus on systematic prevention of third-party integration failures.
+You are an expert code reviewer with focus on systematic prevention of third-party integration failures. Apply project conventions from CLAUDE.md, .cursor/rules/*, or .windsurfrules (if available).
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "**🔄 RE-REVIEW MODE** - This is review #$((REVIEW_COUNT + 1)) for this PR"
+    echo "**Previous Review Context:**"
+    echo "- Focus on changes since last review"
+    echo "- Identify what issues have been resolved vs. still pending"
+    echo "- Avoid repeating previously identified issues that haven't changed"
+    echo "- Provide incremental analysis focusing on new developments"
+    echo ""
+    echo "**Enhanced Re-Review Instructions:**"
+    echo "1. Compare current state against previous automated review findings"
+    echo "2. Highlight what has been addressed from previous feedback"
+    echo "3. Focus analysis on new changes and unresolved issues"
+    echo "4. Provide progress assessment on previous recommendations"
+else
+    echo "**✨ FIRST REVIEW** - Comprehensive initial analysis"
+    echo ""
+    echo "**Enhanced Review Instructions:**"
+fi)
+1. Use available MCP GitHub tools for comprehensive PR analysis
+2. Apply Clear-Thought MCP tools for systematic code review
+3. Leverage research tools for validation of technical approaches
+4. Employ debugging approaches for identifying potential issues
 
 Perform a comprehensive review of this Pull Request and provide output in the exact format below:
 
 🎯 **Overview**
 Brief summary of what this PR accomplishes and its scope
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "🔄 **Re-Review Analysis** (Review #$((REVIEW_COUNT + 1)))"
+    echo "**Previous Review Summary:**"
+    echo "- [ ] Identify key issues flagged in previous automated review(s)"
+    echo "- [ ] Assess what has been resolved since last review"
+    echo "- [ ] Highlight new changes that need analysis"
+    echo "- [ ] Provide progress assessment: IMPROVED/UNCHANGED/REGRESSED"
+    echo "- [ ] Focus on incremental changes vs. comprehensive re-analysis"
+    echo ""
+fi)
 
 🔗 **Issue Linkage Validation**
 $(if [ -n "$LINKED_ISSUES" ]; then
@@ -138,55 +243,115 @@ $(if [ -n "$LINKED_ISSUES" ]; then
     echo "- [ ] Verify PR addresses the core problem described in linked issue(s)"
     echo "- [ ] Check if acceptance criteria from issue are met"
     echo "- [ ] Validate that solution approach aligns with issue requirements"
+    echo "- [ ] Apply Clear-Thought decision framework to assess PR-issue alignment"
+    echo "- [ ] Ensure all issue requirements are addressed by this PR"
+    echo ""
+    echo "**Linked Issue Analysis Available Below** - Use this to validate alignment"
 else
     echo "⚠️ NO LINKED ISSUES DETECTED - This PR should reference specific issues it addresses"
     echo "- [ ] PR should link to relevant issues using 'Fixes #XXX' syntax"
     echo "- [ ] Changes should be traceable to documented requirements"
+    echo "- [ ] Use MCP GitHub search to find related issues if needed"
 fi)
 
-🚫 **Third-Party Integration & Over-Engineering Check**
+📝 **Previous Review Comments Analysis**
+$(if [ "$EXISTING_COMMENTS" != "No comments found" ]; then
+    echo "- [ ] Analyze existing review feedback and concerns raised"
+    echo "- [ ] Verify that previous review issues have been addressed"
+    echo "- [ ] Check if changes align with reviewer suggestions"
+    echo "- [ ] Identify any unresolved review topics that need follow-up"
+    echo "- [ ] Apply Clear-Thought collaborative reasoning to assess reviewer consensus"
+    echo ""
+    echo "**Previous Comments Available Below** - Address any unresolved feedback"
+else
+    echo "✅ This is the first review of this PR"
+    echo "- [ ] Provide comprehensive initial review"
+    echo "- [ ] Set clear expectations for any needed changes"
+fi)
+
+🚫 **Third-Party Integration & Complexity Assessment**
 - [ ] If this involves third-party services: Does it follow API-first development protocol from CLAUDE.md?
 - [ ] Are we using standard APIs/SDKs instead of building custom implementations?
-- [ ] Check for infrastructure-without-implementation patterns (custom solutions when standard approaches exist)
-- [ ] Validate that any custom code is justified over documented standard approaches
-- [ ] Ensure working POC was demonstrated before complex architecture
+- [ ] **Assess (not necessarily block):** Infrastructure-without-implementation patterns
+- [ ] **Consider:** Is custom code justified and well-documented for its purpose?
+- [ ] **Advisory:** Working POC validation for complex third-party integrations
+- [ ] **Apply Clear-Thought debugging approach:** Systematic analysis of complexity trade-offs
+- [ ] **Use MCP research tools:** Validate third-party service integration approaches
 
 ✅ **Strengths** 
 - Key positive aspects and good practices followed
 - Well-implemented features and patterns
 - Good code quality and architecture decisions
 - Adherence to CLAUDE.md guidelines
+- **Clear-Thought validation:** Systematic reasoning supporting good practices
 
 ⚠️ **Critical Issues**
 - Bugs or problems that must be fixed before merge
 - Breaking changes or compatibility issues
 - Security vulnerabilities or concerns
-- Over-engineering patterns or unnecessary complexity
 - Missing issue linkage or requirement validation
+- **Clear-Thought analysis:** Systematic identification of failure modes and risks
 
-💡 **Suggestions**
+💡 **Complexity & Architecture Considerations**
+- Over-engineering patterns or unnecessary complexity (advisory, not necessarily blocking)
+- Infrastructure complexity vs. benefit trade-offs
+- Optional vs. required dependencies assessment
+- User experience and setup complexity considerations
+- Alternative implementation approaches worth considering
+
+💡 **Enhancement Suggestions**
 - Code improvements and optimizations
 - Best practice recommendations
 - Performance considerations
 - Architecture improvements
-- Simplification opportunities
+- Simplification opportunities (where beneficial, not dogmatic)
+- Optional dependency management strategies
+- User experience improvements
+- **Research-backed recommendations:** External validation of suggested approaches
+- **Clear-Thought insights:** Systematic thinking results informing suggestions
 
 🧪 **Testing Requirements**
 - What needs testing before merge
 - Specific test scenarios to validate
 - Integration test considerations
 - Third-party service validation if applicable
+- **Clear-Thought testing strategy:** Systematic approach to test coverage and validation
 
 📋 **Action Items**
-- [ ] Required changes for approval
+- [ ] **Required changes for approval** (critical issues only)
 - [ ] Issue linkage corrections needed
-- [ ] Recommended improvements
+- [ ] **Recommended improvements** (suggestions, not requirements)
+- [ ] **Advisory considerations** (complexity trade-offs to consider)
 - [ ] Documentation updates needed
 - [ ] Third-party integration validation if applicable
+- [ ] **Optional dependency management** (make MCP servers optional where feasible)
+- [ ] **MCP GitHub follow-up:** Use GitHub tools for any additional PR interactions needed
+
+🧠 **Clear-Thought Analysis Summary**
+[Key insights from systematic thinking tools and how they inform the review]
+
+🔍 **MCP Tools Usage Summary**
+[GitHub tools used, research validation performed, systematic analysis applied]
 
 **Recommendation**: [APPROVE / REQUEST CHANGES / NEEDS DISCUSSION]
+**Analysis Confidence**: [HIGH/MEDIUM/LOW] - [systematic validation quality]
 
-Focus on ShapeScale AI project conventions from CLAUDE.md, systematic prevention of integration failures, and actionable feedback.
+**Review Philosophy**: 
+- Distinguish between critical issues (must fix) and advisory considerations (worth considering)
+- Recognize that complexity may be justified for specific purposes (logging, better analysis, etc.)
+- Focus on helping vs. blocking: provide options and considerations rather than dogmatic requirements
+- Validate third-party integrations but recognize their value when well-implemented
+- Consider user experience: optional dependencies and graceful degradation where possible
+
+**CRITICAL: Code Analysis Guidelines**
+- **ONLY analyze the changed files in this PR diff** - do not count unrelated repository files
+- **Focus on NET changes**: If files were deleted and replaced, analyze the complexity reduction vs. addition
+- **Understand refactoring**: File deletions followed by simpler replacements represent complexity reduction
+- **PR Statistics Context**: +${ADDITIONS}/-${DELETIONS} lines may include large deletions of over-engineered code
+- **Validate Claims**: When author claims complexity reduction, look for evidence in deleted vs. added files
+- **Files Changed**: ${FILES_COUNT} files (focus analysis only on these files, not entire repository)
+
+Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, balanced assessment of complexity trade-offs, and actionable feedback enhanced by MCP tool capabilities.
 EOF
 
 # Create data file for claude -p
@@ -219,6 +384,20 @@ $(echo -e "$PR_DIFF_SAMPLE")
 - Assess security implications of large-scale changes
 - Recommend testing strategies for comprehensive changes
 - Highlight areas that need careful manual review
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
+$ISSUE_ANALYSIS
 EOF
 elif [ "$REVIEW_TYPE" = "LARGE_PR_SUMMARY" ]; then
 cat > /tmp/pr_data_${PR_NUMBER}.md << EOF
@@ -244,6 +423,20 @@ ${PR_DIFF_SAMPLE}
 \`\`\`
 
 **Note:** This is a large PR (${DIFF_SIZE} chars). Review focuses on architecture, patterns, and high-level changes rather than line-by-line analysis.
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
+$ISSUE_ANALYSIS
 EOF
 else
 cat > /tmp/pr_data_${PR_NUMBER}.md << EOF
@@ -267,6 +460,20 @@ ${FILES_CHANGED}
 \`\`\`diff
 ${PR_DIFF}
 \`\`\`
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
+$ISSUE_ANALYSIS
 EOF
 fi
 
@@ -397,13 +604,40 @@ fi
 
 echo "📝 Posting review to PR..."
 
+# Add re-review header if this is a re-review
+if [ "$IS_RE_REVIEW" = true ]; then
+    # Create enhanced header for re-review
+    cat > /tmp/review_header_${PR_NUMBER}.md << EOF
+## 🔄 **Automated PR Re-Review #$((REVIEW_COUNT + 1))**
+
+**Previous Reviews**: $REVIEW_COUNT automated review(s) completed
+**Re-Review Focus**: Changes since last review, progress assessment, new issues
+**Analysis Date**: $(date '+%Y-%m-%d %H:%M:%S')
+
+---
+
+EOF
+    # Combine header with review content
+    cat /tmp/review_header_${PR_NUMBER}.md /tmp/review_output_${PR_NUMBER}.md > /tmp/final_review_${PR_NUMBER}.md
+    REVIEW_FILE="/tmp/final_review_${PR_NUMBER}.md"
+else
+    REVIEW_FILE="/tmp/review_output_${PR_NUMBER}.md"
+fi
+
 # Post review as comment
-gh pr comment $PR_NUMBER --body-file /tmp/review_output_${PR_NUMBER}.md
+gh pr comment $PR_NUMBER --body-file "$REVIEW_FILE"
 
-# Add automated review label
+# Add appropriate labels
 gh pr edit $PR_NUMBER --add-label "automated-review" 2>/dev/null || true
+if [ "$IS_RE_REVIEW" = true ]; then
+    gh pr edit $PR_NUMBER --add-label "re-reviewed" 2>/dev/null || true
+fi
 
-echo "✅ Review completed and posted to PR #$PR_NUMBER"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "✅ Re-review #$((REVIEW_COUNT + 1)) completed and posted to PR #$PR_NUMBER"
+else
+    echo "✅ Initial review completed and posted to PR #$PR_NUMBER"
+fi
 echo "🔗 View at: $(gh pr view $PR_NUMBER --json url -q .url)"
 
 # Cleanup (preserve for debugging)
@@ -412,8 +646,15 @@ echo "- Prompt: /tmp/pr_review_prompt_${PR_NUMBER}.md"
 echo "- Data: /tmp/pr_data_${PR_NUMBER}.md"
 echo "- Combined: /tmp/combined_prompt_${PR_NUMBER}.md"
 echo "- Output: /tmp/review_output_${PR_NUMBER}.md"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "- Re-review header: /tmp/review_header_${PR_NUMBER}.md"
+    echo "- Final review: /tmp/final_review_${PR_NUMBER}.md"
+fi
 echo "- Error log: /tmp/claude_error_${PR_NUMBER}.log"
-# rm /tmp/pr_review_prompt_${PR_NUMBER}.md /tmp/pr_data_${PR_NUMBER}.md /tmp/review_output_${PR_NUMBER}.md /tmp/claude_error_${PR_NUMBER}.log
 
 echo ""
-echo "💡 Full detailed analysis completed using claude -p"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "💡 Re-review analysis completed with context from $REVIEW_COUNT previous review(s)"
+else
+    echo "💡 Full detailed analysis completed using claude -p"
+fi
