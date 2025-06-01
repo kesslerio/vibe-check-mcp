@@ -29,6 +29,7 @@ from .tools.demo_tool import demo_analyze_text
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
 from .tools.pr_review import review_pull_request as pr_review_tool
 from .tools.test_claude_cli import register_claude_cli_test_tool
+from .tools.external_claude_integration import register_external_claude_tools
 
 # Configure logging
 logging.basicConfig(
@@ -46,6 +47,9 @@ mcp = FastMCP("Vibe Check MCP")
 
 # Register Claude CLI test tools
 register_claude_cli_test_tool(mcp)
+
+# Register external Claude CLI integration tools
+register_external_claude_tools(mcp)
 
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -192,6 +196,11 @@ def server_status() -> Dict[str, Any]:
             "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
             "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
             "test_claude_cli_recursion_detection - Diagnose recursion issues with Claude CLI",
+            "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
+            "external_pr_review - External PR review via isolated Claude CLI",
+            "external_code_analysis - External code analysis for anti-patterns",
+            "external_issue_analysis - External issue analysis with specialized prompts",
+            "external_claude_status - Status check for external Claude CLI integration",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [
