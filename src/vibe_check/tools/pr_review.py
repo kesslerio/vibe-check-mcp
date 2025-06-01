@@ -28,7 +28,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
 # Import Claude CLI debug/verbose config
-from src.vibe_check.utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
 logger = logging.getLogger(__name__)
 
