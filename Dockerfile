@@ -60,7 +60,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     from vibe_check.server import run_server; print('Health check passed')" || exit 1
 
 # Default command for development
-CMD ["python", "-m", "vibe_check.server"]
+CMD ["python", "-m", "vibe_check", "server"]
 
 # Production stage
 FROM base as production
@@ -84,7 +84,7 @@ HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=5 \
     from vibe_check.server import run_server; print('Production health check passed')" || exit 1
 
 # Optimized production command
-CMD ["python", "-O", "-m", "vibe_check.server"]
+CMD ["python", "-O", "-m", "vibe_check", "server"]
 
 # Default stage is development
 FROM development
