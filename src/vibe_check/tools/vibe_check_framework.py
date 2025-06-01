@@ -206,9 +206,10 @@ class VibeCheckFramework:
                 prompt_file = f.name
             
             try:
-                # Run Claude analysis
+                # Run Claude analysis using stdin approach (like working script)
+                # CRITICAL: Use content as argument, not file path, to avoid hanging
                 result = subprocess.run(
-                    ['claude', '-p', prompt],
+                    ['claude', '--dangerously-skip-permissions', '-p', prompt],
                     capture_output=True,
                     text=True,
                     timeout=60
