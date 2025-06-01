@@ -239,11 +239,21 @@ class VibeCheckFramework:
                 if CLAUDE_CLI_VERBOSE:
                     stdin_command.append('--verbose')
                 stdin_command.extend(['-p', prompt])
+                
+                # Adaptive timeout based on prompt size
+                prompt_size = len(prompt)
+                if prompt_size < 10000:
+                    timeout_seconds = 30
+                elif prompt_size < 30000:
+                    timeout_seconds = 45  
+                else:
+                    timeout_seconds = 60
+                    
                 result = subprocess.run(
                     stdin_command,
                     capture_output=True,
                     text=True,
-                    timeout=60
+                    timeout=timeout_seconds
                 )
                 
                 if result.returncode == 0 and result.stdout.strip():
