@@ -1,7 +1,7 @@
 """
-Anti-Pattern Coach module entry point.
+Vibe Compass MCP module entry point.
 
-Enables running the MCP server via: python -m anti_pattern_coach
+Enables running the MCP server via: python -m vibe_compass
 """
 
 import sys
@@ -12,14 +12,14 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "server":
         run_server()
     else:
-        print("Anti-Pattern Coach - Engineering Anti-Pattern Detection & Prevention")
+        print("Vibe Compass MCP - Engineering Anti-Pattern Detection & Prevention")
         print("")
         print("Available commands:")
-        print("  python -m anti_pattern_coach server    # Start MCP server")
-        print("  python -m anti_pattern_coach.server    # Direct server startup")
+        print("  python -m vibe_compass server    # Start MCP server")
+        print("  python -m vibe_compass.server    # Direct server startup")
         print("")
         print("For CLI usage:")
-        print("  python -m anti_pattern_coach.cli --help")
+        print("  python -m vibe_compass.cli --help")
         print("")
         print("Phase 2 Status: ✅ FastMCP Server Implementation Complete")
         print("Core Engine: ✅ Validated (87.5% accuracy, 0% false positives)")

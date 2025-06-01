@@ -1,4 +1,4 @@
-# Strategic Integration Summary: Claude Code Guidelines + Anti-Pattern Coach
+# Strategic Integration Summary: Claude Code Guidelines + Vibe Compass MCP
 
 **Date**: January 31, 2025  
 **Status**: Strategic Direction Update  
@@ -40,7 +40,7 @@ The discovery of community demand for architectural guideline enforcement in Cla
 
 ### 2. **CLAUDE.md Development Guidelines Updates**
 
-**New Section**: Anti-Pattern Coach Development Guidelines
+**New Section**: Vibe Compass MCP Development Guidelines
 - **Claude Code Integration Priority**: Primary architectural focus
 - **Strategic Alignment**: Build compatibility with proposed guidelines
 - **Market Validation**: Community demand confirmation
@@ -88,7 +88,7 @@ The discovery of community demand for architectural guideline enforcement in Cla
 
 **Enhanced Architecture**:
 ```
-Anti-Pattern Coach v2.0 Architecture
+Vibe Compass MCP v2.0 Architecture
 ┌─────────────────────────────────────────────────────────────┐
 │                Claude Code Integration Layer                │
 │  • .claude-guidelines.yml parser                          │

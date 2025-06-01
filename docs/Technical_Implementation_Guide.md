@@ -1,5 +1,5 @@
 # Technical Implementation Guide
-## Anti-Pattern Coach: Validated Anti-Pattern Detection System
+## Vibe Compass MCP: Validated Anti-Pattern Detection System
 
 **Version**: 2.0  
 **Date**: June 2025  
@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This guide documents the successful implementation and validation of Anti-Pattern Coach as a proven anti-pattern detection system. Through validation-first development, we prevented Infrastructure-Without-Implementation anti-patterns in our own development process and achieved comprehensive detection capabilities with measurable accuracy.
+This guide documents the successful implementation and validation of Vibe Compass MCP as a proven anti-pattern detection system. Through validation-first development, we prevented Infrastructure-Without-Implementation anti-patterns in our own development process and achieved comprehensive detection capabilities with measurable accuracy.
 
 **✅ VALIDATION SUCCESS METRICS**:
 - **87.5% Detection Accuracy**: Achieved on comprehensive test suite with 0% false positive rate
@@ -32,7 +32,7 @@ This guide documents the successful implementation and validation of Anti-Patter
 
 ### ✅ COMPLETED: Phase 0 & Phase 1 Implementation Status
 ```
-Anti-Pattern Coach - Independent MCP Server Architecture
+Vibe Compass MCP - Independent MCP Server Architecture
 ┌─────────────────────────────────────────────────────────────┐
 │                    MCP Protocol Layer                      │
 │  • Standardized tool/resource/prompt interfaces            │
@@ -65,9 +65,9 @@ Anti-Pattern Coach - Independent MCP Server Architecture
 
 ### ✅ CURRENT Working Repository Structure
 ```
-mcp-code-reviewer/                          # ACTUAL REPOSITORY
+vibe-compass-mcp/                          # ACTUAL REPOSITORY
 ├── src/                                    # ✅ IMPLEMENTED
-│   ├── anti_pattern_coach/
+│   ├── vibe_compass/
 │   │   ├── __init__.py                     # ✅ EXISTS
 │   │   ├── cli.py                          # ✅ WORKING CLI (236 lines, tested)
 │   │   ├── core/
@@ -95,7 +95,7 @@ mcp-code-reviewer/                          # ACTUAL REPOSITORY
 
 ### 🔄 PLANNED: Phase 2 MCP Integration (Next)
 ```
-├── src/anti_pattern_coach/
+├── src/vibe_compass/
 │   ├── server.py                          # 🔄 NEXT: FastMCP server entry point
 │   ├── tools/                             # 🔄 NEXT: MCP tool implementations
 │   │   ├── analyze_issue.py               # 🔄 NEXT: Wrap existing detection
@@ -153,12 +153,12 @@ mcp-code-reviewer/                          # ACTUAL REPOSITORY
 
 ### Server Entry Point
 ```python
-# src/anti_pattern_coach/server.py
+# src/vibe_compass/server.py
 from fastmcp import FastMCP
 from .tools import AnalyzeIssue, AnalyzeCode, ValidateIntegration, ExplainPattern
 
 # Initialize FastMCP server
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 # Initialize tools (auto-registered via decorators)
 analyze_issue = AnalyzeIssue()
@@ -174,14 +174,14 @@ if __name__ == "__main__":
 
 #### Tool 1: Issue Analysis
 ```python
-# src/anti_pattern_coach/tools/analyze_issue.py
+# src/vibe_compass/tools/analyze_issue.py
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional
 from ..core.pattern_detector import PatternDetector
 from ..core.educational_content import EducationalContentGenerator
 from ..integrations.github_client import GitHubClient
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_issue(
@@ -242,13 +242,13 @@ def analyze_issue(
 
 #### Tool 2: Code Analysis
 ```python
-# src/anti_pattern_coach/tools/analyze_code.py
+# src/vibe_compass/tools/analyze_code.py
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional
 from ..core.pattern_detector import PatternDetector
 from ..core.educational_content import EducationalContentGenerator
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_code(
@@ -309,13 +309,13 @@ def analyze_code(
 
 #### Tool 3: Integration Validation
 ```python
-# src/anti_pattern_coach/tools/validate_integration.py
+# src/vibe_compass/tools/validate_integration.py
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional
 from ..core.pattern_detector import PatternDetector
 from ..core.educational_content import EducationalContentGenerator
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def validate_integration(
@@ -376,13 +376,13 @@ def validate_integration(
 
 #### Tool 4: Pattern Explanation
 ```python
-# src/anti_pattern_coach/tools/explain_pattern.py
+# src/vibe_compass/tools/explain_pattern.py
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional
 from ..core.educational_content import EducationalContentGenerator
 from ..core.knowledge_base import KnowledgeBase
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def explain_pattern(
@@ -446,7 +446,7 @@ def explain_pattern(
 
 ### Pattern Detection Engine
 ```python
-# src/anti_pattern_coach/core/pattern_detector.py
+# src/vibe_compass/core/pattern_detector.py
 import ast
 import re
 from typing import List, Dict, Any, Optional
@@ -652,7 +652,7 @@ class AntiPatternASTVisitor(ast.NodeVisitor):
 
 ### Educational Content Generator
 ```python
-# src/anti_pattern_coach/core/educational_content.py
+# src/vibe_compass/core/educational_content.py
 from typing import Dict, Any, List
 from .knowledge_base import KnowledgeBase
 
@@ -771,7 +771,7 @@ from pathlib import Path
 @click.group()
 @click.version_option()
 def cli():
-    """Anti-Pattern Coach - Prevent systematic engineering failures"""
+    """Vibe Compass MCP - Prevent systematic engineering failures"""
     pass
 
 @cli.command()
@@ -872,7 +872,7 @@ def call_mcp_tool(tool_name: str, params: dict) -> dict:
     # This would implement local MCP server communication
     # For now, simulate by importing and calling directly
     
-    from src.anti_pattern_coach.tools import analyze_issue, analyze_code, validate_integration, explain_pattern
+    from src.vibe_compass.tools import analyze_issue, analyze_code, validate_integration, explain_pattern
     
     tool_map = {
         'analyze_issue': analyze_issue,
@@ -992,7 +992,7 @@ disallow_untyped_defs = true
 {
   "anti-pattern-coach": {
     "command": "python",
-    "args": ["-m", "anti_pattern_coach.server"],
+    "args": ["-m", "vibe_compass.server"],
     "env": {
       "GITHUB_TOKEN": "${GITHUB_TOKEN}"
     }
@@ -1012,7 +1012,7 @@ pip install anti-pattern-coach
 anti-pattern-coach configure --mcp
 
 # Manual MCP setup
-echo '{"anti-pattern-coach": {"command": "python", "args": ["-m", "anti_pattern_coach.server"]}}' >> ~/.claude/mcp_servers.json
+echo '{"anti-pattern-coach": {"command": "python", "args": ["-m", "vibe_compass.server"]}}' >> ~/.claude/mcp_servers.json
 ```
 
 ---
@@ -1023,7 +1023,7 @@ echo '{"anti-pattern-coach": {"command": "python", "args": ["-m", "anti_pattern_
 ```python
 # tests/test_tools.py
 import pytest
-from src.anti_pattern_coach.tools.analyze_issue import analyze_issue
+from src.vibe_compass.tools.analyze_issue import analyze_issue
 
 @pytest.mark.asyncio
 async def test_analyze_issue_basic():
@@ -1053,7 +1053,7 @@ async def test_analyze_issue_with_anti_pattern():
 
 # tests/test_detection.py
 import pytest
-from src.anti_pattern_coach.core.pattern_detector import PatternDetector
+from src.vibe_compass.core.pattern_detector import PatternDetector
 
 def test_infrastructure_pattern_detection():
     """Test detection of infrastructure-without-implementation pattern"""
@@ -1191,7 +1191,7 @@ RUN pip install -e .
 
 EXPOSE 8000
 
-CMD ["python", "-m", "anti_pattern_coach.server"]
+CMD ["python", "-m", "vibe_compass.server"]
 ```
 
 ---
@@ -1200,7 +1200,7 @@ CMD ["python", "-m", "anti_pattern_coach.server"]
 
 ### Caching Strategy
 ```python
-# src/anti_pattern_coach/core/cache.py
+# src/vibe_compass/core/cache.py
 import json
 import hashlib
 from pathlib import Path
@@ -1255,7 +1255,7 @@ class AnalysisCache:
 
 ### Async Operations
 ```python
-# src/anti_pattern_coach/core/async_analyzer.py
+# src/vibe_compass/core/async_analyzer.py
 import asyncio
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -1290,7 +1290,7 @@ class AsyncPatternAnalyzer:
 
 ### Usage Analytics (Local Only)
 ```python
-# src/anti_pattern_coach/core/analytics.py
+# src/vibe_compass/core/analytics.py
 import json
 from datetime import datetime
 from pathlib import Path
@@ -1349,4 +1349,4 @@ class LocalAnalytics:
 4. Package for PyPI distribution
 5. Community launch and feedback collection
 
-This technical implementation guide provides the foundation for building Anti-Pattern Coach as an independent FastMCP server that achieves the user's goals of local execution, Claude Code integration, and educational anti-pattern prevention.
+This technical implementation guide provides the foundation for building Vibe Compass MCP as an independent FastMCP server that achieves the user's goals of local execution, Claude Code integration, and educational anti-pattern prevention.

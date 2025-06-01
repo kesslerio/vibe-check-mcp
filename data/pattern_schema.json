@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/kesslerio/mcp-code-reviewer/data/pattern_schema.json",
+  "$id": "https://github.com/kesslerio/vibe-compass-mcp/data/pattern_schema.json",
   "title": "Anti-Pattern Definition Schema",
-  "description": "JSON schema for anti-pattern definitions used by the Anti-Pattern Coach detection system",
+  "description": "JSON schema for anti-pattern definitions used by the Vibe Compass MCP detection system",
   "type": "object",
   "patternProperties": {
     "^[a-z][a-z0-9_]*[a-z0-9]$": {

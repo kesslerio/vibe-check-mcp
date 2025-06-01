@@ -1,4 +1,4 @@
-# Anti-Pattern Coach Dependencies
+# Vibe Compass MCP Dependencies
 
 # Core MCP Integration
 fastmcp>=0.1.0
