@@ -5,12 +5,30 @@
 set -e
 
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <PR_NUMBER>"
-    echo "Example: $0 407"
+    echo "Usage: $0 <PR_NUMBER> [--re-review]"
+    echo "Examples:"
+    echo "  $0 407              # First review or auto-detect re-review"
+    echo "  $0 407 --re-review  # Force re-review mode"
     exit 1
 fi
 
 PR_NUMBER=$1
+FORCE_RE_REVIEW=false
+
+# Parse additional arguments
+shift
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --re-review)
+            FORCE_RE_REVIEW=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
 
 echo "🤖 Starting automated review for PR #$PR_NUMBER..."
 
@@ -125,6 +143,25 @@ LINKED_ISSUES=$(echo "$PR_BODY" | grep -oE "(Fixes|Closes|Resolves) #[0-9]+" | g
 echo "📝 Fetching existing PR comments..."
 EXISTING_COMMENTS=$(gh pr view $PR_NUMBER --json comments --jq '.comments[] | "**@" + .author.login + "** (" + .createdAt + "): " + .body' 2>/dev/null || echo "No comments found")
 
+# Detect if this is a re-review (auto-detect or forced)
+IS_RE_REVIEW=false
+PREVIOUS_AUTOMATED_REVIEWS=""
+REVIEW_COUNT=0
+
+if [ "$FORCE_RE_REVIEW" = true ] || echo "$EXISTING_COMMENTS" | grep -q "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review"; then
+    IS_RE_REVIEW=true
+    echo "🔄 Re-review mode detected"
+    
+    # Extract previous automated review comments
+    PREVIOUS_AUTOMATED_REVIEWS=$(echo "$EXISTING_COMMENTS" | grep -A 50 -B 2 "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "Previous automated reviews found but could not extract details")
+    
+    # Count previous reviews
+    REVIEW_COUNT=$(echo "$EXISTING_COMMENTS" | grep -c "Automated PR Review\|🔍 Automated PR Review\|## 🤖 Enhanced PR Review" || echo "0")
+    echo "📊 Previous automated reviews: $REVIEW_COUNT"
+else
+    echo "✨ First automated review for this PR"
+fi
+
 # Get issue details if linked issues exist
 ISSUE_ANALYSIS=""
 if [ -n "$LINKED_ISSUES" ]; then
@@ -157,11 +194,28 @@ fi
 
 echo "🔍 Running comprehensive analysis with comment and issue validation ($REVIEW_TYPE)..."
 
-# Create comprehensive review prompt with issue validation
+# Create comprehensive review prompt with re-review context
 cat > /tmp/pr_review_prompt_${PR_NUMBER}.md << EOF
 You are an expert code reviewer with focus on systematic prevention of third-party integration failures. Apply project conventions from CLAUDE.md, .cursor/rules/*, or .windsurfrules (if available).
 
-**Enhanced Review Instructions:**
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "**🔄 RE-REVIEW MODE** - This is review #$((REVIEW_COUNT + 1)) for this PR"
+    echo "**Previous Review Context:**"
+    echo "- Focus on changes since last review"
+    echo "- Identify what issues have been resolved vs. still pending"
+    echo "- Avoid repeating previously identified issues that haven't changed"
+    echo "- Provide incremental analysis focusing on new developments"
+    echo ""
+    echo "**Enhanced Re-Review Instructions:**"
+    echo "1. Compare current state against previous automated review findings"
+    echo "2. Highlight what has been addressed from previous feedback"
+    echo "3. Focus analysis on new changes and unresolved issues"
+    echo "4. Provide progress assessment on previous recommendations"
+else
+    echo "**✨ FIRST REVIEW** - Comprehensive initial analysis"
+    echo ""
+    echo "**Enhanced Review Instructions:**"
+fi)
 1. Use available MCP GitHub tools for comprehensive PR analysis
 2. Apply Clear-Thought MCP tools for systematic code review
 3. Leverage research tools for validation of technical approaches
@@ -171,6 +225,17 @@ Perform a comprehensive review of this Pull Request and provide output in the ex
 
 🎯 **Overview**
 Brief summary of what this PR accomplishes and its scope
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "🔄 **Re-Review Analysis** (Review #$((REVIEW_COUNT + 1)))"
+    echo "**Previous Review Summary:**"
+    echo "- [ ] Identify key issues flagged in previous automated review(s)"
+    echo "- [ ] Assess what has been resolved since last review"
+    echo "- [ ] Highlight new changes that need analysis"
+    echo "- [ ] Provide progress assessment: IMPROVED/UNCHANGED/REGRESSED"
+    echo "- [ ] Focus on incremental changes vs. comprehensive re-analysis"
+    echo ""
+fi)
 
 🔗 **Issue Linkage Validation**
 $(if [ -n "$LINKED_ISSUES" ]; then
@@ -314,6 +379,16 @@ $(echo -e "$PR_DIFF_SAMPLE")
 
 ## Previous Review Comments
 $EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
 $ISSUE_ANALYSIS
 EOF
 elif [ "$REVIEW_TYPE" = "LARGE_PR_SUMMARY" ]; then
@@ -343,6 +418,16 @@ ${PR_DIFF_SAMPLE}
 
 ## Previous Review Comments
 $EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
 $ISSUE_ANALYSIS
 EOF
 else
@@ -370,6 +455,16 @@ ${PR_DIFF}
 
 ## Previous Review Comments
 $EXISTING_COMMENTS
+
+$(if [ "$IS_RE_REVIEW" = true ]; then
+    echo "## Previous Automated Reviews (For Re-Review Analysis)"
+    echo "**Review Count**: $REVIEW_COUNT previous automated reviews"
+    echo "**Previous Automated Review Details**:"
+    echo "$PREVIOUS_AUTOMATED_REVIEWS"
+    echo ""
+    echo "**Re-Review Focus**: Compare current state against previous findings and assess progress"
+fi)
+
 $ISSUE_ANALYSIS
 EOF
 fi
@@ -501,13 +596,40 @@ fi
 
 echo "📝 Posting review to PR..."
 
+# Add re-review header if this is a re-review
+if [ "$IS_RE_REVIEW" = true ]; then
+    # Create enhanced header for re-review
+    cat > /tmp/review_header_${PR_NUMBER}.md << EOF
+## 🔄 **Automated PR Re-Review #$((REVIEW_COUNT + 1))**
+
+**Previous Reviews**: $REVIEW_COUNT automated review(s) completed
+**Re-Review Focus**: Changes since last review, progress assessment, new issues
+**Analysis Date**: $(date '+%Y-%m-%d %H:%M:%S')
+
+---
+
+EOF
+    # Combine header with review content
+    cat /tmp/review_header_${PR_NUMBER}.md /tmp/review_output_${PR_NUMBER}.md > /tmp/final_review_${PR_NUMBER}.md
+    REVIEW_FILE="/tmp/final_review_${PR_NUMBER}.md"
+else
+    REVIEW_FILE="/tmp/review_output_${PR_NUMBER}.md"
+fi
+
 # Post review as comment
-gh pr comment $PR_NUMBER --body-file /tmp/review_output_${PR_NUMBER}.md
+gh pr comment $PR_NUMBER --body-file "$REVIEW_FILE"
 
-# Add automated review label
+# Add appropriate labels
 gh pr edit $PR_NUMBER --add-label "automated-review" 2>/dev/null || true
+if [ "$IS_RE_REVIEW" = true ]; then
+    gh pr edit $PR_NUMBER --add-label "re-reviewed" 2>/dev/null || true
+fi
 
-echo "✅ Review completed and posted to PR #$PR_NUMBER"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "✅ Re-review #$((REVIEW_COUNT + 1)) completed and posted to PR #$PR_NUMBER"
+else
+    echo "✅ Initial review completed and posted to PR #$PR_NUMBER"
+fi
 echo "🔗 View at: $(gh pr view $PR_NUMBER --json url -q .url)"
 
 # Cleanup (preserve for debugging)
@@ -516,8 +638,15 @@ echo "- Prompt: /tmp/pr_review_prompt_${PR_NUMBER}.md"
 echo "- Data: /tmp/pr_data_${PR_NUMBER}.md"
 echo "- Combined: /tmp/combined_prompt_${PR_NUMBER}.md"
 echo "- Output: /tmp/review_output_${PR_NUMBER}.md"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "- Re-review header: /tmp/review_header_${PR_NUMBER}.md"
+    echo "- Final review: /tmp/final_review_${PR_NUMBER}.md"
+fi
 echo "- Error log: /tmp/claude_error_${PR_NUMBER}.log"
-# rm /tmp/pr_review_prompt_${PR_NUMBER}.md /tmp/pr_data_${PR_NUMBER}.md /tmp/review_output_${PR_NUMBER}.md /tmp/claude_error_${PR_NUMBER}.log
 
 echo ""
-echo "💡 Full detailed analysis completed using claude -p"
+if [ "$IS_RE_REVIEW" = true ]; then
+    echo "💡 Re-review analysis completed with context from $REVIEW_COUNT previous review(s)"
+else
+    echo "💡 Full detailed analysis completed using claude -p"
+fi
