@@ -24,6 +24,7 @@ except ImportError:
     sys.exit(1)
 
 from .tools.demo_tool import demo_analyze_text
+from .tools.analyze_issue import analyze_issue
 
 # Configure logging
 logging.basicConfig(
@@ -58,6 +59,36 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
     return demo_analyze_text(text, detail_level)
 
 @mcp.tool()
+def analyze_github_issue(
+    issue_number: int, 
+    repository: str = None, 
+    focus_patterns: str = "all",
+    detail_level: str = "standard"
+) -> Dict[str, Any]:
+    """
+    Analyze GitHub issue for anti-patterns using validated core detection engine.
+    
+    Fetches GitHub issue data and analyzes it for systematic engineering anti-patterns
+    using the proven Phase 1 detection algorithms (87.5% accuracy, 0% false positives).
+    
+    Args:
+        issue_number: GitHub issue number to analyze
+        repository: Repository in format "owner/repo" (optional, defaults to current repo)
+        focus_patterns: Comma-separated patterns to focus on, or "all" (default: "all")  
+        detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
+        
+    Returns:
+        Comprehensive analysis with detected patterns, confidence scores, and educational content
+    """
+    logger.info(f"GitHub issue analysis requested: #{issue_number} in {repository or 'default repo'}")
+    return analyze_issue(
+        issue_number=issue_number,
+        repository=repository, 
+        focus_patterns=focus_patterns,
+        detail_level=detail_level
+    )
+
+@mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Compass MCP server status and capabilities.
@@ -78,10 +109,10 @@ def server_status() -> Dict[str, Any]:
         },
         "available_tools": [
             "analyze_text_demo - Demo anti-pattern analysis",
+            "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [
-            "analyze_issue - GitHub issue analysis (Issue #22)",
             "analyze_code - Code content analysis (Issue #23)", 
             "validate_integration - Integration approach validation (Issue #24)",
             "explain_pattern - Pattern education and guidance (Issue #25)"

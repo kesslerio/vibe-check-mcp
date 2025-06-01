@@ -171,5 +171,6 @@ Desktop.ini
 
 # Project specific
 CLAUDE.md
+CLAUDE*.md
 .claude/
 .qodo/
