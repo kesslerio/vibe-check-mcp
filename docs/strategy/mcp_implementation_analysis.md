@@ -1,5 +1,5 @@
 # MCP Implementation Analysis: Build On vs. Build New
-## Deep Technical Decision Framework for Anti-Pattern Coach
+## Deep Technical Decision Framework for Vibe Compass MCP
 
 **Date**: January 2025  
 **Purpose**: Systematic analysis of building on Claude Code MCP vs. independent MCP server  
@@ -60,10 +60,10 @@ server.tool("antiPatternAnalysis", "Analyze for anti-patterns", schema, async (p
 
 #### **Option B: Independent MCP Server**
 ```python
-# anti_pattern_coach/server.py - Independent FastMCP server
+# vibe_compass/server.py - Independent FastMCP server
 from fastmcp import FastMCP
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_for_antipatterns(content: str, context: str = "issue") -> dict:
@@ -96,7 +96,7 @@ Claude Code MCP Responsibilities:
 ├── File system operations
 └── Environment utilities
 
-Anti-Pattern Coach Responsibilities:
+Vibe Compass MCP Responsibilities:
 ├── Systematic failure pattern detection
 ├── Educational content generation
 ├── Case study integration (Cognee lessons)
@@ -195,7 +195,7 @@ anti-pattern-coach/
 from fastmcp import FastMCP
 from .tools import IssueAnalyzer, CodeAnalyzer, IntegrationValidator, PatternExplainer
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_issue(issue_number: int, repository: str = None) -> dict:
@@ -233,7 +233,7 @@ if __name__ == "__main__":
 {
   "anti-pattern-coach": {
     "command": "python",
-    "args": ["-m", "anti_pattern_coach.server"],
+    "args": ["-m", "vibe_compass.server"],
     "env": {
       "GITHUB_TOKEN": "${GITHUB_TOKEN}"
     }
@@ -365,7 +365,7 @@ cd anti-pattern-coach && pip install -e .
 
 ```python
 # Recommended implementation approach
-def build_anti_pattern_coach():
+def build_vibe_compass():
     return {
         "architecture": "Independent FastMCP server",
         "positioning": "Specialized anti-pattern prevention coach",
@@ -387,7 +387,7 @@ def build_anti_pattern_coach():
 
 ## Conclusion
 
-Building an independent MCP server optimized for anti-pattern prevention provides the best path to achieving the user's goals while maintaining clear focus and control. This approach enables seamless integration with Claude Code workflows through the MCP protocol while preserving the specialized educational value proposition that differentiates Anti-Pattern Coach from general development tools.
+Building an independent MCP server optimized for anti-pattern prevention provides the best path to achieving the user's goals while maintaining clear focus and control. This approach enables seamless integration with Claude Code workflows through the MCP protocol while preserving the specialized educational value proposition that differentiates Vibe Compass MCP from general development tools.
 
 The independent server can be designed from the ground up for systematic failure prevention, educational content generation, and workflow integration, resulting in a more focused and effective tool than trying to extend existing general-purpose development servers.
 
