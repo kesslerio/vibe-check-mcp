@@ -23,8 +23,7 @@ except ImportError:
     print("❌ FastMCP not installed. Install with: pip install fastmcp")
     sys.exit(1)
 
-from .tools.demo_tool import demo_analyze_text
-from .tools.analyze_issue import analyze_issue
+from .tools.demo_tool import demo_analyze_text, analyze_github_issue as analyze_github_issue_tool
 
 # Configure logging
 logging.basicConfig(
@@ -61,31 +60,34 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
 @mcp.tool()
 def analyze_github_issue(
     issue_number: int, 
-    repository: str = None, 
-    focus_patterns: str = "all",
-    detail_level: str = "standard"
+    repository: str = "kesslerio/vibe-compass-mcp", 
+    analysis_mode: str = "quick",
+    detail_level: str = "standard",
+    post_comment: bool = False
 ) -> Dict[str, Any]:
     """
-    Analyze GitHub issue for anti-patterns using validated core detection engine.
+    Analyze GitHub issue for anti-patterns with quick or comprehensive modes.
     
-    Fetches GitHub issue data and analyzes it for systematic engineering anti-patterns
-    using the proven Phase 1 detection algorithms (87.5% accuracy, 0% false positives).
+    QUICK MODE: Fast analysis for immediate feedback during development
+    COMPREHENSIVE MODE: Detailed analysis with optional GitHub comment posting
     
     Args:
         issue_number: GitHub issue number to analyze
-        repository: Repository in format "owner/repo" (optional, defaults to current repo)
-        focus_patterns: Comma-separated patterns to focus on, or "all" (default: "all")  
+        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-compass-mcp")
+        analysis_mode: "quick" for immediate analysis or "comprehensive" for detailed review
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
+        post_comment: Post analysis as GitHub comment (comprehensive mode only)
         
     Returns:
-        Comprehensive analysis with detected patterns, confidence scores, and educational content
+        Analysis results with detected patterns and recommendations
     """
-    logger.info(f"GitHub issue analysis requested: #{issue_number} in {repository or 'default repo'}")
-    return analyze_issue(
+    logger.info(f"GitHub issue analysis ({analysis_mode}): #{issue_number} in {repository}")
+    return analyze_github_issue_tool(
         issue_number=issue_number,
         repository=repository, 
-        focus_patterns=focus_patterns,
-        detail_level=detail_level
+        analysis_mode=analysis_mode,
+        detail_level=detail_level,
+        post_comment=post_comment
     )
 
 @mcp.tool()
