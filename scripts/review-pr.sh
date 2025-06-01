@@ -91,12 +91,12 @@ SIZE_BY_CHARS="SMALL"
 SIZE_REASONS=()
 
 # Classify by line changes
-if [ $TOTAL_CHANGES -le 100 ]; then
+if [ $TOTAL_CHANGES -le 500 ]; then
     SIZE_BY_LINES="SMALL"
-elif [ $TOTAL_CHANGES -le 300 ]; then
+elif [ $TOTAL_CHANGES -le 1500 ]; then
     SIZE_BY_LINES="MEDIUM"
     SIZE_REASONS+=("$TOTAL_CHANGES line changes (Medium)")
-elif [ $TOTAL_CHANGES -le 1000 ]; then
+elif [ $TOTAL_CHANGES -le 5000 ]; then
     SIZE_BY_LINES="LARGE"
     SIZE_REASONS+=("$TOTAL_CHANGES line changes (Large)")
 else
