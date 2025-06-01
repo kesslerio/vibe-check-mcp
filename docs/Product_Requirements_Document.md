@@ -144,19 +144,35 @@ anti-pattern-coach configure --setup-mcp
 
 ### Core MCP Tools
 
-#### 1. `analyze_issue` Tool
-**Purpose**: Prevent anti-patterns during planning phase  
-**Input**: Issue number, repository context  
-**Output**: Anti-pattern risk assessment with educational explanations
+#### 1. `analyze_github_issue` Tool ✅ **IMPLEMENTED**
+**Purpose**: Dual-mode anti-pattern analysis during planning phase  
+**Input**: Issue number, repository, analysis mode (quick/comprehensive)  
+**Output**: Anti-pattern risk assessment with optional GitHub integration
+
+**Dual-Mode Operation**:
+- **Quick Mode**: Fast analysis for immediate feedback during development
+- **Comprehensive Mode**: Detailed analysis with automatic GitHub comment posting
+
+**Example Usage**:
+```python
+# Quick analysis for development workflow
+analyze_github_issue(issue_number=23, analysis_mode="quick")
+
+# Comprehensive analysis with automatic GitHub integration  
+analyze_github_issue(issue_number=23, analysis_mode="comprehensive")
+```
 
 **Example Response Format**:
 ```json
 {
-  "patterns_detected": [
+  "analysis_mode": "comprehensive",
+  "issue_number": 23,
+  "patterns_detected": 1,
+  "anti_patterns": [
     {
       "type": "infrastructure_without_implementation",
       "confidence": 0.85,
-      "evidence": ["Custom HTTP client mentioned", "No SDK research documented"],
+      "evidence": "Custom HTTP client mentioned, No SDK research documented",
       "educational_content": {
         "why_problematic": "The Cognee integration failed because we built custom HTTP servers instead of using cognee.add() → cognee.cognify() → cognee.search(). This led to 2+ years of technical debt.",
         "case_study": "docs/case_studies/cognee.md",
@@ -164,25 +180,50 @@ anti-pattern-coach configure --setup-mcp
       }
     }
   ],
-  "recommended_action": "research_standard_apis",
-  "impact_assessment": "high_technical_debt_risk"
+  "risk_assessment": {
+    "third_party_integration": true,
+    "infrastructure_complexity": false,
+    "overall_risk": "medium"
+  },
+  "recommendations": {
+    "overall": "⚠️ Review required before implementation",
+    "action": "review_needed",
+    "specific_actions": [
+      "🔍 API-First Validation Required: Demonstrate basic API functionality with working POC before architectural planning"
+    ]
+  }
 }
 ```
 
-#### 2. `analyze_code` Tool
+#### 2. `analyze_code` Tool 🔄 **PLANNED** (Issue #23)
 **Purpose**: Real-time anti-pattern detection during development  
 **Input**: Code content, context, language  
 **Output**: Systematic problem identification with educational guidance
 
-#### 3. `validate_integration` Tool  
+#### 3. `validate_integration` Tool 🔄 **PLANNED** (Issue #24)
 **Purpose**: Prevent infrastructure-without-implementation patterns  
 **Input**: Service name, proposed approach, documentation status  
 **Output**: Integration risk assessment with standard approach recommendations
 
-#### 4. `explain_pattern` Tool
+#### 4. `explain_pattern` Tool 🔄 **PLANNED** (Issue #25)
 **Purpose**: Educational content about specific anti-patterns  
 **Input**: Pattern ID, case study preferences  
 **Output**: Comprehensive explanation with real-world examples
+
+#### 5. `review_pull_request` Tool 🔄 **PLANNED** (Issue #35)
+**Purpose**: Comprehensive PR review with anti-pattern detection  
+**Input**: PR number, repository context  
+**Output**: Detailed code review with systematic analysis (wraps `scripts/review-pr.sh`)
+
+#### 6. `review_engineering_plan` Tool 🔄 **PLANNED** (Issue #36)  
+**Purpose**: Technical plan validation with Cognee lessons  
+**Input**: Plan file path, optional PRD reference  
+**Output**: Technical validation with risk assessment (wraps `scripts/review-engineering-plan.sh`)
+
+#### 7. `review_prd` Tool 🔄 **PLANNED** (Issue #37)
+**Purpose**: PRD review with anti-pattern detection  
+**Input**: PRD file path  
+**Output**: Strategic assessment with systematic analysis (wraps `scripts/review-prd.sh`)
 
 ### Educational Response System
 
@@ -344,45 +385,58 @@ pathlib          # File operations
 
 ## Implementation Roadmap
 
-### Phase 1: MCP Server Foundation (Week 1)
+### Phase 0: Detection Validation ✅ **COMPLETED**
+**Goal**: Prove anti-pattern detection algorithms work before building infrastructure
+
+**Deliverables**:
+- ✅ Core detection engine validation (87.5% accuracy, 0% false positives)
+- ✅ Educational content system implementation
+- ✅ Pattern definitions and case studies (Cognee failure analysis)
+- ✅ Anti-pattern prevention applied to our own development
+
+### Phase 1: MCP Server Foundation ✅ **COMPLETED**
 **Goal**: Basic working MCP server with Claude integration
 
 **Deliverables**:
 - ✅ FastMCP server setup with basic tool structure
-- ✅ `analyze_issue` tool with GitHub integration
-- ✅ Basic anti-pattern detection (infrastructure-without-implementation)
+- ✅ Dual-mode `analyze_github_issue` tool with GitHub integration
+- ✅ Quick analysis for development workflow
+- ✅ Comprehensive analysis with automatic GitHub comment posting
 - ✅ Educational response formatting system
 - ✅ MCP client testing and validation
 
-### Phase 2: Core Anti-Pattern Detection (Week 2)
-**Goal**: Complete anti-pattern detection and educational content
+### Phase 2: MCP Tool Expansion 🔄 **IN PROGRESS**
+**Goal**: Complete MCP tool suite with review automation integration
+
+**Priority 1 - Development Workflow Tools**:
+- 🔄 **Issue #35**: `review_pull_request` tool (wraps `scripts/review-pr.sh`) - **URGENT**
+- 🔄 **Issue #23**: `analyze_code` tool - Real-time anti-pattern detection
+- 🔄 **Issue #24**: `validate_integration` tool - Prevent infrastructure anti-patterns
+
+**Priority 2 - Review Automation Tools**:
+- 🔄 **Issue #36**: `review_engineering_plan` tool (wraps `scripts/review-engineering-plan.sh`)
+- 🔄 **Issue #37**: `review_prd` tool (wraps `scripts/review-prd.sh`)
+- 🔄 **Issue #25**: `explain_pattern` tool - Educational content system
+
+### Phase 3: Advanced Features 🔄 **PLANNED**
+**Goal**: Enhanced capabilities and community features
 
 **Deliverables**:
-- ✅ All 4 anti-pattern detection tools
-- ✅ Knowledge base integration (Cognee case study)
-- ✅ Confidence scoring and structured responses  
-- ✅ `analyze_code` and `validate_integration` tools
-- ✅ Error handling and edge cases
+- CLI wrapper for standalone usage
+- Performance optimization and caching
+- Advanced pattern detection algorithms
+- Community pattern contribution system
+- PyPI package distribution
 
-### Phase 3: CLI Interface & Polish (Week 3)
-**Goal**: Standalone CLI and production readiness
-
-**Deliverables**:
-- ✅ CLI wrapper implementation for standalone usage
-- ✅ Performance optimization and caching
-- ✅ Comprehensive testing framework
-- ✅ Documentation and setup guides
-- ✅ PyPI package preparation
-
-### Phase 4: Community Release (Week 4)
+### Phase 4: Production & Community 🔄 **PLANNED**
 **Goal**: Production deployment and community adoption
 
 **Deliverables**:
-- ✅ Production deployment testing
-- ✅ User onboarding flow optimization
-- ✅ Community launch and feedback collection
-- ✅ Performance monitoring and optimization
-- ✅ Documentation refinement
+- Production deployment testing
+- Community launch and feedback collection
+- Performance monitoring and optimization
+- Documentation and onboarding optimization
+- Community-driven pattern definitions
 
 ---
 
