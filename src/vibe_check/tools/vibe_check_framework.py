@@ -204,16 +204,35 @@ class VibeCheckFramework:
             # Create sophisticated analysis prompt (ported from bash script)
             prompt = self._create_sophisticated_vibe_prompt(issue_data, basic_patterns)
             
-            # Write prompt to temporary file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-                f.write(prompt)
-                prompt_file = f.name
+            # Create selective MCP config to avoid recursive dependency
+            selective_mcp_config = {
+                "mcpServers": {
+                    "clear-thought-server": {
+                        "command": "node",
+                        "args": ["/Users/kesslerio/repos/clear-thought-mcp-server/dist/index.js", "-s", "user"]
+                    },
+                    "brave-search": {
+                        "command": "npx", 
+                        "args": ["-y", "@modelcontextprotocol/server-brave-search"]
+                    },
+                    "github": {
+                        "command": "bash",
+                        "args": ["-c", "docker attach mcp_github || docker run -i --rm --name mcp_github -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"]
+                    }
+                }
+            }
+            
+            # Write selective MCP config to temp file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                json.dump(selective_mcp_config, f)
+                mcp_config_file = f.name
             
             try:
-                # Build command with config flags
+                # Build command with config flags and selective MCP
                 stdin_command = [
                     'claude',
-                    '--dangerously-skip-permissions'
+                    '--dangerously-skip-permissions',
+                    '--mcp-config', mcp_config_file
                 ]
                 if CLAUDE_CLI_DEBUG:
                     stdin_command.append('--debug')
@@ -234,9 +253,9 @@ class VibeCheckFramework:
                     return None
                     
             finally:
-                # Cleanup temporary file
+                # Cleanup MCP config file
                 try:
-                    os.unlink(prompt_file)
+                    os.unlink(mcp_config_file)
                 except OSError:
                     pass
                     
