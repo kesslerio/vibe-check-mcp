@@ -30,6 +30,9 @@ from pathlib import Path
 # Import Claude CLI debug/verbose config
 from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
+# Import external Claude CLI integration
+from .external_claude_cli import ExternalClaudeCli
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,9 +51,12 @@ class PRReviewTool:
     def __init__(self):
         self.reviews_dir = Path("reviews/pr-reviews")
         self.reviews_dir.mkdir(parents=True, exist_ok=True)
-        self.claude_cmd = None  # Store detected Claude command path
+        self.claude_cmd = None  # Store detected Claude command path (legacy)
         
-    def review_pull_request(
+        # Initialize external Claude CLI integration
+        self.external_claude = ExternalClaudeCli(timeout_seconds=300)  # 5 min timeout for complex PRs
+        
+    async def review_pull_request(
         self,
         pr_number: int,
         repository: str = "kesslerio/vibe-check-mcp",
@@ -86,7 +92,7 @@ class PRReviewTool:
             review_context = self._detect_re_review(pr_data, force_re_review)
             
             # Phase 4: Analysis Generation (replaces lines 260-572)
-            analysis_result = self._generate_comprehensive_analysis(
+            analysis_result = await self._generate_comprehensive_analysis(
                 pr_data, size_analysis, review_context, analysis_mode, detail_level
             )
             
@@ -330,7 +336,7 @@ class PRReviewTool:
             "previous_reviews": comments if is_re_review else []
         }
     
-    def _generate_comprehensive_analysis(
+    async def _generate_comprehensive_analysis(
         self,
         pr_data: Dict,
         size_analysis: Dict,
@@ -361,7 +367,7 @@ class PRReviewTool:
             if claude_available:
                 logger.info("✅ Claude CLI available - attempting enhanced analysis")
                 # Use claude -p for comprehensive analysis (lines 549-572)
-                analysis = self._run_claude_analysis(
+                analysis = await self._run_claude_analysis(
                     prompt_content, data_content, pr_data["metadata"]["number"]
                 )
                 
@@ -387,53 +393,41 @@ class PRReviewTool:
             return self._generate_fallback_analysis(pr_data, size_analysis, review_context)
     
     def _check_claude_availability(self) -> bool:
-        """Check for Claude CLI availability with comprehensive debug logging."""
-        logger.info("🔍 Starting Claude CLI availability check...")
+        """Check external Claude CLI integration availability."""
+        logger.info("🔍 Checking external Claude CLI integration availability...")
         
         try:
-            # Check environment
+            # Check environment for Docker
             import os
             docker_env_exists = os.path.exists("/.dockerenv")
             docker_env_var = os.environ.get("RUNNING_IN_DOCKER")
-            logger.info(f"🔍 Environment check: /.dockerenv={docker_env_exists}, RUNNING_IN_DOCKER={docker_env_var}")
             
             if docker_env_exists or docker_env_var:
-                logger.info("🐳 Running in Docker container - Claude CLI not available, using fallback analysis")
+                logger.info("🐳 Running in Docker container - external Claude CLI not available, using fallback analysis")
                 return False
             
-            # Try multiple ways to detect Claude Code CLI
-            commands_to_try = ["claude", "/Users/kesslerio/.nvm/versions/node/v22.14.0/bin/claude"]
-            logger.info(f"🔍 Testing Claude CLI commands: {commands_to_try}")
+            # Use our external Claude CLI integration to check availability
+            claude_path = self.external_claude._find_claude_cli()
             
-            for i, cmd in enumerate(commands_to_try):
-                logger.info(f"🔍 Testing command {i+1}/{len(commands_to_try)}: {cmd}")
+            if claude_path and claude_path != "claude":
+                logger.info(f"✅ External Claude CLI integration available at {claude_path}")
+                return True
+            elif claude_path == "claude":
+                # Test if default claude command works
                 try:
                     result = subprocess.run(
-                        [cmd, "--version"], 
+                        ["claude", "--version"], 
                         capture_output=True, 
                         text=True, 
-                        check=True,
                         timeout=5
                     )
-                    logger.info(f"🔍 Command output: stdout='{result.stdout.strip()}', stderr='{result.stderr.strip()}'")
-                    
-                    if "Claude Code" in result.stdout or "claude" in result.stdout.lower():
-                        logger.info(f"✅ Claude CLI available at {cmd} for enhanced analysis")
-                        self.claude_cmd = cmd  # Store the working command
+                    if result.returncode == 0:
+                        logger.info("✅ External Claude CLI integration available (default claude command)")
                         return True
-                    else:
-                        logger.warning(f"⚠️ Command succeeded but output doesn't match Claude Code pattern")
-                        
-                except subprocess.CalledProcessError as e:
-                    logger.info(f"❌ Command failed with return code {e.returncode}: {e.stderr}")
-                except FileNotFoundError:
-                    logger.info(f"❌ Command not found: {cmd}")
-                except subprocess.TimeoutExpired:
-                    logger.info(f"❌ Command timed out: {cmd}")
-                except Exception as e:
-                    logger.info(f"❌ Unexpected error: {e}")
+                except Exception:
+                    pass
             
-            logger.warning("⚠️ Claude CLI not available - will use fallback analysis")
+            logger.warning("⚠️ External Claude CLI integration not available - will use fallback analysis")
             return False
             
         except Exception as e:
@@ -893,228 +887,127 @@ File too large or binary
                 
         return "\n".join(sections)
     
-    def _run_claude_analysis(
+    async def _run_claude_analysis(
         self, 
         prompt_content: str, 
         data_content: str, 
         pr_number: int
     ) -> Optional[Dict[str, Any]]:
         """
-        Run claude -p analysis with comprehensive debug logging.
-        Debug/verbose flags are controlled by src.vibe_check.utils.CLAUDE_CLI_DEBUG/VERBOSE.
+        Run Claude analysis using external Claude CLI integration.
+        
+        Replaces the complex subprocess implementation with our external Claude CLI
+        integration that eliminates context blocking and timeout issues.
         """
-        logger.info(f"🔍 Starting Claude analysis for PR #{pr_number}")
+        logger.info(f"🔍 Starting external Claude analysis for PR #{pr_number}")
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
         logger.info(f"🔍 Data content size: {len(data_content)} chars")
         
         try:
-            # Create combined prompt content
+            # Create combined content for analysis
             combined_content = f"{prompt_content}\n\n{data_content}"
             combined_size = len(combined_content)
             logger.info(f"🔍 Combined content size: {combined_size} chars")
             
-            # Set adaptive timeout based on actual content size
+            # Set adaptive timeout based on content size
             timeout_seconds = self._calculate_adaptive_timeout(combined_size, pr_number)
             
-            # Use stdin approach directly (no temp file needed)
-            logger.info(f"🔍 Starting Claude CLI with stdin input (like working script)...")
+            # Update external Claude CLI timeout dynamically
+            self.external_claude.timeout_seconds = timeout_seconds
             
-            try:
-                claude_command = self.claude_cmd or "claude"
-                # Create selective MCP config to avoid recursive dependency
-                selective_mcp_config = {
-                    "mcpServers": {
-                        "clear-thought-server": {
-                            "command": "node",
-                            "args": ["/Users/kesslerio/repos/clear-thought-mcp-server/dist/index.js", "-s", "user"]
-                        },
-                        "brave-search": {
-                            "command": "npx", 
-                            "args": ["-y", "@modelcontextprotocol/server-brave-search"]
-                        },
-                        "github": {
-                            "command": "bash",
-                            "args": ["-c", "docker attach mcp_github || docker run -i --rm --name mcp_github -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"]
-                        }
-                    }
-                }
+            logger.info(f"🔍 Using external Claude CLI integration with {timeout_seconds}s timeout...")
+            
+            # Use external Claude CLI for PR review analysis
+            result = await self.external_claude.analyze_content(
+                content=combined_content,
+                task_type="pr_review",
+                additional_context=f"PR #{pr_number} Analysis"
+            )
+            
+            # Log execution details
+            logger.info(f"🔍 External Claude analysis completed in {result.execution_time:.2f}s")
+            
+            if result.success and result.output:
+                output_size = len(result.output)
+                logger.info(f"🔍 Claude output preview: {result.output[:200]}{'...' if len(result.output) > 200 else ''}")
                 
-                # Write selective MCP config to temp file
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                    json.dump(selective_mcp_config, f)
-                    mcp_config_file = f.name
+                # Log SDK metadata if available
+                if result.cost_usd:
+                    logger.info(f"💰 Analysis cost: ${result.cost_usd:.4f}")
+                if result.session_id:
+                    logger.info(f"🔗 Session ID: {result.session_id}")
+                if result.num_turns:
+                    logger.info(f"🔄 Number of turns: {result.num_turns}")
                 
-                # Build command with config flags and selective MCP
-                stdin_command = [
-                    claude_command,
-                    "--dangerously-skip-permissions",
-                    "--mcp-config", mcp_config_file
-                ]
-                if CLAUDE_CLI_DEBUG:
-                    stdin_command.append("--debug")
-                if CLAUDE_CLI_VERBOSE:
-                    stdin_command.append("--verbose")
-                stdin_command.extend(["-p", combined_content])
-                logger.info(f"📝 Running Claude command: {' '.join(stdin_command[:4])} ... [content omitted]")
-                process = subprocess.Popen(
-                    stdin_command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True
-                )
-                
-                # Stream output in real-time
-                output_lines = []
-                start_time = time.time()
-                
-                while True:
-                    # Check if process finished
-                    if process.poll() is not None:
-                        break
-                        
-                    # Check timeout
-                    if time.time() - start_time > timeout_seconds:
-                        logger.error(f"❌ Claude analysis timed out after {timeout_seconds} seconds")
-                        process.terminate()
-                        try:
-                            process.wait(timeout=5)
-                        except subprocess.TimeoutExpired:
-                            process.kill()
-                        raise subprocess.TimeoutExpired(stdin_command, timeout_seconds)
-                    
-                    # Read line with timeout
-                    
-                    if sys.platform != 'win32':
-                        # Unix-like systems: use select for non-blocking read
-                        ready, _, _ = select.select([process.stdout], [], [], 1.0)
-                        if ready:
-                            line = process.stdout.readline()
-                            if line:
-                                line = line.rstrip()
-                                output_lines.append(line)
-                                logger.info(f"🔍 Claude: {line}")
-                    else:
-                        # Windows: simpler approach
-                        try:
-                            line = process.stdout.readline()
-                            if line:
-                                line = line.rstrip()
-                                output_lines.append(line)
-                                logger.info(f"🔍 Claude: {line}")
-                        except:
-                            pass
-                    
-                    time.sleep(0.1)  # Small delay to prevent CPU spinning
-                
-                # Get final return code and remaining output
-                return_code = process.returncode
-                remaining_output = process.stdout.read()
-                if remaining_output:
-                    remaining_lines = remaining_output.strip().split('\n')
-                    output_lines.extend(remaining_lines)
-                    for line in remaining_lines:
-                        if line.strip():
-                            logger.info(f"🔍 Claude final: {line}")
-                
-                # Create result object compatible with original code
-                class StreamResult:
-                    def __init__(self, returncode, stdout, stderr=""):
-                        self.returncode = returncode
-                        self.stdout = stdout
-                        self.stderr = stderr
-                
-                result = StreamResult(return_code, '\n'.join(output_lines))
-                
-                logger.info(f"🔍 Claude command completed with return code: {result.returncode}")
-                logger.info(f"🔍 stdout size: {len(result.stdout)} chars")
-                logger.info(f"🔍 stderr size: {len(result.stderr)} chars")
-                
-                # Log Claude debug/verbose output for prompt troubleshooting
-                if result.stderr:
-                    logger.info("🔍 Claude CLI debug/verbose output:")
-                    # Split stderr into lines for better readability
-                    stderr_lines = result.stderr.strip().split('\n')
-                    for i, line in enumerate(stderr_lines[:20]):  # Show first 20 lines
-                        logger.info(f"🔍   {i+1:2d}: {line}")
-                    if len(stderr_lines) > 20:
-                        logger.info(f"🔍   ... and {len(stderr_lines) - 20} more lines (truncated for readability)")
-                else:
-                    logger.info("🔍 No debug/verbose output from Claude CLI (clean execution)")
-                
-                # Save full debug output to file for detailed analysis (always save)
+                # Save debug information
                 try:
                     timestamp = int(time.time())
-                    debug_file = f"/tmp/claude_debug_pr_{pr_number}_{timestamp}.log"
+                    debug_file = f"/tmp/claude_external_pr_{pr_number}_{timestamp}.log"
                     prompt_file = f"/tmp/claude_prompt_pr_{pr_number}_{timestamp}.md"
                     
-                    # Save debug output
+                    # Save debug output with SDK metadata
                     with open(debug_file, 'w') as f:
-                        f.write("=== Claude CLI Debug Session ===\n")
-                        f.write(f"Command: {' '.join(stdin_command[:4])} ... [content omitted]\n")
-                        f.write(f"Return code: {result.returncode}\n")
-                        f.write(f"Timestamp: {__import__('datetime').datetime.now()}\n")
+                        f.write("=== External Claude CLI Analysis Session ===\n")
+                        f.write(f"Command: {result.command_used}\n")
+                        f.write(f"Exit code: {result.exit_code}\n")
+                        f.write(f"Execution time: {result.execution_time:.2f}s\n")
+                        f.write(f"Cost: ${result.cost_usd or 0:.4f}\n")
+                        f.write(f"Session ID: {result.session_id or 'N/A'}\n")
+                        f.write(f"Timestamp: {datetime.now()}\n")
                         f.write(f"Timeout: {timeout_seconds} seconds\n")
                         f.write(f"Prompt file: {prompt_file}\n")
-                        f.write("\n=== STDERR (Debug/Verbose) ===\n")
-                        f.write(result.stderr)
-                        f.write("\n\n=== STDOUT (Response) ===\n")
-                        f.write(result.stdout)
+                        f.write("\n=== SDK METADATA ===\n")
+                        f.write(json.dumps(result.sdk_metadata, indent=2))
+                        f.write("\n\n=== OUTPUT ===\n")
+                        f.write(result.output)
+                        if result.error:
+                            f.write("\n\n=== ERROR ===\n")
+                            f.write(result.error)
                     
-                    # Save the prompt content that was sent to Claude
+                    # Save the prompt content
                     with open(prompt_file, 'w') as f:
                         f.write(combined_content)
                     
-                    logger.info(f"🔍 Full Claude debug output saved to: {debug_file}")
+                    logger.info(f"🔍 External Claude debug output saved to: {debug_file}")
                     logger.info(f"🔍 Prompt content saved to: {prompt_file}")
                     
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to save debug output: {e}")
                 
-                if result.returncode == 0 and result.stdout.strip():
-                    output_size = len(result.stdout)
-                    logger.info(f"🔍 Claude output preview: {result.stdout[:200]}{'...' if len(result.stdout) > 200 else ''}")
-                    
-                    if output_size < 50:
-                        logger.warning(f"⚠️ Generated review content seems too short ({output_size} chars)")
-                        logger.info(f"🔍 Full short output: {result.stdout}")
-                        return None
-                        
-                    logger.info(f"✅ Claude analysis completed successfully ({output_size} chars)")
-                    
-                    # Parse Claude output into structured format
-                    logger.info("🔍 Parsing Claude output into structured format...")
-                    parsed_result = self._parse_claude_output(result.stdout, pr_number)
-                    
-                    if parsed_result:
-                        logger.info("✅ Claude output parsed successfully")
-                        return parsed_result
-                    else:
-                        logger.error("❌ Failed to parse Claude output")
-                        return None
-                    
-                else:
-                    logger.error(f"❌ Claude command failed with return code {result.returncode}")
-                    logger.error(f"❌ stderr: {result.stderr}")
-                    logger.info(f"🔍 stdout (if any): {result.stdout}")
+                if output_size < 50:
+                    logger.warning(f"⚠️ Generated review content seems too short ({output_size} chars)")
+                    logger.info(f"🔍 Full short output: {result.output}")
                     return None
                     
-            finally:
-                # Clean up MCP config temp file
-                import os
-                try:
-                    os.unlink(mcp_config_file)
-                    logger.info(f"🔍 Cleaned up MCP config file: {mcp_config_file}")
-                except Exception as cleanup_error:
-                    logger.warning(f"⚠️ Failed to cleanup MCP config file: {cleanup_error}")
+                logger.info(f"✅ External Claude analysis completed successfully ({output_size} chars)")
+                
+                # Parse Claude output into structured format
+                logger.info("🔍 Parsing Claude output into structured format...")
+                parsed_result = self._parse_claude_output(result.output, pr_number)
+                
+                # Add SDK metadata to parsed result
+                if parsed_result and result.sdk_metadata:
+                    parsed_result["sdk_metadata"] = result.sdk_metadata
+                    parsed_result["cost_usd"] = result.cost_usd
+                    parsed_result["session_id"] = result.session_id
+                    parsed_result["execution_time"] = result.execution_time
+                    parsed_result["analysis_method"] = "external-claude-cli"
+                
+                if parsed_result:
+                    logger.info("✅ Claude output parsed successfully")
+                    return parsed_result
+                else:
+                    logger.error("❌ Failed to parse Claude output")
+                    return None
                     
-        except subprocess.TimeoutExpired:
-            logger.error(f"❌ Claude analysis timed out after {timeout_seconds} seconds")
-            logger.error("💡 Large PRs may require more time - this is expected behavior")
-            return None
+            else:
+                logger.error(f"❌ External Claude analysis failed: {result.error}")
+                logger.info(f"🔍 Exit code: {result.exit_code}")
+                logger.info(f"🔍 Execution time: {result.execution_time:.2f}s")
+                return None
+                
         except Exception as e:
-            logger.error(f"❌ Claude analysis failed with exception: {e}")
+            logger.error(f"❌ External Claude analysis failed with exception: {e}")
             import traceback
             logger.debug(f"Stack trace: {traceback.format_exc()}")
             return None
@@ -1546,7 +1439,7 @@ File too large or binary
 
 
 # MCP Tool Interface Function
-def review_pull_request(
+async def review_pull_request(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
     force_re_review: bool = False,
@@ -1575,7 +1468,7 @@ def review_pull_request(
         Complete review results with GitHub integration status
     """
     tool = PRReviewTool()
-    return tool.review_pull_request(
+    return await tool.review_pull_request(
         pr_number=pr_number,
         repository=repository,
         force_re_review=force_re_review,
