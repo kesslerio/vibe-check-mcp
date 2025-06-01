@@ -113,6 +113,11 @@ PROMPT="You are a senior technical architect with expertise in preventing system
 3. Look up similar technical implementations for validation
 4. Provide evidence-based technical recommendations
 5. Apply Cognee retrospective lessons with external research validation
+6. **NEW: Use Clear-Thought MCP tools for systematic analysis:**
+   - Apply sequential thinking for complex architectural decisions
+   - Use mental models (First Principles, Opportunity Cost) for technology evaluation
+   - Employ decision frameworks for critical technical choices
+   - Leverage debugging approaches for risk assessment
 
 **Engineering Anti-Pattern Detection Framework:**
 
@@ -120,26 +125,36 @@ PROMPT="You are a senior technical architect with expertise in preventing system
 - Research the proposed technical stack for stability and best practices
 - Validate complexity claims against industry standards
 - Check for simpler alternatives using research tools
+- **Apply First Principles thinking:** Break down proposed architecture to fundamental requirements
+- **Use Decision Framework:** Evaluate technical stack choices systematically
 
 ### 2. INTEGRATION ASSUMPTION FAILURES  
 - Research third-party APIs and SDKs mentioned
 - Validate compatibility and stability claims
 - Look up common integration pitfalls
+- **Apply Sequential Thinking:** Step through integration dependencies and failure points
+- **Use Debugging Approach:** Anticipate and plan for integration failure modes
 
 ### 3. SCALE PREMATURE OPTIMIZATION
 - Research performance benchmarks for proposed approaches
 - Validate scaling claims with external data
 - Check industry standards for similar applications
+- **Apply Opportunity Cost Analysis:** Evaluate scaling investment vs. simpler solutions
+- **Use Mental Model:** Assess premature optimization patterns systematically
 
 ### 4. TECHNOLOGY SELECTION BIAS
 - Research proposed technologies for production readiness
 - Look up alternatives and comparative analysis
 - Validate team skill requirements
+- **Apply Decision Framework:** Systematic evaluation of technology alternatives
+- **Use First Principles:** Strip away bias to focus on core technical requirements
 
 ### 5. RISK ASSESSMENT BLINDNESS
 - Research failure modes for proposed architecture
 - Look up monitoring and observability best practices
 - Validate backup and recovery approaches
+- **Apply Debugging Approach:** Systematic identification of potential failure modes
+- **Use Sequential Thinking:** Map out failure cascades and mitigation strategies
 
 ## COGNEE RETROSPECTIVE LESSONS WITH RESEARCH VALIDATION
 
@@ -172,15 +187,22 @@ PROMPT="You are a senior technical architect with expertise in preventing system
 $(if [ -n "$PRD_CONTENT" ]; then echo "🔗 **PRD Alignment with Research**
 [Technical approach vs. PRD with external validation]"; fi)
 
+🧠 **Clear-Thought Analysis Results**
+[Results from systematic thinking tools: mental models applied, decision frameworks used, sequential reasoning outcomes]
+
 💡 **Research-Backed Recommendations**
 [Evidence-based improvements with citations]
 
 📚 **Technical Research Citations**
 [Sources used for validation]
 
+🎯 **Systematic Analysis Summary**
+[Key insights from Clear-Thought tools and how they inform the technical decision]
+
 **Overall Assessment**: [APPROVE/NEEDS POC/NEEDS SIMPLIFICATION/REJECT]
 **Infrastructure-Without-Implementation Risk**: [HIGH/MEDIUM/LOW]
 **Research Confidence**: [HIGH/MEDIUM/LOW] - [validation quality]
+**Clear-Thought Confidence**: [HIGH/MEDIUM/LOW] - [systematic analysis quality]
 
 ## ENGINEERING PLAN TO ANALYZE:
 

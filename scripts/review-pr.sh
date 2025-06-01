@@ -125,7 +125,13 @@ echo "🔍 Running comprehensive analysis with issue validation ($REVIEW_TYPE)..
 
 # Create comprehensive review prompt with issue validation
 cat > /tmp/pr_review_prompt_${PR_NUMBER}.md << EOF
-You are an expert code reviewer for the ShapeScale AI project with focus on systematic prevention of third-party integration failures.
+You are an expert code reviewer with focus on systematic prevention of third-party integration failures. Apply project conventions from CLAUDE.md, .cursor/rules/*, or .windsurfrules (if available).
+
+**Enhanced Review Instructions:**
+1. Use available MCP GitHub tools for comprehensive PR analysis
+2. Apply Clear-Thought MCP tools for systematic code review
+3. Leverage research tools for validation of technical approaches
+4. Employ debugging approaches for identifying potential issues
 
 Perform a comprehensive review of this Pull Request and provide output in the exact format below:
 
@@ -135,13 +141,16 @@ Brief summary of what this PR accomplishes and its scope
 🔗 **Issue Linkage Validation**
 $(if [ -n "$LINKED_ISSUES" ]; then
     echo "- Linked Issues: #$LINKED_ISSUES"
+    echo "- [ ] Use MCP GitHub tools to fetch and validate linked issue details"
     echo "- [ ] Verify PR addresses the core problem described in linked issue(s)"
     echo "- [ ] Check if acceptance criteria from issue are met"
     echo "- [ ] Validate that solution approach aligns with issue requirements"
+    echo "- [ ] Apply Clear-Thought decision framework to assess PR-issue alignment"
 else
     echo "⚠️ NO LINKED ISSUES DETECTED - This PR should reference specific issues it addresses"
     echo "- [ ] PR should link to relevant issues using 'Fixes #XXX' syntax"
     echo "- [ ] Changes should be traceable to documented requirements"
+    echo "- [ ] Use MCP GitHub search to find related issues if needed"
 fi)
 
 🚫 **Third-Party Integration & Over-Engineering Check**
@@ -150,12 +159,15 @@ fi)
 - [ ] Check for infrastructure-without-implementation patterns (custom solutions when standard approaches exist)
 - [ ] Validate that any custom code is justified over documented standard approaches
 - [ ] Ensure working POC was demonstrated before complex architecture
+- [ ] **Apply Clear-Thought debugging approach:** Systematic analysis of integration complexity
+- [ ] **Use MCP research tools:** Validate third-party service best practices
 
 ✅ **Strengths** 
 - Key positive aspects and good practices followed
 - Well-implemented features and patterns
 - Good code quality and architecture decisions
 - Adherence to CLAUDE.md guidelines
+- **Clear-Thought validation:** Systematic reasoning supporting good practices
 
 ⚠️ **Critical Issues**
 - Bugs or problems that must be fixed before merge
@@ -163,6 +175,7 @@ fi)
 - Security vulnerabilities or concerns
 - Over-engineering patterns or unnecessary complexity
 - Missing issue linkage or requirement validation
+- **Clear-Thought analysis:** Systematic identification of failure modes and risks
 
 💡 **Suggestions**
 - Code improvements and optimizations
@@ -170,12 +183,15 @@ fi)
 - Performance considerations
 - Architecture improvements
 - Simplification opportunities
+- **Research-backed recommendations:** External validation of suggested approaches
+- **Clear-Thought insights:** Systematic thinking results informing suggestions
 
 🧪 **Testing Requirements**
 - What needs testing before merge
 - Specific test scenarios to validate
 - Integration test considerations
 - Third-party service validation if applicable
+- **Clear-Thought testing strategy:** Systematic approach to test coverage and validation
 
 📋 **Action Items**
 - [ ] Required changes for approval
@@ -183,10 +199,18 @@ fi)
 - [ ] Recommended improvements
 - [ ] Documentation updates needed
 - [ ] Third-party integration validation if applicable
+- [ ] **MCP GitHub follow-up:** Use GitHub tools for any additional PR interactions needed
+
+🧠 **Clear-Thought Analysis Summary**
+[Key insights from systematic thinking tools and how they inform the review]
+
+🔍 **MCP Tools Usage Summary**
+[GitHub tools used, research validation performed, systematic analysis applied]
 
 **Recommendation**: [APPROVE / REQUEST CHANGES / NEEDS DISCUSSION]
+**Analysis Confidence**: [HIGH/MEDIUM/LOW] - [systematic validation quality]
 
-Focus on ShapeScale AI project conventions from CLAUDE.md, systematic prevention of integration failures, and actionable feedback.
+Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, systematic prevention of integration failures, and actionable feedback enhanced by MCP tool capabilities.
 EOF
 
 # Create data file for claude -p
