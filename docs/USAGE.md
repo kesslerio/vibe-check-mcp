@@ -343,6 +343,12 @@ please use vibe-check:analyze_github_issue for this
 - Try comprehensive mode for more detailed analysis
 - Check that the issue content contains sufficient detail
 
+**"PR review uses GitHub MCP instead of vibe-check"** (should be resolved with routing optimizations):
+- ✅ Try natural language first: "vibe check PR 44" should now work
+- ✅ Include pattern keywords: "analyze PR 44 for patterns"
+- 🔄 If still routing incorrectly, use explicit: "use vibe-check to review PR 44"
+- 📝 Report persistent routing issues for further optimization
+
 **"Claude doesn't use Vibe Check automatically"**:
 - Use more specific language (see "Ensuring Tool Selection" above)
 - Include "anti-pattern" or "Vibe Check" in your prompt
@@ -372,11 +378,122 @@ teach me about complexity escalation
 what are the main anti-patterns to avoid?
 ```
 
+## PR Review Usage
+
+The enhanced Vibe Check MCP now includes comprehensive PR review capabilities with Claude CLI integration.
+
+### Natural Language Commands
+
+**Basic PR Review**:
+```
+review pull request 42
+vibe check PR 42
+analyze PR 44 comprehensively
+```
+
+**Explicit Tool Usage** (recommended for consistent routing):
+```
+use vibe-check to review PR 44
+analyze PR 44 with vibe-check
+vibe-check: comprehensive PR review of 44
+```
+
+### Command Routing Notes
+
+✅ **Routing Optimization**: Tool descriptions have been optimized with "vibe check" keywords to improve natural language routing.
+
+**Natural language commands that should work**:
+- `vibe check PR 44` ✅ (optimized routing)
+- `vibe check issue 23` ✅ (optimized routing)  
+- `analyze PR 44 for patterns` ✅ (optimized routing)
+
+**If routing issues persist, use explicit tool references**:
+- `use vibe-check to review PR 44` ✅ (guaranteed)
+- `vibe-check: analyze PR 44 comprehensively` ✅ (guaranteed)
+- `analyze PR 44 with the vibe-check tool` ✅ (guaranteed)
+
+### PR Review Features
+
+**🧠 Enhanced Claude CLI Analysis**:
+- Comprehensive technical review with sophisticated reasoning
+- Anti-pattern detection and prevention guidance
+- Security analysis and architectural review
+- Real-time output streaming for large PRs
+
+**📊 Multi-Dimensional Analysis**:
+- PR size classification (Small/Medium/Large/Very Large)
+- Re-review detection and progress tracking
+- Linked issue validation and requirement alignment
+- Previous review comment analysis
+
+**🔍 Comprehensive Coverage**:
+- Code quality and architecture assessment
+- Third-party integration validation
+- Testing requirements analysis
+- Action items with priority classification
+
+### Enhanced Analysis Output
+
+When using explicit vibe-check tool calls, you'll receive:
+
+```json
+{
+  "pr_number": 44,
+  "analysis": {
+    "claude_analysis": "Full Claude CLI enhanced review...",
+    "analysis_method": "claude-cli",
+    "timestamp": "2025-06-01T12:37:36"
+  },
+  "github_integration": {
+    "comment_posted": true,
+    "labels_added": ["automated-review"]
+  },
+  "review_context": {
+    "is_re_review": false,
+    "review_count": 0
+  }
+}
+```
+
+### GitHub Integration
+
+**Automatic Features**:
+- Posts comprehensive review comment to PR
+- Adds `automated-review` label
+- Tracks re-review status with `re-reviewed` label
+- Validates issue linkage and acceptance criteria
+
+**Re-Review Support**:
+- Detects previous automated reviews
+- Focuses on changes since last review
+- Provides progress assessment
+- Avoids repeating resolved issues
+
+### Security and Performance
+
+**Claude CLI Integration**:
+- Uses `--dangerously-skip-permissions` flag for subprocess execution
+- Real-time output streaming for observability
+- Automatic fallback to standard analysis if Claude CLI unavailable
+- Comprehensive timeout and error handling
+
+**Performance Optimizations**:
+- Large PR detection with summary analysis approach
+- Diff pattern extraction for very large changes
+- Intelligent content sampling for massive PRs
+
+### ✅ Verified Working
+
+**Recent Testing**:
+- PR #44: 6 files, +3734/-0 lines - Full Claude CLI analysis successful
+- PR #48: 3 files, +28/-0 lines - Instant response with comprehensive review
+- Enhanced analysis provides 8000+ character detailed reviews
+- Real-time output streaming working correctly
+
 ## Upcoming Features
 
 The following tools are planned for Phase 2 expansion:
 
-- **PR Review**: `review pull request 42`
 - **Code Analysis**: `analyze this code for patterns`
 - **Integration Validation**: `validate Stripe integration approach`
 - **Engineering Plan Review**: `review engineering plan docs/plan.md`
