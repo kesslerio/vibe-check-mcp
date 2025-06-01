@@ -22,7 +22,24 @@ class PatternDetector:
             patterns_file = Path(__file__).parent.parent / "data" / "anti_patterns.json"
         
         with open(patterns_file) as f:
-            self.patterns = json.load(f)
+            pattern_data = json.load(f)
+        
+        # Extract version information if present
+        self.schema_version = pattern_data.get("schema_version", "1.0.0")
+        self.data_version = pattern_data.get("data_version", "1.0.0")
+        
+        # Extract pattern definitions (exclude version fields)
+        self.patterns = {
+            key: value for key, value in pattern_data.items()
+            if key not in ["schema_version", "data_version"]
+        }
+    
+    def get_version_info(self) -> Dict[str, str]:
+        """Get version information for the pattern database"""
+        return {
+            "schema_version": self.schema_version,
+            "data_version": self.data_version
+        }
     
     def detect_infrastructure_without_implementation(
         self, 
@@ -61,6 +78,7 @@ class PatternDetector:
             "confidence": confidence,
             "evidence": evidence,
             "pattern_type": "infrastructure_without_implementation",
+            "pattern_version": pattern_config.get("version", "1.0.0"),
             "threshold": pattern_config["detection_threshold"]
         }
     
@@ -105,6 +123,7 @@ class PatternDetector:
             "confidence": confidence,
             "evidence": evidence,
             "pattern_type": pattern_config["id"],
+            "pattern_version": pattern_config.get("version", "1.0.0"),
             "threshold": pattern_config["detection_threshold"]
         }
 

@@ -1,6 +1,9 @@
 {
+  "schema_version": "1.1.0",
+  "data_version": "1.0.0",
   "infrastructure_without_implementation": {
     "id": "infrastructure_without_implementation",
+    "version": "1.0.0",
     "name": "Infrastructure Without Implementation",
     "description": "Building custom solutions when standard APIs/SDKs exist and haven't been tested",
     "severity": "high",
@@ -105,7 +108,8 @@
     ]
   },
   "symptom_driven_development": {
-    "id": "symptom_driven_development", 
+    "id": "symptom_driven_development",
+    "version": "1.0.0", 
     "name": "Symptom-Driven Development",
     "description": "Addressing symptoms rather than root causes",
     "severity": "medium",
@@ -134,6 +138,7 @@
   },
   "complexity_escalation": {
     "id": "complexity_escalation",
+    "version": "1.0.0",
     "name": "Complexity Escalation", 
     "description": "Adding complexity instead of questioning necessity",
     "severity": "medium",
@@ -162,6 +167,7 @@
   },
   "documentation_neglect": {
     "id": "documentation_neglect",
+    "version": "1.0.0",
     "name": "Documentation Neglect",
     "description": "Building solutions without researching standard approaches",
     "severity": "medium", 

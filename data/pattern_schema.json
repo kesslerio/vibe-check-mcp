@@ -4,6 +4,19 @@
   "title": "Anti-Pattern Definition Schema",
   "description": "JSON schema for anti-pattern definitions used by the Vibe Compass MCP detection system",
   "type": "object",
+  "required": ["schema_version", "data_version"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the JSON schema (affects validation logic)"
+    },
+    "data_version": {
+      "type": "string", 
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the pattern data (affects detection behavior)"
+    }
+  },
   "patternProperties": {
     "^[a-z][a-z0-9_]*[a-z0-9]$": {
       "type": "object",
@@ -14,6 +27,12 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]*[a-z0-9]$",
           "description": "Unique identifier for the pattern (snake_case, matches property key)"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "default": "1.0.0",
+          "description": "Semantic version of this specific pattern definition"
         },
         "name": {
           "type": "string",
