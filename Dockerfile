@@ -11,10 +11,11 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONPATH=/app/src
 
-# Install system dependencies
+# Install system dependencies including socat for MCP bridge functionality
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security
@@ -44,6 +45,7 @@ RUN pip install --no-cache-dir \
 COPY src/ ./src/
 COPY data/ ./data/
 COPY tests/ ./tests/
+COPY scripts/ ./scripts/
 
 # Change ownership to mcp user
 RUN chown -R mcp:mcp /app
@@ -68,6 +70,7 @@ FROM base as production
 # Copy only necessary files for production
 COPY src/ ./src/
 COPY data/ ./data/
+COPY scripts/ ./scripts/
 
 # Create config directory for mounting
 RUN mkdir -p /app/config && chown -R mcp:mcp /app

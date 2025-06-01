@@ -5,12 +5,14 @@ Enables running the MCP server via: python -m vibe_check
 """
 
 import sys
-from .server import run_server
+from .server import main as server_main
 
 if __name__ == "__main__":
     # Check for server subcommand
     if len(sys.argv) > 1 and sys.argv[1] == "server":
-        run_server()
+        # Remove 'server' from args and pass to server main
+        sys.argv = [sys.argv[0]] + sys.argv[2:]
+        server_main()
     else:
         print("Vibe Check MCP - Engineering Anti-Pattern Detection & Prevention")
         print("")
