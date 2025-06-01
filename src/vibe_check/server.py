@@ -187,8 +187,10 @@ def server_status() -> Dict[str, Any]:
             "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
             "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
             "test_claude_cli_integration - Test Claude CLI integration via MCP",
-            "test_claude_cli_availability - Check Claude CLI availability and version",
+            "test_claude_cli_availability - Check Claude CLI availability and version", 
             "test_claude_cli_with_file_input - Test Claude CLI with file input",
+            "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
+            "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [
