@@ -194,9 +194,66 @@ For cross-repository analysis, always specify the repository:
 analyze issue 23 in microsoft/typescript
 ```
 
+## Ensuring Tool Selection
+
+### When Vibe Compass Isn't Selected Automatically
+
+Sometimes Claude may not automatically choose the Vibe Compass tool for analysis. Here's how to ensure it gets used:
+
+**Explicit Tool References**:
+```
+use vibe compass to analyze issue 35
+analyze issue 35 with vibe compass
+vibe compass: check issue 35 for anti-patterns
+```
+
+**Anti-Pattern Keywords** (triggers tool selection):
+```
+analyze issue 35 for anti-patterns
+check issue 35 for patterns
+scan issue 35 for engineering anti-patterns
+anti-pattern analysis of issue 35
+```
+
+**Specific Mode Requests**:
+```
+run comprehensive anti-pattern analysis on issue 35
+do a quick vibe check on issue 35  
+systematic pattern analysis of issue 35
+```
+
+> **📝 Note**: "Vibe check" phrasing works well and may become the official tool name ([see Issue #39](https://github.com/kesslerio/vibe-compass-mcp/issues/39)).
+
+### Tool Selection Debugging
+
+**Check Available Tools**:
+```
+what MCP tools are available?
+list vibe compass capabilities
+show me the vibe compass server status
+```
+
+**Verify Tool Registration**:
+If Vibe Compass isn't available, check your MCP configuration:
+```bash
+claude mcp list | grep vibe
+```
+
+**Force Tool Usage**:
+When Claude uses other tools instead, explicitly request:
+```
+instead, use the vibe compass analyze_github_issue tool
+please use vibe-compass:analyze_github_issue for this
+```
+
 ## Troubleshooting
 
 ### Common Issues
+
+**"Vibe Compass tool not found"**:
+- Check MCP server registration: `claude mcp list`
+- Verify server is running: `claude mcp status vibe-compass`
+- Re-add server if needed (see [README.md](../README.md))
 
 **"Failed to fetch issue"**:
 - Check that the issue number exists
@@ -212,6 +269,11 @@ analyze issue 23 in microsoft/typescript
 - This is actually good! It means no anti-patterns were found
 - Try comprehensive mode for more detailed analysis
 - Check that the issue content contains sufficient detail
+
+**"Claude doesn't use Vibe Compass automatically"**:
+- Use more specific language (see "Ensuring Tool Selection" above)
+- Include "anti-pattern" or "vibe compass" in your prompt
+- Be explicit: "use vibe compass to analyze..."
 
 ### Authentication Setup
 
