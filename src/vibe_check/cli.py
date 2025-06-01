@@ -1,19 +1,84 @@
 #!/usr/bin/env python3
 """
-Simple CLI for testing core PatternDetector functionality
+Vibe Check CLI - Natural language interface for anti-pattern detection
 
-This CLI provides a way to test the Phase 1 core detection engine
-without any MCP or server dependencies.
+Supports both direct CLI usage and Claude Code integration:
+- vibe check issue 31        (quick mode)
+- deep vibe issue 31         (comprehensive mode)
+- vibe check PR #17          (future feature)
+
+This CLI provides both core testing functionality and MCP server integration.
 """
 
 import sys
+import re
+import argparse
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+
+
+def parse_vibe_command(args: List[str]) -> Optional[dict]:
+    """Parse natural language vibe check commands
+    
+    Supports:
+    - vibe check issue 31
+    - deep vibe issue 31
+    - vibe check issue 31 in owner/repo
+    """
+    text = " ".join(args)
+    
+    # Check for deep vibe (comprehensive mode)
+    is_deep = "deep vibe" in text.lower()
+    
+    # Extract issue number
+    issue_match = re.search(r'issue\s+#?(\d+)', text, re.IGNORECASE)
+    if not issue_match:
+        return None
+    
+    issue_number = int(issue_match.group(1))
+    
+    # Extract repository (optional)
+    repo_match = re.search(r'in\s+([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)', text, re.IGNORECASE)
+    repository = repo_match.group(1) if repo_match else None
+    
+    return {
+        "action": "analyze_issue",
+        "issue_number": issue_number,
+        "repository": repository,
+        "mode": "comprehensive" if is_deep else "quick"
+    }
+
+
+def analyze_github_issue(issue_number: int, repository: Optional[str] = None, mode: str = "quick"):
+    """Analyze a GitHub issue using MCP tools if available, fallback to manual"""
+    try:
+        # Try to use MCP server integration
+        import subprocess
+        import json
+        
+        cmd = ["python", "-m", "vibe_check.server", "--analyze-issue", str(issue_number)]
+        if repository:
+            cmd.extend(["--repository", repository])
+        if mode == "comprehensive":
+            cmd.append("--comprehensive")
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(__file__).parent.parent.parent)
+        
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            print(f"❌ MCP analysis failed: {result.stderr}")
+            return None
+            
+    except Exception as e:
+        print(f"⚠️  MCP integration unavailable: {e}")
+        print("💡 For full GitHub integration, ensure MCP server is configured")
+        return None
 
 
 def format_detection_result(result: DetectionResult) -> str:
@@ -207,6 +272,32 @@ def interactive_test():
 def main():
     """Main CLI entry point"""
     if len(sys.argv) > 1:
+        # Try to parse as natural language command first
+        vibe_cmd = parse_vibe_command(sys.argv[1:])
+        if vibe_cmd:
+            if vibe_cmd["action"] == "analyze_issue":
+                print(f"🔍 {'Deep vibe' if vibe_cmd['mode'] == 'comprehensive' else 'Vibe check'} analyzing issue #{vibe_cmd['issue_number']}")
+                if vibe_cmd["repository"]:
+                    print(f"📁 Repository: {vibe_cmd['repository']}")
+                
+                result = analyze_github_issue(
+                    vibe_cmd["issue_number"], 
+                    vibe_cmd["repository"], 
+                    vibe_cmd["mode"]
+                )
+                
+                if result:
+                    print("✅ Analysis complete!")
+                    if isinstance(result, dict):
+                        print(f"📊 Patterns detected: {result.get('patterns_detected', 0)}")
+                        if result.get('anti_patterns'):
+                            for pattern in result['anti_patterns']:
+                                print(f"🚨 {pattern['type']}: {pattern.get('confidence', 0):.2f} confidence")
+                else:
+                    print("❌ Analysis failed - ensure MCP server is configured")
+                return
+        
+        # Legacy commands for testing
         command = sys.argv[1]
         
         if command == "validate":
@@ -224,12 +315,31 @@ def main():
         elif command == "interactive":
             interactive_test()
         else:
-            print(f"Unknown command: {command}")
+            print(f"🤔 Unknown command. Try:")
+            print("  vibe check issue 31")
+            print("  deep vibe issue 31")
+            print("  vibe check issue 31 in owner/repo")
+            print("  validate  (run tests)")
+            print("  interactive  (test mode)")
             sys.exit(1)
     else:
-        # Default: run validation
-        success = run_validation_test()
-        sys.exit(0 if success else 1)
+        # Default: show usage
+        print("🎵 Vibe Check CLI")
+        print()
+        print("Quick analysis:")
+        print("  vibe check issue 31")
+        print("  vibe check issue 31 in microsoft/typescript")
+        print()
+        print("Deep analysis (comprehensive mode):")
+        print("  deep vibe issue 31")
+        print("  deep vibe issue 31 in facebook/react")
+        print()
+        print("Testing:")
+        print("  validate     - Run validation tests")
+        print("  interactive  - Interactive testing mode")
+        print()
+        print("💡 For full GitHub integration, configure the MCP server")
+        print("   See docs/USAGE.md for setup instructions")
 
 
 if __name__ == "__main__":

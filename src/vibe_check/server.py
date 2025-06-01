@@ -24,6 +24,7 @@ except ImportError:
     sys.exit(1)
 
 from .tools.demo_tool import demo_analyze_text, analyze_github_issue as analyze_github_issue_tool
+from .tools.pr_review import review_pull_request as pr_review_tool
 
 # Configure logging
 logging.basicConfig(
@@ -95,6 +96,44 @@ def analyze_github_issue(
     )
 
 @mcp.tool()
+def review_pull_request(
+    pr_number: int,
+    repository: str = "kesslerio/vibe-check-mcp",
+    force_re_review: bool = False,
+    analysis_mode: str = "comprehensive",
+    detail_level: str = "standard"
+) -> Dict[str, Any]:
+    """
+    Comprehensive PR review incorporating ALL functionality from scripts/review-pr.sh.
+    
+    Enterprise-grade PR review with:
+    - Multi-dimensional size classification
+    - Re-review detection and progress tracking
+    - Linked issue analysis and validation
+    - Clear-Thought integration for systematic analysis
+    - Comprehensive GitHub integration
+    - Permanent logging and review tracking
+    
+    Args:
+        pr_number: PR number to review
+        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
+        force_re_review: Force re-review mode even if not auto-detected
+        analysis_mode: "comprehensive" for full analysis or "quick" for basic review
+        detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
+        
+    Returns:
+        Complete review results with GitHub integration status and permanent logging
+    """
+    logger.info(f"Comprehensive PR review requested: #{pr_number} in {repository} (mode: {analysis_mode})")
+    return pr_review_tool(
+        pr_number=pr_number,
+        repository=repository,
+        force_re_review=force_re_review,
+        analysis_mode=analysis_mode,
+        detail_level=detail_level
+    )
+
+@mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Check MCP server status and capabilities.
@@ -116,6 +155,7 @@ def server_status() -> Dict[str, Any]:
         "available_tools": [
             "analyze_text_demo - Demo anti-pattern analysis",
             "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
+            "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [
