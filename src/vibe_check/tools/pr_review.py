@@ -907,6 +907,7 @@ File too large or binary
                 claude_command = self.claude_cmd or "claude"
                 full_command = [
                     claude_command, 
+                    "--dangerously-skip-permissions",  # Bypass file access security for subprocess
                     "--debug",           # Enable debug mode
                     "--verbose",         # Enable verbose logging
                     "-p",               # Print mode
