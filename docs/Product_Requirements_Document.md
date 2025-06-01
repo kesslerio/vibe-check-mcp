@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-## Anti-Pattern Coach: MCP-Native Engineering Excellence Platform
+## Vibe Compass MCP: MCP-Native Engineering Excellence Platform
 
 **Version**: 2.0  
 **Date**: January 2025  
@@ -10,11 +10,11 @@
 
 ## Executive Summary
 
-**Anti-Pattern Coach** is an independent MCP server that prevents systematic engineering failures through real-time anti-pattern detection and educational coaching. Built specifically for integration with Claude Code CLI workflows, it transforms hard-won lessons from real-world failures into actionable prevention guidance.
+**Vibe Compass MCP** is an independent MCP server that prevents systematic engineering failures through real-time anti-pattern detection and educational coaching. Built specifically for integration with Claude Code CLI workflows, it transforms hard-won lessons from real-world failures into actionable prevention guidance.
 
 **Strategic Positioning**: The first MCP-native anti-pattern prevention coach that integrates educational systematic failure prevention directly into Claude Code workflows.
 
-**Market Differentiation**: While CodeRabbit provides enterprise team automation and PR-Agent offers multi-platform review capabilities, Anti-Pattern Coach focuses exclusively on educational prevention of systematic patterns that cause long-term technical debt.
+**Market Differentiation**: While CodeRabbit provides enterprise team automation and PR-Agent offers multi-platform review capabilities, Vibe Compass MCP focuses exclusively on educational prevention of systematic patterns that cause long-term technical debt.
 
 ---
 
@@ -85,7 +85,7 @@ Market Positioning:
 │   └── Focus: Automation, webhook integration
 ├── GitHub Actions Ecosystem
 │   └── Focus: CI/CD integration, workflow automation
-└── Anti-Pattern Coach (Our Position)
+└── Vibe Compass MCP (Our Position)
     └── Focus: Educational prevention, MCP integration, individual coaching
 ```
 
@@ -130,7 +130,7 @@ anti-pattern-coach configure --setup-mcp
 {
   "anti-pattern-coach": {
     "command": "python", 
-    "args": ["-m", "anti_pattern_coach.server"],
+    "args": ["-m", "vibe_compass.server"],
     "env": {
       "GITHUB_TOKEN": "${GITHUB_TOKEN}"
     }
@@ -222,7 +222,7 @@ pattern_violation:
 
 ### MCP Server Architecture (Independent FastMCP)
 ```
-Anti-Pattern Coach - Independent MCP Server
+Vibe Compass MCP - Independent MCP Server
 ┌─────────────────────────────────────────────────────────────┐
 │                    MCP Server Layer (Primary)               │
 │  • FastMCP framework                                        │
@@ -449,7 +449,7 @@ pathlib          # File operations
 
 ## Conclusion
 
-Anti-Pattern Coach represents a unique opportunity to serve the underserved market of individual technical leaders who need educational coaching beyond what enterprise team tools provide. By building as an independent MCP server with FastMCP, we can achieve seamless integration with Claude Code workflows while maintaining the specialized focus on systematic failure prevention that differentiates us from general code review platforms.
+Vibe Compass MCP represents a unique opportunity to serve the underserved market of individual technical leaders who need educational coaching beyond what enterprise team tools provide. By building as an independent MCP server with FastMCP, we can achieve seamless integration with Claude Code workflows while maintaining the specialized focus on systematic failure prevention that differentiates us from general code review platforms.
 
 The path forward is clear: build an independent MCP server optimized for anti-pattern prevention that provides educational value through real-world case studies and actionable prevention strategies. This approach enables the `claude -p @anti-pattern-coach` workflow the user desires while positioning for future ecosystem growth and community adoption.
 

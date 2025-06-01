@@ -13,8 +13,8 @@ import os
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from anti_pattern_coach.tools.demo_tool import demo_analyze_text
-from anti_pattern_coach.server import analyze_text_demo, server_status
+from vibe_compass.tools.demo_tool import demo_analyze_text
+from vibe_compass.server import analyze_text_demo, server_status
 
 
 class TestMCPServerIntegration:
@@ -53,7 +53,7 @@ class TestMCPServerIntegration:
         status = server_status()
         
         # Verify status structure
-        assert status["server_name"] == "Anti-Pattern Coach"
+        assert status["server_name"] == "Vibe Compass MCP"
         assert status["status"] == "✅ Operational"
         assert status["core_engine_status"]["validation_completed"] is True
         assert status["core_engine_status"]["detection_accuracy"] == "87.5%"
@@ -74,7 +74,7 @@ class TestMCPServerIntegration:
         
     def test_server_import(self):
         """Test server can be imported and initialized"""
-        from anti_pattern_coach.server import mcp, run_server
+        from vibe_compass.server import mcp, run_server
         
         # Verify FastMCP instance
         assert mcp is not None
@@ -83,10 +83,10 @@ class TestMCPServerIntegration:
         # Verify run_server function exists
         assert callable(run_server)
         
-    @patch('anti_pattern_coach.server.mcp.run')
+    @patch('vibe_compass.server.mcp.run')
     def test_server_startup(self, mock_run):
         """Test server startup process"""
-        from anti_pattern_coach.server import run_server
+        from vibe_compass.server import run_server
         
         # Test normal startup
         run_server()
@@ -95,14 +95,14 @@ class TestMCPServerIntegration:
     def test_module_structure(self):
         """Test proper module structure and imports"""
         # Test main module imports
-        from anti_pattern_coach import PatternDetector, EducationalContentGenerator, run_server
+        from vibe_compass import PatternDetector, EducationalContentGenerator, run_server
         
         assert PatternDetector is not None
         assert EducationalContentGenerator is not None
         assert run_server is not None
         
         # Test tools module
-        from anti_pattern_coach.tools import demo_analyze_text
+        from vibe_compass.tools import demo_analyze_text
         assert demo_analyze_text is not None
 
 

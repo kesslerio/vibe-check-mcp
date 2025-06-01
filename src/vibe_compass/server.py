@@ -1,15 +1,15 @@
 """
-Anti-Pattern Coach FastMCP Server
+Vibe Compass MCP FastMCP Server
 
 Main MCP server entry point that provides anti-pattern detection capabilities
 via the Model Context Protocol. Built on top of the validated Phase 1 core 
 detection engine (87.5% accuracy, 0% false positives).
 
 Usage:
-    python -m anti_pattern_coach.server
+    python -m vibe_compass.server
     
 Or programmatically:
-    from anti_pattern_coach.server import run_server
+    from vibe_compass.server import run_server
     run_server()
 """
 
@@ -31,13 +31,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('anti_pattern_coach.log')
+        logging.FileHandler('vibe_compass.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -60,13 +60,13 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
 @mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
-    Get Anti-Pattern Coach server status and capabilities.
+    Get Vibe Compass MCP server status and capabilities.
     
     Returns:
         Server status, core engine validation results, and available capabilities
     """
     return {
-        "server_name": "Anti-Pattern Coach",
+        "server_name": "Vibe Compass MCP",
         "version": "Phase 2.1 - FastMCP Integration",
         "status": "✅ Operational",
         "core_engine_status": {
@@ -91,12 +91,12 @@ def server_status() -> Dict[str, Any]:
 
 def run_server():
     """
-    Start the Anti-Pattern Coach MCP server.
+    Start the Vibe Compass MCP server.
     
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
-        logger.info("🚀 Starting Anti-Pattern Coach MCP Server...")
+        logger.info("🚀 Starting Vibe Compass MCP Server...")
         logger.info("📊 Core detection engine validated: 87.5% accuracy, 0% false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
         
@@ -109,7 +109,7 @@ def run_server():
         logger.error(f"❌ Server startup failed: {e}")
         sys.exit(1)
     finally:
-        logger.info("✅ Anti-Pattern Coach server shutdown complete")
+        logger.info("✅ Vibe Compass MCP server shutdown complete")
 
 if __name__ == "__main__":
     run_server()

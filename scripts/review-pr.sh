@@ -81,9 +81,46 @@ FILES_CHANGED=$(echo "$PR_INFO" | jq -r '.files[].path')
 TOTAL_CHANGES=$((ADDITIONS + DELETIONS))
 echo "📊 PR Statistics: $FILES_COUNT files, +$ADDITIONS/-$DELETIONS lines (total: $TOTAL_CHANGES changes)"
 
+# Create reviews directory structure
+mkdir -p reviews/pr-reviews
+
+# Multi-dimensional PR size classification
+SIZE_BY_LINES="SMALL"
+SIZE_BY_FILES="SMALL"
+SIZE_BY_CHARS="SMALL"
+SIZE_REASONS=()
+
+# Classify by line changes
+if [ $TOTAL_CHANGES -le 100 ]; then
+    SIZE_BY_LINES="SMALL"
+elif [ $TOTAL_CHANGES -le 300 ]; then
+    SIZE_BY_LINES="MEDIUM"
+    SIZE_REASONS+=("$TOTAL_CHANGES line changes (Medium)")
+elif [ $TOTAL_CHANGES -le 1000 ]; then
+    SIZE_BY_LINES="LARGE"
+    SIZE_REASONS+=("$TOTAL_CHANGES line changes (Large)")
+else
+    SIZE_BY_LINES="VERY_LARGE"
+    SIZE_REASONS+=("$TOTAL_CHANGES line changes (Very Large)")
+fi
+
+# Classify by file count
+if [ $FILES_COUNT -le 3 ]; then
+    SIZE_BY_FILES="SMALL"
+elif [ $FILES_COUNT -le 8 ]; then
+    SIZE_BY_FILES="MEDIUM"
+    SIZE_REASONS+=("$FILES_COUNT files (Medium)")
+elif [ $FILES_COUNT -le 20 ]; then
+    SIZE_BY_FILES="LARGE"
+    SIZE_REASONS+=("$FILES_COUNT files (Large)")
+else
+    SIZE_BY_FILES="VERY_LARGE"
+    SIZE_REASONS+=("$FILES_COUNT files (Very Large)")
+fi
+
 # Auto-detect very large PRs to avoid hanging on diff commands
 if [ $TOTAL_CHANGES -gt 10000 ] || [ $FILES_COUNT -gt 50 ]; then
-    echo "⚠️ Very large PR detected based on file count/changes - using file-by-file analysis"
+    echo "⚠️ Very large PR detected: ${SIZE_REASONS[*]} - using file-by-file analysis"
     DIFF_SIZE=999999
     REVIEW_TYPE="VERY_LARGE_PR"
     
@@ -122,14 +159,42 @@ else
         DIFF_SIZE=$(echo "$DIFF_OUTPUT" | wc -c)
         echo "📊 Diff size: $DIFF_SIZE characters"
         
-        # Determine review approach based on size
+        # Classify by character size
         if [ $DIFF_SIZE -gt 100000 ]; then
-            echo "⚠️ Large PR detected - using focused review approach"
+            SIZE_BY_CHARS="VERY_LARGE"
+            SIZE_REASONS+=("$DIFF_SIZE char diff (Very Large)")
+        elif [ $DIFF_SIZE -gt 50000 ]; then
+            SIZE_BY_CHARS="LARGE"
+            SIZE_REASONS+=("$DIFF_SIZE char diff (Large)")
+        fi
+        
+        # Determine overall size (highest category wins)
+        OVERALL_SIZE="SMALL"
+        for size in "$SIZE_BY_LINES" "$SIZE_BY_FILES" "$SIZE_BY_CHARS"; do
+            case $size in
+                "VERY_LARGE") OVERALL_SIZE="VERY_LARGE"; break ;;
+                "LARGE") OVERALL_SIZE="LARGE" ;;
+                "MEDIUM") if [ "$OVERALL_SIZE" != "LARGE" ]; then OVERALL_SIZE="MEDIUM"; fi ;;
+            esac
+        done
+        
+        # Determine review approach based on overall size
+        if [ "$OVERALL_SIZE" = "VERY_LARGE" ] || [ $DIFF_SIZE -gt 100000 ]; then
+            echo "⚠️ Very Large PR detected: ${SIZE_REASONS[*]} - using focused review approach"
+            FILE_STATS=$(echo "$PR_INFO" | jq -r '.files[] | "\(.path): +\(.additions)/-\(.deletions)"')
+            PR_DIFF_SAMPLE=$(echo "$DIFF_OUTPUT" | grep -E "^(diff|@@|\+\+\+|---|\+[^+]|\-[^-])" | head -200)
+            REVIEW_TYPE="LARGE_PR_SUMMARY"
+        elif [ "$OVERALL_SIZE" = "LARGE" ] || [ $DIFF_SIZE -gt 50000 ]; then
+            echo "⚠️ Large PR detected: ${SIZE_REASONS[*]} - using focused review approach"
             FILE_STATS=$(echo "$PR_INFO" | jq -r '.files[] | "\(.path): +\(.additions)/-\(.deletions)"')
             PR_DIFF_SAMPLE=$(echo "$DIFF_OUTPUT" | grep -E "^(diff|@@|\+\+\+|---|\+[^+]|\-[^-])" | head -200)
             REVIEW_TYPE="LARGE_PR_SUMMARY"
         else
-            echo "📝 Small/Medium PR - using detailed review approach"
+            if [ ${#SIZE_REASONS[@]} -gt 0 ]; then
+                echo "📝 ${OVERALL_SIZE} PR detected: ${SIZE_REASONS[*]} - using detailed review approach"
+            else
+                echo "📝 Small PR - using detailed review approach"
+            fi
             PR_DIFF="$DIFF_OUTPUT"
             REVIEW_TYPE="FULL_ANALYSIS"
         fi
@@ -624,6 +689,10 @@ else
     REVIEW_FILE="/tmp/review_output_${PR_NUMBER}.md"
 fi
 
+# Save review to permanent log file
+REVIEW_LOG_FILE="reviews/pr-reviews/pr-${PR_NUMBER}-review-$(date +%Y%m%d-%H%M%S).md"
+cp "$REVIEW_FILE" "$REVIEW_LOG_FILE"
+
 # Post review as comment
 gh pr comment $PR_NUMBER --body-file "$REVIEW_FILE"
 
@@ -640,7 +709,9 @@ else
 fi
 echo "🔗 View at: $(gh pr view $PR_NUMBER --json url -q .url)"
 
-# Cleanup (preserve for debugging)
+# File preservation summary
+echo "📁 Review files saved:"
+echo "💾 Permanent log: $REVIEW_LOG_FILE"
 echo "🔍 Debug files preserved:"
 echo "- Prompt: /tmp/pr_review_prompt_${PR_NUMBER}.md"
 echo "- Data: /tmp/pr_data_${PR_NUMBER}.md"

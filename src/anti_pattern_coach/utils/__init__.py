@@ -1,1 +1,0 @@
-# Utils module for Anti-Pattern Coach

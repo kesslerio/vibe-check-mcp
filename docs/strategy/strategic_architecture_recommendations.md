@@ -1,4 +1,4 @@
-# Strategic Architecture Recommendations for Anti-Pattern Coach
+# Strategic Architecture Recommendations for Vibe Compass MCP
 ## Competitive Analysis Integration & MCP vs. Direct CLI Decision Framework
 
 **Date**: January 2025  
@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-Based on comprehensive analysis of the competitive landscape and Claude Code MCP architecture, this document provides definitive strategic and technical recommendations for Anti-Pattern Coach development. The analysis reveals that **building as an MCP server is the optimal path** for achieving the user's goals of local execution, Claude Code integration, and workflow flexibility.
+Based on comprehensive analysis of the competitive landscape and Claude Code MCP architecture, this document provides definitive strategic and technical recommendations for Vibe Compass MCP development. The analysis reveals that **building as an MCP server is the optimal path** for achieving the user's goals of local execution, Claude Code integration, and workflow flexibility.
 
-**Key Recommendation**: Build Anti-Pattern Coach as a FastMCP server that can be consumed by Claude Code CLI via `claude -p @anti-pattern-coach`, while maintaining standalone CLI functionality.
+**Key Recommendation**: Build Vibe Compass MCP as a FastMCP server that can be consumed by Claude Code CLI via `claude -p @anti-pattern-coach`, while maintaining standalone CLI functionality.
 
 ---
 
@@ -67,7 +67,7 @@ Competitive Landscape Mapping:
 │   └── Focus: Automation, webhook integration
 ├── GitHub Actions Ecosystem
 │   └── Focus: CI/CD integration, workflow automation
-└── Anti-Pattern Coach (Our Position)
+└── Vibe Compass MCP (Our Position)
     └── Focus: Educational prevention, MCP integration, individual coaching
 ```
 
@@ -161,7 +161,7 @@ claude -p "review this PR @anti-pattern-coach check for systematic patterns"
 Based on systematic analysis, the optimal architecture is:
 
 ```
-Anti-Pattern Coach - Hybrid MCP Architecture
+Vibe Compass MCP - Hybrid MCP Architecture
 ┌─────────────────────────────────────────────────────────────┐
 │                    MCP Server Layer (Primary)               │
 │  • FastMCP framework                                        │
@@ -199,10 +199,10 @@ Anti-Pattern Coach - Hybrid MCP Architecture
 
 #### **FastMCP Server Structure**
 ```python
-# anti_pattern_coach_server.py
+# vibe_compass_server.py
 from fastmcp import FastMCP
 
-mcp = FastMCP("Anti-Pattern Coach")
+mcp = FastMCP("Vibe Compass MCP")
 
 @mcp.tool()
 def analyze_issue(issue_number: int, repository: str = None) -> dict:
@@ -261,7 +261,7 @@ claude -p "@anti-pattern-coach check if building a custom HTTP client for Stripe
   "mcpServers": {
     "anti-pattern-coach": {
       "command": "python",
-      "args": ["-m", "anti_pattern_coach.server"],
+      "args": ["-m", "vibe_compass.server"],
       "env": {
         "GITHUB_TOKEN": "optional"
       }
@@ -445,7 +445,7 @@ def issue(issue_number):
 
 ## Conclusion
 
-The competitive analysis reveals that building Anti-Pattern Coach as an MCP server is the optimal strategy for achieving the user's goals of local execution, Claude Code integration, and workflow flexibility. This approach:
+The competitive analysis reveals that building Vibe Compass MCP as an MCP server is the optimal strategy for achieving the user's goals of local execution, Claude Code integration, and workflow flexibility. This approach:
 
 1. **Aligns with ecosystem trends** toward MCP-based tool integration
 2. **Provides seamless user experience** within existing Claude Code workflows
