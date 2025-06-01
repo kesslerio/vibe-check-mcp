@@ -19,6 +19,10 @@ import logging
 import re
 import subprocess
 import json
+import time
+import select
+import sys
+import tempfile
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
@@ -895,7 +899,6 @@ File too large or binary
             logger.info(f"🔍 Combined content size: {combined_size} chars")
             
             # Write to temporary file
-            import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
                 f.write(combined_content)
                 temp_file = f.name
@@ -918,12 +921,95 @@ File too large or binary
                 timeout_seconds = 300  # 5 minutes for comprehensive analysis
                 logger.info(f"🔍 Using timeout: {timeout_seconds} seconds")
                 
-                result = subprocess.run(
-                    full_command,
-                    capture_output=True, 
-                    text=True, 
-                    timeout=timeout_seconds
+                # Use stdin approach like the working script (claude -p "$(cat file)")
+                logger.info("🔍 Starting Claude CLI with stdin input (like working script)...")
+                
+                # Read file content to pass via stdin (matches review-pr.sh approach)
+                with open(temp_file, 'r') as f:
+                    prompt_content_for_stdin = f.read()
+                
+                # Use the same command structure as working script: claude -p "content"
+                stdin_command = [
+                    claude_command,
+                    "--dangerously-skip-permissions",  # Keep security bypass
+                    "--debug",           # Enable debug mode  
+                    "--verbose",         # Enable verbose logging
+                    "-p",               # Print mode
+                    prompt_content_for_stdin  # Content as argument, not file path
+                ]
+                
+                logger.info(f"📝 Running Claude command with stdin content: {claude_command} --dangerously-skip-permissions --debug --verbose -p [content: {len(prompt_content_for_stdin)} chars]")
+                
+                process = subprocess.Popen(
+                    stdin_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,  # Combine stderr with stdout for unified logging
+                    text=True,
+                    bufsize=1,  # Line buffered for real-time output
+                    universal_newlines=True
                 )
+                
+                # Stream output in real-time
+                output_lines = []
+                start_time = time.time()
+                
+                while True:
+                    # Check if process finished
+                    if process.poll() is not None:
+                        break
+                        
+                    # Check timeout
+                    if time.time() - start_time > timeout_seconds:
+                        logger.error(f"❌ Claude analysis timed out after {timeout_seconds} seconds")
+                        process.terminate()
+                        try:
+                            process.wait(timeout=5)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                        raise subprocess.TimeoutExpired(full_command, timeout_seconds)
+                    
+                    # Read line with timeout
+                    
+                    if sys.platform != 'win32':
+                        # Unix-like systems: use select for non-blocking read
+                        ready, _, _ = select.select([process.stdout], [], [], 1.0)
+                        if ready:
+                            line = process.stdout.readline()
+                            if line:
+                                line = line.rstrip()
+                                output_lines.append(line)
+                                logger.info(f"🔍 Claude: {line}")
+                    else:
+                        # Windows: simpler approach
+                        try:
+                            line = process.stdout.readline()
+                            if line:
+                                line = line.rstrip()
+                                output_lines.append(line)
+                                logger.info(f"🔍 Claude: {line}")
+                        except:
+                            pass
+                    
+                    time.sleep(0.1)  # Small delay to prevent CPU spinning
+                
+                # Get final return code and remaining output
+                return_code = process.returncode
+                remaining_output = process.stdout.read()
+                if remaining_output:
+                    remaining_lines = remaining_output.strip().split('\n')
+                    output_lines.extend(remaining_lines)
+                    for line in remaining_lines:
+                        if line.strip():
+                            logger.info(f"🔍 Claude final: {line}")
+                
+                # Create result object compatible with original code
+                class StreamResult:
+                    def __init__(self, returncode, stdout, stderr=""):
+                        self.returncode = returncode
+                        self.stdout = stdout
+                        self.stderr = stderr
+                
+                result = StreamResult(return_code, '\n'.join(output_lines))
                 
                 logger.info(f"🔍 Claude command completed with return code: {result.returncode}")
                 logger.info(f"🔍 stdout size: {len(result.stdout)} chars")
@@ -943,8 +1029,6 @@ File too large or binary
                 
                 # Save full debug output to file for detailed analysis (always save)
                 try:
-                    import tempfile
-                    import time
                     timestamp = int(time.time())
                     debug_file = f"/tmp/claude_debug_pr_{pr_number}_{timestamp}.log"
                     prompt_file = f"/tmp/claude_prompt_pr_{pr_number}_{timestamp}.md"
