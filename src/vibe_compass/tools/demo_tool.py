@@ -138,8 +138,8 @@ def _comprehensive_analysis(
         "recommendations": _generate_recommendations(detected_patterns, has_integration_risk, has_complexity_risk)
     }
     
-    # Post comment if requested
-    if post_comment and analysis["patterns_detected"] > 0:
+    # Post comment if requested (regardless of patterns detected)
+    if post_comment:
         _post_github_comment(issue_number, repository, analysis)
     
     return analysis
@@ -205,12 +205,20 @@ def _post_github_comment(issue_number: int, repository: str, analysis: Dict) -> 
             "--body", comment_body
         ], check=True, capture_output=True)
         
-        # Add review label
-        subprocess.run([
-            "gh", "issue", "edit", str(issue_number),
-            "--repo", repository,
-            "--add-label", "anti-pattern-review"
-        ], check=True, capture_output=True)
+        # Add review label (only if patterns detected)
+        if analysis["patterns_detected"] > 0:
+            subprocess.run([
+                "gh", "issue", "edit", str(issue_number),
+                "--repo", repository,
+                "--add-label", "anti-pattern-review"
+            ], check=True, capture_output=True)
+        else:
+            # Add clean review label for issues with no patterns
+            subprocess.run([
+                "gh", "issue", "edit", str(issue_number),
+                "--repo", repository,
+                "--add-label", "vibe-compass-reviewed"
+            ], check=True, capture_output=True)
         
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to post GitHub comment: {e}")
@@ -237,6 +245,9 @@ def _format_github_comment(analysis: Dict) -> str:
         for i, pattern in enumerate(analysis["anti_patterns"], 1):
             comment += f"**{i}. {pattern['type']}** (Confidence: {pattern['confidence']:.2f})\n"
             comment += f"- Evidence: {pattern['evidence'][:200]}{'...' if len(pattern['evidence']) > 200 else ''}\n\n"
+    else:
+        comment += "### ✅ No Anti-Patterns Detected\n\n"
+        comment += "The issue description follows good engineering practices and shows no obvious anti-pattern indicators.\n\n"
     
     comment += f"### 🎯 Recommendations\n\n{analysis['recommendations']['overall']}\n\n"
     
