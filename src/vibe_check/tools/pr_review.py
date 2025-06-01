@@ -861,7 +861,7 @@ File too large or binary
                 # Use the detected Claude command
                 claude_command = self.claude_cmd or "claude"
                 result = subprocess.run([
-                    claude_command, "-p", combined_content
+                    claude_command, "-p", temp_file
                 ], capture_output=True, text=True, timeout=120)
                 
                 if result.returncode == 0 and result.stdout.strip():
@@ -874,7 +874,7 @@ File too large or binary
                     logger.info(f"✅ Claude analysis completed successfully ({output_size} chars)")
                     
                     # Parse Claude output into structured format
-                    return self._parse_claude_output(result.stdout, pr_data["metadata"]["number"])
+                    return self._parse_claude_output(result.stdout, pr_number)
                     
                 else:
                     logger.error(f"❌ Claude command failed: {result.stderr}")
@@ -936,7 +936,7 @@ File too large or binary
             "action_items": self._generate_action_items(pr_data),
             "recommendation": self._generate_recommendation(pr_data),
             "analysis_method": "fallback",
-            "clear_thought_summary": "Claude CLI not available in Docker environment - systematic analysis tools not applied",
+            "clear_thought_summary": "Using fallback analysis - Claude CLI analysis not available or failed",
             "mcp_tools_summary": "GitHub CLI integration used for data collection",
             "timestamp": datetime.now().isoformat()
         }
