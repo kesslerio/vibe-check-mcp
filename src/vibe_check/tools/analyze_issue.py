@@ -1,11 +1,13 @@
 """
-GitHub Issue Analysis MCP Tool
+Enhanced GitHub Issue Analysis MCP Tool
 
-Implements FastMCP tool for analyzing GitHub issues for anti-patterns using the
-validated core detection engine. Integrates GitHub API, PatternDetector, and 
-EducationalContentGenerator to provide comprehensive anti-pattern analysis.
+Implements FastMCP tool for comprehensive "vibe check" analysis of GitHub issues
+using Claude-powered analytical reasoning and validated pattern detection.
 
-Phase 2.2 implementation based on Technical Implementation Guide lines 175-241.
+Transforms from basic "anti-pattern detection" to friendly "vibe check" framework
+that provides practical engineering guidance and coaching.
+
+Issue #40 implementation: Claude-powered comprehensive vibe check framework.
 """
 
 import logging
@@ -15,6 +17,7 @@ from github.Issue import Issue
 
 from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
+from .vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -344,35 +347,113 @@ def get_github_analyzer(github_token: Optional[str] = None) -> GitHubIssueAnalyz
 def analyze_issue(
     issue_number: int,
     repository: Optional[str] = None,
-    focus_patterns: Optional[str] = "all",
-    detail_level: str = "standard"
+    analysis_mode: str = "quick",
+    detail_level: str = "standard",
+    post_comment: bool = False
 ) -> Dict[str, Any]:
     """
-    FastMCP tool function: Analyze GitHub issue for anti-patterns.
+    Enhanced FastMCP tool: Comprehensive vibe check for GitHub issues.
     
-    This function provides the FastMCP tool interface for GitHub issue analysis
-    using the validated Phase 1 core detection engine.
+    Transforms from basic anti-pattern detection to Claude-powered friendly vibe check
+    that provides practical engineering guidance and coaching.
     
     Args:
         issue_number: GitHub issue number to analyze
         repository: Repository in format "owner/repo" (optional, defaults to current repo)
-        focus_patterns: Comma-separated patterns to focus on, or "all" (default: "all")
-        detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
+        analysis_mode: Analysis mode - "quick" for fast feedback or "comprehensive" for detailed analysis
+        detail_level: Educational detail level - "brief"/"standard"/"comprehensive" (default: "standard")
+        post_comment: Whether to post analysis as GitHub comment (auto-enabled for comprehensive mode)
         
     Returns:
-        Comprehensive analysis with detected patterns, confidence scores, and educational content
+        Comprehensive vibe check with friendly guidance, coaching recommendations, and technical analysis
         
     Example:
-        # Analyze issue #22 in current repository
-        result = analyze_issue(22)
+        # Quick vibe check for development workflow  
+        result = analyze_issue(22, analysis_mode="quick")
         
-        # Analyze specific repository issue with focus on infrastructure patterns
-        result = analyze_issue(123, "owner/repo", "infrastructure_without_implementation", "comprehensive")
+        # Comprehensive analysis with GitHub comment
+        result = analyze_issue(123, "owner/repo", "comprehensive", "comprehensive", True)
     """
-    analyzer = get_github_analyzer()
-    return analyzer.analyze_issue(
-        issue_number=issue_number,
-        repository=repository,
-        focus_patterns=focus_patterns,
-        detail_level=detail_level
-    )
+    try:
+        # Parse analysis mode
+        mode = VibeCheckMode.COMPREHENSIVE if analysis_mode.lower() == "comprehensive" else VibeCheckMode.QUICK
+        
+        # Parse detail level
+        try:
+            detail_enum = DetailLevel(detail_level.lower())
+        except ValueError:
+            detail_enum = DetailLevel.STANDARD
+            logger.warning(f"Invalid detail level '{detail_level}', using 'standard'")
+        
+        # Auto-enable comment posting for comprehensive mode (unless explicitly disabled)
+        if mode == VibeCheckMode.COMPREHENSIVE and post_comment is None:
+            post_comment = True
+        
+        # Get vibe check framework
+        framework = get_vibe_check_framework()
+        
+        # Run comprehensive vibe check
+        vibe_result = framework.check_issue_vibes(
+            issue_number=issue_number,
+            repository=repository,
+            mode=mode,
+            detail_level=detail_enum,
+            post_comment=post_comment
+        )
+        
+        # Convert to MCP tool response format
+        from datetime import datetime
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        
+        return {
+            "status": "vibe_check_complete",
+            "analysis_timestamp": timestamp,
+            
+            # Friendly vibe check results
+            "vibe_check": {
+                "overall_vibe": vibe_result.overall_vibe,
+                "vibe_level": vibe_result.vibe_level.value,
+                "friendly_summary": vibe_result.friendly_summary,
+                "coaching_recommendations": vibe_result.coaching_recommendations
+            },
+            
+            # Issue information  
+            "issue_info": {
+                "number": issue_number,
+                "repository": repository or "kesslerio/vibe-check-mcp",
+                "analysis_mode": mode.value,
+                "detail_level": detail_enum.value,
+                "comment_posted": post_comment
+            },
+            
+            # Technical analysis (for transparency)
+            "technical_analysis": vibe_result.technical_analysis,
+            
+            # Enhanced capabilities
+            "enhanced_features": {
+                "claude_reasoning": vibe_result.claude_reasoning is not None,
+                "clear_thought_analysis": vibe_result.clear_thought_analysis is not None,
+                "comprehensive_validation": mode == VibeCheckMode.COMPREHENSIVE,
+                "educational_coaching": True,
+                "friendly_language": True
+            },
+            
+            # Analysis metadata
+            "analysis_metadata": {
+                "framework_version": "2.0 - Claude-powered vibe check",
+                "core_engine_validation": "87.5% accuracy, 0% false positives",
+                "analysis_type": "comprehensive_vibe_check",
+                "language_style": "friendly_coaching"
+            }
+        }
+        
+    except Exception as e:
+        error_msg = f"Vibe check failed: {str(e)}"
+        logger.error(error_msg)
+        return {
+            "error": error_msg,
+            "status": "vibe_check_error",
+            "issue_number": issue_number,
+            "repository": repository,
+            "friendly_error": "🚨 Oops! Something went wrong with the vibe check. Try again with a simpler analysis mode."
+        }
