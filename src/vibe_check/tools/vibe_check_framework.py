@@ -27,6 +27,9 @@ from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
 from ..core.vibe_coaching import get_vibe_coaching_framework, LearningLevel, CoachingTone
 
+# Import Claude CLI debug/verbose config
+from src.vibe_check.utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+
 logger = logging.getLogger(__name__)
 
 
@@ -195,6 +198,7 @@ class VibeCheckFramework:
     def _run_claude_analysis(self, issue_data: Dict[str, Any], basic_patterns: List[DetectionResult]) -> Optional[str]:
         """
         Run Claude-powered sophisticated analysis using prompts ported from review-issue.sh
+        Debug/verbose flags are controlled by src.vibe_check.utils.CLAUDE_CLI_DEBUG/VERBOSE.
         """
         try:
             # Create sophisticated analysis prompt (ported from bash script)
@@ -206,10 +210,18 @@ class VibeCheckFramework:
                 prompt_file = f.name
             
             try:
-                # Run Claude analysis using stdin approach (like working script)
-                # CRITICAL: Use content as argument, not file path, to avoid hanging
+                # Build command with config flags
+                stdin_command = [
+                    'claude',
+                    '--dangerously-skip-permissions'
+                ]
+                if CLAUDE_CLI_DEBUG:
+                    stdin_command.append('--debug')
+                if CLAUDE_CLI_VERBOSE:
+                    stdin_command.append('--verbose')
+                stdin_command.extend(['-p', prompt])
                 result = subprocess.run(
-                    ['claude', '--dangerously-skip-permissions', '-p', prompt],
+                    stdin_command,
                     capture_output=True,
                     text=True,
                     timeout=60
