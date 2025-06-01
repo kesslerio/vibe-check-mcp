@@ -329,18 +329,27 @@ $(if [ -n "$THIRD_PARTY_SERVICES" ]; then
     echo "2. Demonstrate basic functionality with real data"
     echo "3. Document working API patterns before architecture"
     echo "4. Avoid custom implementations of standard functionality"
+    echo "5. **Apply Clear-Thought tools:** Use systematic analysis for integration planning"
     echo ""
     echo "**DO NOT PROCEED** without demonstrated API usage"
 else
     echo "✅ Standard development process applies"
+    echo "- **Consider Clear-Thought enhancement:** Apply systematic thinking for complex issues"
 fi)
+
+**🧠 Clear-Thought Analysis Summary:**
+- Systematic thinking tools can enhance issue validation and planning
+- Mental models applicable: $([ -n "$COMPLEXITY_INDICATORS" ] && echo "First Principles (complexity validation)" || echo "Standard analysis sufficient")
+- Decision frameworks recommended for: $([ -n "$THIRD_PARTY_SERVICES" ] && echo "Service selection and integration approach" || echo "N/A")
 
 **Overall Assessment:**
 - This issue requires $([ -n "$THIRD_PARTY_SERVICES" ] && echo "**API-FIRST VALIDATION**" || echo "standard review")
 - $([ -n "$COMPLEXITY_INDICATORS" ] && echo "Complexity justification needed" || echo "Appropriate complexity level")
 - Follow prevention guidelines from docs/guides/THIRD_PARTY_INTEGRATION_GUIDE.md
+- **Enhanced with:** MCP GitHub tools and Clear-Thought systematic analysis
 
 **Recommendation**: $(if [ -n "$THIRD_PARTY_SERVICES" ]; then echo "**NEEDS POC BEFORE APPROVAL**"; elif [ -n "$COMPLEXITY_INDICATORS" ]; then echo "**NEEDS COMPLEXITY JUSTIFICATION**"; else echo "**STANDARD REVIEW PROCESS**"; fi)
+**Analysis Quality**: **ENHANCED** - MCP tools provide comprehensive validation
 
 ### 📚 References
 - Cognee Foundational Failures Retrospective
