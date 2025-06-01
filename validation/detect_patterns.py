@@ -11,6 +11,7 @@ import json
 import re
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
+from timing_utils import PerformanceTimer
 
 
 class PatternDetector:
@@ -249,6 +250,10 @@ def validate_additional_cases() -> List[Dict[str, Any]]:
 
 def run_comprehensive_validation() -> Dict[str, Any]:
     """Run all validation tests and provide summary"""
+    # Initialize performance timer
+    timer = PerformanceTimer()
+    timer.start_session()
+    
     print("=" * 60)
     print("ANTI-PATTERN DETECTION VALIDATION")
     print("Testing core detection algorithms BEFORE building infrastructure")
@@ -257,7 +262,8 @@ def run_comprehensive_validation() -> Dict[str, Any]:
     # Test 1: Cognee case (known failure)
     print("\n1. COGNEE CASE VALIDATION (Known Failure)")
     print("-" * 40)
-    cognee_result = validate_with_cognee_case()
+    with timer.time_operation("cognee_case_validation"):
+        cognee_result = validate_with_cognee_case()
     
     status = "✅ PASS" if cognee_result["validation_passed"] else "❌ FAIL"
     print(f"Status: {status}")
@@ -269,7 +275,8 @@ def run_comprehensive_validation() -> Dict[str, Any]:
     # Test 2: Good case (should not detect)
     print("\n2. GOOD CASE VALIDATION (Should Not Detect)")
     print("-" * 40)
-    good_result = validate_with_good_case()
+    with timer.time_operation("good_case_validation"):
+        good_result = validate_with_good_case()
     
     status = "✅ PASS" if good_result["validation_passed"] else "❌ FAIL"
     print(f"Status: {status}")
@@ -281,7 +288,8 @@ def run_comprehensive_validation() -> Dict[str, Any]:
     # Test 3: Additional cases
     print("\n3. ADDITIONAL TEST CASES")
     print("-" * 40)
-    additional_results = validate_additional_cases()
+    with timer.time_operation("additional_test_cases"):
+        additional_results = validate_additional_cases()
     
     passed_count = 0
     for i, result in enumerate(additional_results, 1):
@@ -319,6 +327,10 @@ def run_comprehensive_validation() -> Dict[str, Any]:
         print("❌ Detection algorithms need refinement")
         print("❌ DO NOT proceed to Phase 1 until this passes")
     
+    # End timing session and print performance summary
+    total_time = timer.end_session()
+    timer.print_summary(threshold=1.0, verbose=True)
+    
     return {
         "overall_passed": overall_pass,
         "accuracy": accuracy,
@@ -326,7 +338,9 @@ def run_comprehensive_validation() -> Dict[str, Any]:
         "total_tests": total_tests,
         "cognee_result": cognee_result,
         "good_result": good_result,
-        "additional_results": additional_results
+        "additional_results": additional_results,
+        "performance_summary": timer.get_summary(threshold=1.0),
+        "total_execution_time": total_time
     }
 
 

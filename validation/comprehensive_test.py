@@ -7,33 +7,41 @@ Tests detection algorithms against realistic examples
 import sys
 from pathlib import Path
 from detect_patterns import PatternDetector
+from timing_utils import PerformanceTimer
 
 def test_sample_files():
     """Test detection against sample code files"""
+    # Initialize performance timer
+    timer = PerformanceTimer()
+    timer.start_session()
+    
     detector = PatternDetector()
     
     # Test bad examples (should detect)
     print("Testing BAD examples (should detect patterns):")
     print("-" * 50)
     
-    bad_examples_file = Path(__file__).parent / "sample_code" / "bad_examples.py"
-    with open(bad_examples_file) as f:
-        content = f.read()
+    with timer.time_operation("load_bad_examples_file"):
+        bad_examples_file = Path(__file__).parent / "sample_code" / "bad_examples.py"
+        with open(bad_examples_file) as f:
+            content = f.read()
     
-    # Extract the example strings
-    import re
-    examples = re.findall(r'"""(.*?)"""', content, re.DOTALL)
+    with timer.time_operation("extract_bad_examples"):
+        # Extract the example strings
+        import re
+        examples = re.findall(r'"""(.*?)"""', content, re.DOTALL)
     
     bad_results = []
     for i, example in enumerate(examples[1:], 1):  # Skip docstring
         if "Title:" in example:
-            result = detector.detect_infrastructure_without_implementation(example)
-            should_detect = True
-            passed = result["detected"] and result["confidence"] >= 0.5
-            
-            print(f"{i}. {'✅ PASS' if passed else '❌ FAIL'} - Confidence: {result['confidence']:.2f}")
-            print(f"   Evidence: {result['evidence']}")
-            bad_results.append(passed)
+            with timer.time_operation(f"detect_bad_example_{i}"):
+                result = detector.detect_infrastructure_without_implementation(example)
+                should_detect = True
+                passed = result["detected"] and result["confidence"] >= 0.5
+                
+                print(f"{i}. {'✅ PASS' if passed else '❌ FAIL'} - Confidence: {result['confidence']:.2f}")
+                print(f"   Evidence: {result['evidence']}")
+                bad_results.append(passed)
     
     print(f"\nBad examples: {sum(bad_results)}/{len(bad_results)} passed")
     
@@ -41,23 +49,26 @@ def test_sample_files():
     print("\nTesting GOOD examples (should NOT detect patterns):")
     print("-" * 50)
     
-    good_examples_file = Path(__file__).parent / "sample_code" / "good_examples.py"
-    with open(good_examples_file) as f:
-        content = f.read()
+    with timer.time_operation("load_good_examples_file"):
+        good_examples_file = Path(__file__).parent / "sample_code" / "good_examples.py"
+        with open(good_examples_file) as f:
+            content = f.read()
     
-    examples = re.findall(r'"""(.*?)"""', content, re.DOTALL)
+    with timer.time_operation("extract_good_examples"):
+        examples = re.findall(r'"""(.*?)"""', content, re.DOTALL)
     
     good_results = []
     for i, example in enumerate(examples[1:], 1):  # Skip docstring
         if "Title:" in example:
-            result = detector.detect_infrastructure_without_implementation(example)
-            should_not_detect = True
-            passed = not result["detected"] and result["confidence"] < 0.4
-            
-            print(f"{i}. {'✅ PASS' if passed else '❌ FAIL'} - Confidence: {result['confidence']:.2f}")
-            if result["evidence"]:
-                print(f"   Evidence: {result['evidence']}")
-            good_results.append(passed)
+            with timer.time_operation(f"detect_good_example_{i}"):
+                result = detector.detect_infrastructure_without_implementation(example)
+                should_not_detect = True
+                passed = not result["detected"] and result["confidence"] < 0.4
+                
+                print(f"{i}. {'✅ PASS' if passed else '❌ FAIL'} - Confidence: {result['confidence']:.2f}")
+                if result["evidence"]:
+                    print(f"   Evidence: {result['evidence']}")
+                good_results.append(passed)
     
     print(f"\nGood examples: {sum(good_results)}/{len(good_results)} passed")
     
@@ -72,6 +83,10 @@ def test_sample_files():
     print(f"Total tests: {total_tests}")
     print(f"Passed: {total_passed}")
     print(f"Accuracy: {accuracy:.1f}%")
+    
+    # End timing session and print performance summary
+    total_time = timer.end_session()
+    timer.print_summary(threshold=1.0, verbose=True)
     
     if accuracy >= 80:
         print("\n🎉 COMPREHENSIVE VALIDATION PASSED!")
