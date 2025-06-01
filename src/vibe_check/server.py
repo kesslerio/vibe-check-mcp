@@ -14,6 +14,7 @@ Or programmatically:
 """
 
 import logging
+import os
 import sys
 from typing import Dict, Any
 
@@ -178,7 +179,9 @@ def run_server():
         logger.info("🔧 Server ready for MCP protocol connections")
         
         # Start the FastMCP server with HTTP transport for Docker
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+        host = os.environ.get("MCP_SERVER_HOST", "0.0.0.0")
+        port = int(os.environ.get("MCP_SERVER_PORT", "8001"))
+        mcp.run(transport="streamable-http", host=host, port=port)
         
     except KeyboardInterrupt:
         logger.info("🛑 Server shutdown requested by user")

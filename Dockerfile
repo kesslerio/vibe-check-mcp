@@ -52,7 +52,7 @@ RUN chown -R mcp:mcp /app
 USER mcp
 
 # Expose port for MCP server
-EXPOSE 8000
+EXPOSE 8001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
@@ -76,7 +76,7 @@ RUN mkdir -p /app/config && chown -R mcp:mcp /app
 USER mcp
 
 # Expose port for MCP server
-EXPOSE 8000
+EXPOSE 8001
 
 # Production health check (more robust)
 HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=5 \

@@ -8,14 +8,14 @@ services:
       target: development  # Use development stage by default
     container_name: vibe-check-mcp
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
       # GitHub integration (optional)
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
       
       # Server configuration
       - MCP_SERVER_HOST=0.0.0.0
-      - MCP_SERVER_PORT=8000
+      - MCP_SERVER_PORT=8001
       
       # Logging configuration
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
