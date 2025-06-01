@@ -1,0 +1,120 @@
+name: "Anti-Pattern Detection Issue"
+description: "Report or work on anti-pattern detection features"
+title: "[Anti-Pattern]: "
+labels: ["anti-pattern", "area:pattern-detection"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Anti-Pattern Detection Issue Template
+        
+        Please provide clear information about the anti-pattern detection work. All fields marked with * are required.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority Level *"
+      description: "Select the appropriate priority level"
+      options:
+        - P0 - Critical (system broken, blocking all work, security issues)
+        - P1 - High (major feature/fix, affects multiple workflows)
+        - P2 - Medium (important improvement, affects single workflow)
+        - P3 - Low (minor enhancement, nice-to-have)
+        - P4 - Trivial (documentation typos, formatting)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: "Issue Type *"
+      description: "What type of issue is this?"
+      options:
+        - bug - Functional defects, incorrect behavior
+        - feature - New functionality implementation
+        - enhancement - Improvements to existing functionality
+        - documentation - Documentation changes/additions
+        - test - Testing infrastructure and test cases
+        - refactor - Code cleanup, architectural improvements
+        - performance - Performance optimization
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: area_labels
+    attributes:
+      label: "Area Labels *"
+      description: "Select all applicable areas (at least one required)"
+      options:
+        - label: "area:pattern-detection - Core anti-pattern detection algorithms"
+        - label: "area:educational-content - Educational response generation"
+        - label: "area:case-studies - Case study data and integration"
+        - label: "area:validation - Testing and validation systems"
+        - label: "area:cli - Command-line interface"
+        - label: "area:mcp-integration - MCP server and protocol integration"
+        - label: "area:data-management - Pattern definitions and data files"
+        - label: "area:infrastructure-antipattern - Infrastructure-Without-Implementation pattern"
+        - label: "area:symptom-driven - Symptom-Driven Development pattern"
+        - label: "area:complexity-escalation - Complexity Escalation pattern"
+        - label: "area:documentation-neglect - Documentation Neglect pattern"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: anti_pattern_type
+    attributes:
+      label: "Anti-Pattern Type"
+      description: "If related to a specific anti-pattern, select it"
+      options:
+        - Infrastructure-Without-Implementation
+        - Symptom-Driven Development
+        - Complexity Escalation
+        - Documentation Neglect
+        - Not Applicable
+
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: "Problem Description *"
+      description: "Clearly describe the problem or feature request"
+      placeholder: "Describe what needs to be fixed or implemented..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution_approach
+    attributes:
+      label: "Solution Approach"
+      description: "Describe your proposed solution or approach"
+      placeholder: "How should this be solved or implemented?"
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria *"
+      description: "List the specific criteria that must be met for this issue to be considered complete"
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Anti-pattern prevention validated
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: "Additional Context"
+      description: "Add any other context, screenshots, or examples"
+
+  - type: checkboxes
+    id: anti_pattern_prevention
+    attributes:
+      label: "Anti-Pattern Prevention Checklist"
+      description: "Verify that this issue follows anti-pattern prevention guidelines"
+      options:
+        - label: "I have checked that this doesn't exhibit Infrastructure-Without-Implementation (building custom before testing standard)"
+        - label: "I have checked that this addresses root causes, not just symptoms"
+        - label: "I have verified complexity is justified and necessary"
+        - label: "I have researched existing solutions and documentation"
+EOF < /dev/null

@@ -1,0 +1,110 @@
+name: "Bug Report"
+description: "Report a bug or defect in the anti-pattern detection system"
+title: "[Bug]: "
+labels: ["bug", "status:untriaged"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report Template
+        
+        Please provide detailed information about the bug. All fields marked with * are required.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority Level *"
+      description: "How critical is this bug?"
+      options:
+        - P0 - Critical (system broken, blocking all work, security issues)
+        - P1 - High (major functionality broken, affects multiple workflows)
+        - P2 - Medium (important feature broken, affects single workflow)
+        - P3 - Low (minor issue, workaround available)
+        - P4 - Trivial (cosmetic issue, no functional impact)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: area_labels
+    attributes:
+      label: "Affected Areas *"
+      description: "Select all areas affected by this bug"
+      options:
+        - label: "area:pattern-detection - Core detection algorithms"
+        - label: "area:educational-content - Educational response generation"
+        - label: "area:case-studies - Case study integration"
+        - label: "area:validation - Testing and validation"
+        - label: "area:cli - Command-line interface"
+        - label: "area:mcp-integration - MCP server functionality"
+        - label: "area:data-management - Pattern data and configurations"
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: "Bug Description *"
+      description: "Clear description of what the bug is"
+      placeholder: "Describe what is broken or not working correctly..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: "Steps to Reproduce *"
+      description: "Detailed steps to reproduce the bug"
+      placeholder: |
+        1. Run command...
+        2. Input data...
+        3. Observe result...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior *"
+      description: "What should happen instead?"
+      placeholder: "Describe the expected correct behavior..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: "Actual Behavior *"
+      description: "What actually happens?"
+      placeholder: "Describe what actually happens (including error messages)..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Environment details"
+      placeholder: |
+        - OS: 
+        - Python version:
+        - Branch/commit:
+        - MCP client version:
+
+  - type: textarea
+    id: logs_output
+    attributes:
+      label: "Logs/Output"
+      description: "Relevant logs, error messages, or output"
+      render: text
+
+  - type: checkboxes
+    id: validation_checklist
+    attributes:
+      label: "Validation Checklist"
+      description: "Please confirm the following"
+      options:
+        - label: "I have verified this is actually a bug and not expected behavior"
+        - label: "I have checked that this bug hasn't already been reported"
+        - label: "I have provided sufficient information to reproduce the issue"
+EOF < /dev/null

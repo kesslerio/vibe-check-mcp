@@ -1,0 +1,112 @@
+name: "Feature Request"
+description: "Request a new feature for the anti-pattern detection system"
+title: "[Feature]: "
+labels: ["feature", "status:untriaged"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request Template
+        
+        Please provide detailed information about the requested feature. All fields marked with * are required.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority Level *"
+      description: "How important is this feature?"
+      options:
+        - P1 - High (major feature, affects multiple workflows)
+        - P2 - Medium (important improvement, affects single workflow)
+        - P3 - Low (minor enhancement, nice-to-have)
+        - P4 - Trivial (small convenience feature)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: area_labels
+    attributes:
+      label: "Feature Areas *"
+      description: "Select all areas this feature affects"
+      options:
+        - label: "area:pattern-detection - Core detection algorithms"
+        - label: "area:educational-content - Educational response generation"
+        - label: "area:case-studies - Case study integration"
+        - label: "area:validation - Testing and validation"
+        - label: "area:cli - Command-line interface"
+        - label: "area:mcp-integration - MCP server functionality"
+        - label: "area:data-management - Pattern data and configurations"
+        - label: "area:infrastructure-antipattern - Infrastructure pattern specific"
+        - label: "area:symptom-driven - Symptom-driven pattern specific"
+        - label: "area:complexity-escalation - Complexity pattern specific"
+        - label: "area:documentation-neglect - Documentation pattern specific"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: "Development Phase"
+      description: "Which development phase does this belong to?"
+      options:
+        - phase0 - Validation and proof of concept
+        - phase1 - Core detection engine
+        - phase2 - MCP integration
+        - phase3 - Advanced features and optimization
+
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: "Feature Description *"
+      description: "Clear description of the requested feature"
+      placeholder: "Describe what new functionality you would like to see..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: "Use Case *"
+      description: "Describe the specific use case or problem this feature solves"
+      placeholder: "Explain why this feature is needed and how it would be used..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: "Proposed Solution"
+      description: "Describe how you think this feature should be implemented"
+      placeholder: "How do you envision this feature working?"
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria *"
+      description: "List the specific criteria that must be met for this feature to be considered complete"
+      placeholder: |
+        - [ ] Feature works as described
+        - [ ] Performance meets requirements
+        - [ ] Documentation is updated
+        - [ ] Tests are written and passing
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "Alternative Solutions"
+      description: "Describe any alternative solutions or workarounds you've considered"
+
+  - type: checkboxes
+    id: research_checklist
+    attributes:
+      label: "Research Checklist"
+      description: "Please confirm you have done the following"
+      options:
+        - label: "I have searched existing issues to ensure this feature hasn't been requested"
+        - label: "I have considered if this can be achieved with existing functionality"
+        - label: "I have thought about potential anti-patterns this feature might introduce"
+        - label: "I have considered the maintenance burden of this feature"
+EOF < /dev/null
