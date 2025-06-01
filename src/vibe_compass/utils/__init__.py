@@ -1,1 +1,0 @@
-# Utils module for Vibe Compass MCP

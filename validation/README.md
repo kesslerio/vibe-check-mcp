@@ -1,6 +1,6 @@
 # Phase 0: Anti-Pattern Detection Validation
 
-This directory contains **Phase 0 validation** for the Vibe Compass MCP project. The validation approach directly addresses the Infrastructure-Without-Implementation anti-pattern by proving our detection algorithms work BEFORE building any server infrastructure.
+This directory contains **Phase 0 validation** for the Vibe Check MCP project. The validation approach directly addresses the Infrastructure-Without-Implementation anti-pattern by proving our detection algorithms work BEFORE building any server infrastructure.
 
 ## Quick Start
 
@@ -74,7 +74,7 @@ The validation uses **only Python standard library**:
 
 ### Core Validation
 ```bash
-cd /path/to/vibe-compass-mcp
+cd /path/to/vibe-check-mcp
 python validation/detect_patterns.py
 ```
 
@@ -137,7 +137,7 @@ Each detection includes **WHY** it's problematic:
 
 With Phase 0 validation complete, proceed to:
 
-1. **Phase 1**: Core Detection Engine (src/vibe_compass/core/)
+1. **Phase 1**: Core Detection Engine (src/vibe_check/core/)
 2. **Phase 2**: MCP Integration (only after core engine proven)
 3. **Phase 3**: Production features and CLI interface
 

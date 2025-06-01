@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains the methodology used to determine and validate regex weights in the Vibe Compass MCP detection system. Understanding this process is crucial for maintaining detection accuracy and adding new patterns effectively.
+This document explains the methodology used to determine and validate regex weights in the Vibe Check MCP detection system. Understanding this process is crucial for maintaining detection accuracy and adding new patterns effectively.
 
 ## Weight Determination Process
 

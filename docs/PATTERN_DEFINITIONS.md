@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides comprehensive guidance for defining anti-patterns in the Vibe Compass MCP detection system. All pattern definitions are stored in `data/anti_patterns.json` and must conform to the JSON schema defined in `data/pattern_schema.json`.
+This document provides comprehensive guidance for defining anti-patterns in the Vibe Check MCP detection system. All pattern definitions are stored in `data/anti_patterns.json` and must conform to the JSON schema defined in `data/pattern_schema.json`.
 
 ## Schema Structure
 
@@ -284,7 +284,7 @@ Monitor these metrics:
 ```bash
 # Test specific text against pattern
 python -c "
-from src.vibe_compass.core.pattern_detector import PatternDetector
+from src.vibe_check.core.pattern_detector import PatternDetector
 detector = PatternDetector()
 results = detector.analyze_text_for_patterns('your test text here')
 print(results)
@@ -298,5 +298,5 @@ python validation/debug_pattern_weights.py pattern_id
 
 - [JSON Schema Specification](https://json-schema.org/)
 - [Python Regex Documentation](https://docs.python.org/3/library/re.html)
-- [Vibe Compass MCP Core Documentation](Technical_Implementation_Guide.md)
+- [Vibe Check MCP Core Documentation](Technical_Implementation_Guide.md)
 - [Validation Results](../validation/README.md)

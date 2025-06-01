@@ -1,15 +1,15 @@
 """
-Vibe Compass MCP FastMCP Server
+Vibe Check MCP FastMCP Server
 
 Main MCP server entry point that provides anti-pattern detection capabilities
 via the Model Context Protocol. Built on top of the validated Phase 1 core 
 detection engine (87.5% accuracy, 0% false positives).
 
 Usage:
-    python -m vibe_compass.server
+    python -m vibe_check.server
     
 Or programmatically:
-    from vibe_compass.server import run_server
+    from vibe_check.server import run_server
     run_server()
 """
 
@@ -31,13 +31,13 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('vibe_compass.log')
+        logging.FileHandler('vibe_check.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP("Vibe Compass MCP")
+mcp = FastMCP("Vibe Check MCP")
 
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -60,7 +60,7 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
 @mcp.tool()
 def analyze_github_issue(
     issue_number: int, 
-    repository: str = "kesslerio/vibe-compass-mcp", 
+    repository: str = "kesslerio/vibe-check-mcp", 
     analysis_mode: str = "quick",
     detail_level: str = "standard",
     post_comment: bool = None
@@ -73,7 +73,7 @@ def analyze_github_issue(
     
     Args:
         issue_number: GitHub issue number to analyze
-        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-compass-mcp")
+        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
         analysis_mode: "quick" for immediate analysis or "comprehensive" for detailed review
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         post_comment: Post analysis as GitHub comment (auto-enabled for comprehensive mode, disabled for quick mode)
@@ -97,13 +97,13 @@ def analyze_github_issue(
 @mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
-    Get Vibe Compass MCP server status and capabilities.
+    Get Vibe Check MCP server status and capabilities.
     
     Returns:
         Server status, core engine validation results, and available capabilities
     """
     return {
-        "server_name": "Vibe Compass MCP",
+        "server_name": "Vibe Check MCP",
         "version": "Phase 2.1 - FastMCP Integration",
         "status": "✅ Operational",
         "core_engine_status": {
@@ -128,12 +128,12 @@ def server_status() -> Dict[str, Any]:
 
 def run_server():
     """
-    Start the Vibe Compass MCP server.
+    Start the Vibe Check MCP server.
     
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
-        logger.info("🚀 Starting Vibe Compass MCP Server...")
+        logger.info("🚀 Starting Vibe Check MCP Server...")
         logger.info("📊 Core detection engine validated: 87.5% accuracy, 0% false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
         
@@ -146,7 +146,7 @@ def run_server():
         logger.error(f"❌ Server startup failed: {e}")
         sys.exit(1)
     finally:
-        logger.info("✅ Vibe Compass MCP server shutdown complete")
+        logger.info("✅ Vibe Check MCP server shutdown complete")
 
 if __name__ == "__main__":
     run_server()

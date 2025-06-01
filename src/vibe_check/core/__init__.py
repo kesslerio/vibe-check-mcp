@@ -1,5 +1,5 @@
 """
-Vibe Compass MCP Core Engine
+Vibe Check MCP Core Engine
 
 Core detection and educational content generation modules.
 """

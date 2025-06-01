@@ -11,9 +11,9 @@ These scripts serve as **proof-of-concept implementations** and **feature specif
 | Script | Status | MCP Tool | GitHub Issue |
 |--------|--------|----------|--------------|
 | `review-issue.sh` | ✅ Prototype | `analyze_github_issue` | ✅ **COMPLETED** |
-| `review-pr.sh` | ✅ Prototype | `review_pull_request` | 🔄 [Issue #35](https://github.com/kesslerio/vibe-compass-mcp/issues/35) |
-| `review-engineering-plan.sh` | ✅ Prototype | `review_engineering_plan` | 🔄 [Issue #36](https://github.com/kesslerio/vibe-compass-mcp/issues/36) |
-| `review-prd.sh` | ✅ Prototype | `review_prd` | 🔄 [Issue #37](https://github.com/kesslerio/vibe-compass-mcp/issues/37) |
+| `review-pr.sh` | ✅ Prototype | `review_pull_request` | 🔄 [Issue #35](https://github.com/kesslerio/vibe-check-mcp/issues/35) |
+| `review-engineering-plan.sh` | ✅ Prototype | `review_engineering_plan` | 🔄 [Issue #36](https://github.com/kesslerio/vibe-check-mcp/issues/36) |
+| `review-prd.sh` | ✅ Prototype | `review_prd` | 🔄 [Issue #37](https://github.com/kesslerio/vibe-check-mcp/issues/37) |
 
 ### Utility Scripts
 

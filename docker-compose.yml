@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # Main Vibe Compass MCP server
-  vibe-compass-mcp:
+  # Main Vibe Check MCP server
+  vibe-check-mcp:
     build:
       context: .
       target: development  # Use development stage by default
-    container_name: vibe-compass-mcp
+    container_name: vibe-check-mcp
     ports:
       - "8000:8000"
     environment:
@@ -35,7 +35,7 @@ services:
     
     # Health check configuration
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_compass.server import run_server; print('Health OK')"]
+      test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_check.server import run_server; print('Health OK')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -62,11 +62,11 @@ services:
         max-file: "3"
 
   # Production variant (uncomment to use)
-  # vibe-compass-mcp-prod:
+  # vibe-check-mcp-prod:
   #   build:
   #     context: .
   #     target: production
-  #   container_name: vibe-compass-mcp-prod
+  #   container_name: vibe-check-mcp-prod
   #   ports:
   #     - "8000:8000"
   #   environment:
@@ -79,7 +79,7 @@ services:
   #     - ./config:/app/config:ro
   #     - ./logs:/app/logs
   #   healthcheck:
-  #     test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_compass.server import run_server; print('Health OK')"]
+  #     test: ["CMD", "python", "-c", "import sys; sys.path.insert(0, '/app/src'); from vibe_check.server import run_server; print('Health OK')"]
   #     interval: 60s
   #     timeout: 15s
   #     retries: 5
@@ -97,7 +97,7 @@ services:
 # Network configuration (optional)
 networks:
   default:
-    name: vibe-compass-network
+    name: vibe-check-network
 
 # Volume configuration (optional)
 volumes:
