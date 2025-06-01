@@ -333,37 +333,59 @@ class PRReviewTool:
             )
             
             # Check for Claude CLI availability (lines 49-54 of review-pr.sh)
+            logger.info("🔍 Checking Claude CLI availability for enhanced analysis...")
             claude_available = self._check_claude_availability()
+            logger.info(f"🔍 Claude CLI availability result: {claude_available}")
             
             if claude_available:
+                logger.info("✅ Claude CLI available - attempting enhanced analysis")
                 # Use claude -p for comprehensive analysis (lines 549-572)
                 analysis = self._run_claude_analysis(
                     prompt_content, data_content, pr_data["metadata"]["number"]
                 )
                 
                 if analysis:
+                    logger.info("✅ Enhanced Claude analysis successful - returning results")
                     return analysis
+                else:
+                    logger.warning("⚠️ Enhanced Claude analysis failed - falling back to standard analysis")
+            else:
+                logger.info("ℹ️ Claude CLI not available - using fallback analysis")
                     
             # Fallback analysis when Claude is not available (lines 574-668)
-            return self._generate_fallback_analysis(pr_data, size_analysis, review_context)
+            logger.info("📋 Generating fallback analysis...")
+            fallback_result = self._generate_fallback_analysis(pr_data, size_analysis, review_context)
+            logger.info("✅ Fallback analysis completed")
+            return fallback_result
             
         except Exception as e:
-            logger.error(f"Analysis generation failed: {e}")
+            logger.error(f"❌ Analysis generation failed with exception: {e}")
+            import traceback
+            logger.debug(f"Stack trace: {traceback.format_exc()}")
+            logger.info("📋 Falling back to standard analysis due to exception...")
             return self._generate_fallback_analysis(pr_data, size_analysis, review_context)
     
     def _check_claude_availability(self) -> bool:
-        """Check for Claude CLI availability (replicating lines 49-54)."""
+        """Check for Claude CLI availability with comprehensive debug logging."""
+        logger.info("🔍 Starting Claude CLI availability check...")
+        
         try:
-            # Check if running in Docker container (Claude CLI not available there)
+            # Check environment
             import os
-            if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
+            docker_env_exists = os.path.exists("/.dockerenv")
+            docker_env_var = os.environ.get("RUNNING_IN_DOCKER")
+            logger.info(f"🔍 Environment check: /.dockerenv={docker_env_exists}, RUNNING_IN_DOCKER={docker_env_var}")
+            
+            if docker_env_exists or docker_env_var:
                 logger.info("🐳 Running in Docker container - Claude CLI not available, using fallback analysis")
                 return False
             
             # Try multiple ways to detect Claude Code CLI
             commands_to_try = ["claude", "/Users/kesslerio/.nvm/versions/node/v22.14.0/bin/claude"]
+            logger.info(f"🔍 Testing Claude CLI commands: {commands_to_try}")
             
-            for cmd in commands_to_try:
+            for i, cmd in enumerate(commands_to_try):
+                logger.info(f"🔍 Testing command {i+1}/{len(commands_to_try)}: {cmd}")
                 try:
                     result = subprocess.run(
                         [cmd, "--version"], 
@@ -372,17 +394,31 @@ class PRReviewTool:
                         check=True,
                         timeout=5
                     )
+                    logger.info(f"🔍 Command output: stdout='{result.stdout.strip()}', stderr='{result.stderr.strip()}'")
+                    
                     if "Claude Code" in result.stdout or "claude" in result.stdout.lower():
                         logger.info(f"✅ Claude CLI available at {cmd} for enhanced analysis")
                         self.claude_cmd = cmd  # Store the working command
                         return True
-                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                    continue
+                    else:
+                        logger.warning(f"⚠️ Command succeeded but output doesn't match Claude Code pattern")
+                        
+                except subprocess.CalledProcessError as e:
+                    logger.info(f"❌ Command failed with return code {e.returncode}: {e.stderr}")
+                except FileNotFoundError:
+                    logger.info(f"❌ Command not found: {cmd}")
+                except subprocess.TimeoutExpired:
+                    logger.info(f"❌ Command timed out: {cmd}")
+                except Exception as e:
+                    logger.info(f"❌ Unexpected error: {e}")
             
             logger.warning("⚠️ Claude CLI not available - will use fallback analysis")
             return False
+            
         except Exception as e:
-            logger.warning(f"⚠️ Claude CLI check failed: {e} - will use fallback analysis")
+            logger.error(f"❌ Claude CLI check failed with exception: {e}")
+            import traceback
+            logger.debug(f"Stack trace: {traceback.format_exc()}")
             return False
     
     def _create_comprehensive_prompt(
@@ -843,11 +879,17 @@ File too large or binary
         pr_number: int
     ) -> Optional[Dict[str, Any]]:
         """
-        Run claude -p analysis (replicating lines 549-572 of review-pr.sh).
+        Run claude -p analysis with comprehensive debug logging.
         """
+        logger.info(f"🔍 Starting Claude analysis for PR #{pr_number}")
+        logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
+        logger.info(f"🔍 Data content size: {len(data_content)} chars")
+        
         try:
             # Create combined prompt file
             combined_content = f"{prompt_content}\n\n{data_content}"
+            combined_size = len(combined_content)
+            logger.info(f"🔍 Combined content size: {combined_size} chars")
             
             # Write to temporary file
             import tempfile
@@ -855,29 +897,54 @@ File too large or binary
                 f.write(combined_content)
                 temp_file = f.name
             
+            logger.info(f"🔍 Created temporary file: {temp_file}")
+            
             try:
                 # Run claude -p with the combined prompt
-                logger.info("📝 Generating review with Claude CLI...")
-                # Use the detected Claude command
                 claude_command = self.claude_cmd or "claude"
-                result = subprocess.run([
-                    claude_command, "-p", temp_file
-                ], capture_output=True, text=True, timeout=120)
+                full_command = [claude_command, "-p", temp_file]
+                logger.info(f"📝 Running Claude command: {' '.join(full_command)}")
+                
+                result = subprocess.run(
+                    full_command,
+                    capture_output=True, 
+                    text=True, 
+                    timeout=120
+                )
+                
+                logger.info(f"🔍 Claude command completed with return code: {result.returncode}")
+                logger.info(f"🔍 stdout size: {len(result.stdout)} chars")
+                logger.info(f"🔍 stderr size: {len(result.stderr)} chars")
+                
+                if result.stderr:
+                    logger.info(f"🔍 stderr content: {result.stderr[:500]}{'...' if len(result.stderr) > 500 else ''}")
                 
                 if result.returncode == 0 and result.stdout.strip():
                     output_size = len(result.stdout)
+                    logger.info(f"🔍 Claude output preview: {result.stdout[:200]}{'...' if len(result.stdout) > 200 else ''}")
                     
                     if output_size < 50:
                         logger.warning(f"⚠️ Generated review content seems too short ({output_size} chars)")
+                        logger.info(f"🔍 Full short output: {result.stdout}")
                         return None
                         
                     logger.info(f"✅ Claude analysis completed successfully ({output_size} chars)")
                     
                     # Parse Claude output into structured format
-                    return self._parse_claude_output(result.stdout, pr_number)
+                    logger.info("🔍 Parsing Claude output into structured format...")
+                    parsed_result = self._parse_claude_output(result.stdout, pr_number)
+                    
+                    if parsed_result:
+                        logger.info("✅ Claude output parsed successfully")
+                        return parsed_result
+                    else:
+                        logger.error("❌ Failed to parse Claude output")
+                        return None
                     
                 else:
-                    logger.error(f"❌ Claude command failed: {result.stderr}")
+                    logger.error(f"❌ Claude command failed with return code {result.returncode}")
+                    logger.error(f"❌ stderr: {result.stderr}")
+                    logger.info(f"🔍 stdout (if any): {result.stdout}")
                     return None
                     
             finally:
@@ -885,14 +952,17 @@ File too large or binary
                 import os
                 try:
                     os.unlink(temp_file)
-                except:
-                    pass
+                    logger.info(f"🔍 Cleaned up temporary file: {temp_file}")
+                except Exception as cleanup_error:
+                    logger.warning(f"⚠️ Failed to cleanup temp file: {cleanup_error}")
                     
         except subprocess.TimeoutExpired:
             logger.error("❌ Claude analysis timed out after 120 seconds")
             return None
         except Exception as e:
-            logger.error(f"❌ Claude analysis failed: {e}")
+            logger.error(f"❌ Claude analysis failed with exception: {e}")
+            import traceback
+            logger.debug(f"Stack trace: {traceback.format_exc()}")
             return None
     
     def _parse_claude_output(self, claude_output: str, pr_number: int = None) -> Dict[str, Any]:
