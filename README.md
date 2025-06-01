@@ -153,11 +153,26 @@ Add the server at user level (available across all projects):
 # Navigate to the project directory
 cd /path/to/vibe-compass-mcp
 
-# Add server with user scope
-claude mcp add vibe-compass -s user python -m vibe_compass.server --cwd $(pwd) --env PYTHONPATH=$(pwd)/src
+# Add server with user scope (using JSON config for reliability)
+claude mcp add-json vibe-compass '{
+  "type": "stdio",
+  "command": "python",
+  "args": ["-m", "vibe_compass.server"],
+  "env": {
+    "PYTHONPATH": "'$(pwd)'/src"
+  }
+}' -s user
 
 # Optional: Add GitHub token for private repositories
-claude mcp add vibe-compass -s user python -m vibe_compass.server --cwd $(pwd) --env PYTHONPATH=$(pwd)/src --env GITHUB_TOKEN=your_token_here
+claude mcp add-json vibe-compass '{
+  "type": "stdio", 
+  "command": "python",
+  "args": ["-m", "vibe_compass.server"],
+  "env": {
+    "PYTHONPATH": "'$(pwd)'/src",
+    "GITHUB_TOKEN": "your_token_here"
+  }
+}' -s user
 ```
 
 #### Project-Level Configuration
@@ -168,8 +183,15 @@ Add the server for current project only:
 # Navigate to your project directory
 cd /your/project/directory
 
-# Add server with local scope
-claude mcp add vibe-compass -s local python -m vibe_compass.server --cwd /path/to/vibe-compass-mcp --env PYTHONPATH=/path/to/vibe-compass-mcp/src
+# Add server with local scope (using JSON config)
+claude mcp add-json vibe-compass '{
+  "type": "stdio",
+  "command": "python", 
+  "args": ["-m", "vibe_compass.server"],
+  "env": {
+    "PYTHONPATH": "/path/to/vibe-compass-mcp/src"
+  }
+}' -s local
 ```
 
 #### Docker-Based Configuration
@@ -181,8 +203,18 @@ If using Docker:
 cd /path/to/vibe-compass-mcp
 docker build -t vibe-compass-mcp .
 
-# Add Docker-based MCP server
-claude mcp add vibe-compass -s user docker run --rm -p 8000:8000 vibe-compass-mcp
+# Add Docker-based MCP server (using JSON config like GitHub MCP)
+claude mcp add-json vibe-compass '{
+  "type": "stdio",
+  "command": "bash",
+  "args": [
+    "-c", 
+    "docker attach vibe_compass_mcp || docker run -i --rm --name vibe_compass_mcp -e GITHUB_TOKEN=${GITHUB_TOKEN:-} vibe-compass-mcp"
+  ],
+  "env": {
+    "GITHUB_TOKEN": "your_token_here"
+  }
+}' -s user
 ```
 
 ### Step 2: Verify Installation
