@@ -198,6 +198,37 @@ docker run -d \
   vibe-check-mcp:prod
 ```
 
+## 🧠 External Claude CLI Integration
+
+**NEW: Enhanced Analysis with External Claude CLI**
+
+Vibe Check MCP now includes **external Claude CLI integration** for advanced analysis capabilities:
+
+- **🔥 No Context Blocking**: External subprocess execution eliminates 30-second timeout issues
+- **💰 Cost Tracking**: Real-time cost monitoring and session management
+- **📊 SDK Compliance**: Structured JSON responses with metadata
+- **⚡ Reliable Performance**: Consistent 27s analysis time for complex PRs
+- **🎯 Specialized Prompts**: Task-specific system prompts for PR reviews, code analysis, and issue analysis
+
+### Requirements for Enhanced Analysis
+
+To unlock enhanced Claude CLI analysis features:
+
+1. **Install Claude CLI** (optional but recommended):
+   ```bash
+   # Install Claude CLI for enhanced analysis
+   # See: https://docs.anthropic.com/en/docs/claude-cli
+   ```
+
+2. **Automatic Fallback**: When Claude CLI is unavailable, the system automatically falls back to standard analysis
+
+### Enhanced Analysis Features
+
+- **PR Reviews**: Comprehensive PR analysis with anti-pattern detection and architectural guidance
+- **Code Analysis**: Deep code quality assessment with security and performance insights  
+- **Issue Analysis**: Strategic issue evaluation with implementation guidance
+- **Cost Optimization**: Track analysis costs to optimize usage patterns
+
 ## 🔗 Claude Code Integration (Detailed Setup)
 
 > **📋 Quick Setup**: See [Quick Start](#-quick-start-claude-code-required) above for the fastest way to get started.
@@ -307,7 +338,9 @@ Expected output includes:
 
 ## 🛠️ Available Tools
 
-### `analyze_github_issue` (Enhanced Vibe Check Framework)
+### Core Analysis Tools
+
+#### `analyze_github_issue` (Enhanced Vibe Check Framework)
 
 Provides friendly, coaching-oriented analysis with Claude-powered reasoning and educational guidance.
 
@@ -334,7 +367,91 @@ claude "deep vibe issue 22"
 claude "vibe check issue 123 in microsoft/typescript"
 ```
 
-### `server_status`
+#### `review_pull_request` (Enhanced PR Analysis)
+
+Comprehensive PR review with external Claude CLI integration for advanced analysis.
+
+**Parameters**:
+- `pr_number` (int): Pull request number to review
+- `repository` (str, optional): Repository in format "owner/repo"
+- `force_re_review` (bool, optional): Force re-review mode even if not auto-detected
+- `analysis_mode` (str, optional): "comprehensive" for full analysis or "quick" for basic review
+- `detail_level` (str, optional): Educational detail level - "brief", "standard", or "comprehensive"
+
+**Features**:
+- **Multi-dimensional size classification**: Intelligent review strategies based on PR complexity
+- **Re-review tracking**: Detects and handles multiple review cycles
+- **External Claude CLI**: Enhanced analysis with cost tracking and session management
+- **GitHub integration**: Automated commenting and labeling
+
+**Example Usage**:
+```bash
+# Comprehensive PR review
+claude "vibe check PR 42"
+
+# Re-review with progress tracking
+claude "review PR 42 again"
+```
+
+### External Claude CLI Tools (Enhanced)
+
+#### `external_claude_analyze`
+
+Advanced content analysis using isolated Claude CLI execution.
+
+**Parameters**:
+- `content` (str): Content to analyze
+- `task_type` (str, optional): Analysis type - "general", "pr_review", "code_analysis", "issue_analysis"
+- `additional_context` (str, optional): Additional context for analysis
+- `timeout_seconds` (int, optional): Maximum execution time
+
+#### `external_pr_review`
+
+Specialized PR review using external Claude CLI with anti-pattern detection.
+
+**Parameters**:
+- `pr_diff` (str): Pull request diff content
+- `pr_description` (str, optional): PR description/title
+- `file_changes` (list, optional): List of changed files for context
+- `timeout_seconds` (int, optional): Maximum execution time
+
+#### `external_code_analysis`
+
+Deep code analysis for quality, security, and anti-patterns.
+
+**Parameters**:
+- `code_content` (str): Code to analyze
+- `file_path` (str, optional): File path for context
+- `language` (str, optional): Programming language for specialized analysis
+- `timeout_seconds` (int, optional): Maximum execution time
+
+#### `external_issue_analysis`
+
+Strategic GitHub issue analysis with implementation guidance.
+
+**Parameters**:
+- `issue_content` (str): Issue body/content
+- `issue_title` (str, optional): Issue title
+- `issue_labels` (list, optional): Issue labels for context
+- `timeout_seconds` (int, optional): Maximum execution time
+
+#### `external_claude_status`
+
+Check status and availability of external Claude CLI integration.
+
+**Returns**: Integration status, capabilities, and configuration information
+
+### Utility Tools
+
+#### `analyze_text_demo`
+
+Test vibe check analysis on any text content without GitHub dependencies.
+
+**Parameters**:
+- `text` (str): Text content to analyze for anti-patterns
+- `detail_level` (str, optional): Educational detail level
+
+#### `server_status`
 
 Get server status and capabilities information.
 
