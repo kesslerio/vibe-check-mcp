@@ -1,255 +1,175 @@
 #!/bin/bash
-# PRD Review Script - Enhanced systematic validation with MCP tools
-# Usage: ./scripts/review-prd.sh <PRD_FILE_PATH> [--verbose]
+# PRD Review Script - Basic anti-pattern detection
+# Usage: ./scripts/review-prd.sh <PRD_FILE_PATH>
 
 set -e
 
-# Source shared utilities
-SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SOURCE_DIR/shared/validation-utils.sh"
-source "$SOURCE_DIR/shared/logging-utils.sh"
-
-# Parse arguments
-PRD_FILE=""
-VERBOSE_MODE=false
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --verbose|-v)
-            VERBOSE_MODE=true
-            enable_verbose_mode
-            shift
-            ;;
-        *)
-            if [ -z "$PRD_FILE" ]; then
-                PRD_FILE="$1"
-            else
-                echo "Error: Multiple PRD files specified"
-                exit 1
-            fi
-            shift
-            ;;
-    esac
-done
-
-if [ -z "$PRD_FILE" ]; then
-    echo "Usage: $0 <PRD_FILE_PATH> [--verbose]"
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <PRD_FILE_PATH>"
     echo "Example: $0 docs/Product_Requirements_Document.md"
-    echo "Example: $0 docs/Product_Requirements_Document.md --verbose"
     exit 1
 fi
 
-# Set up logging
-PRD_IDENTIFIER=$(basename "$PRD_FILE" .md)
-setup_logging "prd" "$PRD_IDENTIFIER"
+PRD_FILE=$1
 
-echo "🎯 Running enhanced PRD review with MCP tools for comprehensive analysis..."
-$VERBOSE_MODE && echo "🔍 Verbose mode enabled - detailed logs in: $LOG_DIR"
+echo "🎯 Running PRD review with anti-pattern detection..."
 
-# Test Claude CLI with logging
-if ! test_claude_cli; then
+# Check if Claude CLI is available
+if ! command -v claude &> /dev/null; then
+    echo "❌ Claude CLI not found"
+    echo "Please install Claude Code CLI first: https://claude.ai/code"
     exit 1
 fi
 
 # Check if PRD file exists
 if [ ! -f "$PRD_FILE" ]; then
     echo "❌ PRD file not found: $PRD_FILE"
-    echo "Please provide a valid file path"
     exit 1
 fi
 
-# Create reviews directory if it doesn't exist
+# Create reviews directory
 mkdir -p reviews
 
-# Get PRD content and check size
+# Get PRD content (limit to 100 lines to avoid hanging)
 echo "📋 Reading PRD file: $PRD_FILE"
-log_info "Reading PRD file: $PRD_FILE"
-PRD_SIZE=$(wc -c < "$PRD_FILE")
-PRD_LINES=$(wc -l < "$PRD_FILE")
+PRD_CONTENT=$(head -n 100 "$PRD_FILE")
+PRD_LINES=$(echo "$PRD_CONTENT" | wc -l)
 
-if [ "$PRD_SIZE" -eq 0 ]; then
-    echo "❌ PRD file is empty"
-    log_error "PRD file is empty: $PRD_FILE"
-    exit 1
-fi
+echo "📝 PRD content loaded ($PRD_LINES lines)"
 
-echo "📝 PRD content loaded ($PRD_LINES lines, $PRD_SIZE chars)"
-log_debug "PRD file size: $PRD_SIZE characters, $PRD_LINES lines"
+# Create output file
+OUTPUT_FILE="reviews/prd-review-$(basename "$PRD_FILE" .md)-$(date +%Y%m%d-%H%M%S).md"
 
-# Check if document is too large for Claude
-if [ "$PRD_SIZE" -gt 25000 ]; then
-    echo "⚠️ Warning: PRD file is large ($PRD_SIZE characters)"
-    echo "Breaking into summary analysis to avoid Claude limits..."
-    
-    # Create summary for large documents
-    SUMMARY=$(head -n 50 "$PRD_FILE" && echo -e "\n...\n[Document continues for $PRD_LINES total lines]\n..." && tail -n 20 "$PRD_FILE")
-else
-    SUMMARY=$(cat "$PRD_FILE")
-fi
-
-# Create output file in reviews directory
-OUTPUT_FILE="reviews/prd-review-${PRD_IDENTIFIER}-${TIMESTAMP}.md"
-echo "💾 Analysis will be saved to: $OUTPUT_FILE"
-log_info "Output file: $OUTPUT_FILE"
-
-# Enhanced prompt with MCP tool integration
-PROMPT="You are a senior product strategy advisor. Analyze this PRD for anti-patterns using available research tools for comprehensive analysis.
+# Rich prompt with systematic thinking integration
+PROMPT="You are a senior product strategy advisor. Analyze this PRD comprehensively for anti-patterns and strategic quality using systematic thinking approaches.
 
 **Enhanced Analysis Instructions:**
 1. Use available MCP research tools to validate claims and approaches
 2. Search for similar products/solutions to inform recommendations  
 3. Research best practices for identified problem areas
-4. Provide evidence-based recommendations with external validation
-5. **NEW: Apply Clear-Thought MCP tools for systematic product analysis:**
+4. **Apply Clear-Thought systematic analysis:**
    - Use mental models (First Principles, Opportunity Cost, Pareto Principle) for product validation
    - Apply decision frameworks for feature prioritization and market positioning
    - Employ sequential thinking for complex product strategy evaluation
    - Use collaborative reasoning for stakeholder alignment assessment
 
-**Anti-Patterns to Check:**
-1. Solution-first requirements (tech details before user problems)
+**Focus Areas:**
+1. **Problem Definition Clarity** - How well-defined and validated is the problem?
+2. **Solution Approach Appropriateness** - Does the solution fit the problem and market?
+3. **Success Metrics Specificity** - Are success criteria measurable and realistic?
+4. **Overall Strategic Assessment** - Is this a sound product strategy?
+
+**Anti-Pattern Detection with Systematic Thinking:**
+1. **Solution-first requirements** (tech details before user problems)
    - **Apply First Principles:** Strip away solution bias to focus on core user problems
-2. Scope creep enablers (vague success criteria)
+2. **Scope creep enablers** (vague success criteria)
    - **Use Decision Framework:** Systematic evaluation of scope boundaries and success metrics
-3. Resource reality disconnect (no feasibility validation)
+3. **Resource reality disconnect** (no feasibility validation)
    - **Apply Opportunity Cost Analysis:** Evaluate resource allocation against alternatives
-4. Stakeholder assumption gaps (missing user research)
+4. **Stakeholder assumption gaps** (missing user research)
    - **Use Collaborative Reasoning:** Simulate stakeholder perspectives and identify gaps
-5. Metrics manipulation (vanity metrics vs business impact)
+5. **Metrics manipulation** (vanity metrics vs business impact)
    - **Apply Pareto Principle:** Focus on the 20% of metrics that drive 80% of business value
 
-**Enhanced Analysis Process:**
-- Research market validation for the problem domain
-- Look up best practices for the proposed solution approach
-- Validate technical feasibility claims
-- Check for similar solutions and differentiation opportunities
-- **Apply systematic thinking frameworks:**
-  - Sequential thinking for complex product strategy evaluation
-  - Mental model analysis for market positioning and user value
-  - Decision framework assessment for feature prioritization
-  - Collaborative reasoning for stakeholder alignment
-
 **Required Output Format:**
-🎯 **PRD Overview**
-[Brief summary]
+# PRD Strategic Assessment: [Product Name]
 
-🔍 **Market Research & Validation**
-[Results from research tools about problem domain and solutions]
+## 1. Problem Definition Clarity ⭐⭐⭐⭐⭐
 
-🚨 **Anti-Pattern Risk Assessment**
-[Detected patterns with risk level HIGH/MEDIUM/LOW and research validation]
+**Strengths:**
+[Detailed analysis with evidence]
 
-🔧 **Technical Feasibility Research**
-[External validation of technical claims and approaches]
+**Evidence of strong/weak problem definition:**
+[Specific examples from PRD]
 
-🧠 **Clear-Thought Analysis Results**
+## 2. Solution Approach Appropriateness ⭐⭐⭐⭐⚡
+
+**Strengths:**
+[Detailed analysis]
+
+**Potential concerns:**
+[Issues and risks]
+
+## 3. Success Metrics Specificity ⭐⭐⭐⚡⚡
+
+**Strengths:**
+[What's well defined]
+
+**Weaknesses:**
+[Missing or vague metrics]
+
+**Suggested additions needed:**
+[Specific metric recommendations]
+
+## 4. Overall Recommendation ⭐⭐⭐⭐⚡
+
+### ✅ **[PROCEED/NEEDS REVISION/REJECT]** with strategic adjustments
+
+**Key Strengths:**
+[Major positives]
+
+**Critical Success Factors:**
+[What needs to happen]
+
+**Risk Mitigation:**
+[How to reduce risks]
+
+## 🧠 **Clear-Thought Analysis Results**
 [Results from systematic thinking: mental models applied, decision frameworks used, collaborative reasoning insights]
 
-💡 **Evidence-Based Recommendations**
-[Top 3 actionable improvements with research backing and systematic thinking validation]
+## 🔍 **Market Research & Validation** 
+[Results from research tools about problem domain and solutions]
 
-📚 **Research Citations**
-[Sources and validation from research tools used]
-
-🎯 **Systematic Thinking Summary**
+## 🎯 **Systematic Thinking Summary**
 [Key insights from Clear-Thought tools and how they validate/challenge the PRD approach]
 
-**Overall Assessment**: [APPROVE/NEEDS REVISION/REJECT]
+**Recommendation**: [Detailed strategic assessment]
 **Research Confidence**: [HIGH/MEDIUM/LOW] - [explanation of research validation]
 **Clear-Thought Confidence**: [HIGH/MEDIUM/LOW] - [systematic analysis validation]
 
+Format your response in markdown with clear sections and use star ratings (⭐) for each area.
+
 **PRD Content:**
 \`\`\`
-$SUMMARY
+$PRD_CONTENT
 \`\`\`"
 
-# Run Claude analysis with MCP tools and enhanced logging
-echo "🤖 Running enhanced Claude analysis with MCP research tools..."
-echo "🔍 This includes market research, technical validation, and best practices lookup..."
-$VERBOSE_MODE && echo "📝 Detailed analysis logs will be captured for debugging"
-
-log_info "Starting Claude analysis with enhanced MCP tools"
-if execute_claude_with_logging "$PROMPT" "$OUTPUT_FILE" "PRD analysis with MCP research tools"; then
-    
-    # Validate output
-    if validate_output "$OUTPUT_FILE" 100; then
-        echo "✅ Enhanced PRD analysis complete!"
-        log_info "Analysis completed successfully"
-    else
-        echo "⚠️ Primary analysis had issues, trying simplified analysis..."
-        log_info "Falling back to simplified analysis"
+# Run Claude analysis
+echo "🤖 Running Claude analysis..."
+if echo "$PROMPT" | claude -p > "$OUTPUT_FILE" 2>/dev/null; then
+    if [ -s "$OUTPUT_FILE" ]; then
+        echo "✅ Analysis complete!"
+        echo ""
+        echo "📊 Analysis Results:"
+        echo "=================="
+        cat "$OUTPUT_FILE"
+        echo ""
+        echo "💾 Full analysis saved to: $OUTPUT_FILE"
         
-        # Fallback: Simple prompt without MCP tools
-        SIMPLE_PROMPT="Analyze this PRD for major anti-patterns. Provide summary and 3 recommendations.
-
-PRD excerpt:
-\`\`\`
-$(head -n 30 "$PRD_FILE")
-\`\`\`"
-        
-        if execute_claude_with_logging "$SIMPLE_PROMPT" "$OUTPUT_FILE" "Simplified PRD analysis"; then
-            if validate_output "$OUTPUT_FILE" 50; then
-                echo "✅ Simplified analysis complete!"
-                log_info "Fallback analysis completed successfully"
-            else
-                echo "❌ Even simplified analysis failed"
-                log_error "Both primary and fallback analysis failed"
-                echo "Manual review required - check logs for details"
-                print_log_summary "prd" "$PRD_IDENTIFIER"
-                exit 1
-            fi
-        else
-            echo "❌ Claude analysis completely failed"
-            log_error "Complete analysis failure"
-            echo "Manual review required - check logs for details"
-            print_log_summary "prd" "$PRD_IDENTIFIER"
-            exit 1
+        # Check for high-risk patterns
+        if grep -qi "HIGH\\|REJECT" "$OUTPUT_FILE"; then
+            echo ""
+            echo "⚠️  HIGH RISK PATTERNS DETECTED"
+            echo "Review systematic analysis recommendations before proceeding."
+        elif grep -qi "APPROVE" "$OUTPUT_FILE"; then
+            echo ""
+            echo "✅ PRD APPROVED WITH SYSTEMATIC VALIDATION"
+            echo "Ready for engineering planning with research confidence."
         fi
+    else
+        echo "❌ Claude produced no output"
+        exit 1
     fi
-    
-    echo ""
-    echo "📊 Enhanced Analysis Results:"
-    echo "============================"
-    cat "$OUTPUT_FILE"
-    echo ""
-    echo "💾 Full analysis saved to: $OUTPUT_FILE"
-    
-    # Check for high-risk patterns
-    if grep -qi "high\|critical\|reject" "$OUTPUT_FILE"; then
-        echo ""
-        echo "⚠️  HIGH RISK PATTERNS DETECTED"
-        echo "Review research-backed recommendations before proceeding."
-    elif grep -qi "approve" "$OUTPUT_FILE"; then
-        echo ""
-        echo "✅ PRD APPROVED WITH RESEARCH VALIDATION"
-        echo "Ready for engineering planning with market confidence."
-    fi
-    
 else
-    echo "❌ Claude CLI execution failed"
-    log_error "Claude CLI execution failed"
-    echo "Check Claude authentication and network connection"
-    echo "Detailed error information available in logs"
-    print_log_summary "prd" "$PRD_IDENTIFIER"
+    echo "❌ Claude analysis failed"
+    echo "Check Claude authentication and try again"
     exit 1
 fi
 
-# Clean up old logs
-cleanup_old_logs "prd" 10
-
 echo ""
 echo "🎯 Enhanced PRD systematic review complete!"
-echo "📄 Review the full analysis with research validation in: $OUTPUT_FILE"
-echo ""
 echo "💡 Next steps:"
 echo "   1. Address any HIGH risk anti-patterns identified"
 echo "   2. Validate market research findings"
-echo "   3. Run ./scripts/review-engineering-plan.sh with MCP enhancement"
-echo "   4. Consider external validation of technical feasibility claims"
-
-# Print debug information if verbose mode or if there were issues
-if $VERBOSE_MODE || [ -f "$ERROR_LOG" ]; then
-    print_log_summary "prd" "$PRD_IDENTIFIER"
-fi
-
-log_info "PRD review script completed successfully"
+echo "   3. Apply systematic thinking insights to planning"
+echo "   4. Run ./scripts/review-engineering-plan.sh for technical validation"

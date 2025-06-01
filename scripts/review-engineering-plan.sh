@@ -1,5 +1,5 @@
 #!/bin/bash
-# Engineering Plan Review Script - Enhanced technical validation with MCP research tools
+# Engineering Plan Review Script - Technical validation with Cognee lessons
 # Usage: ./scripts/review-engineering-plan.sh <PLAN_FILE_PATH> [--prd <PRD_FILE_PATH>]
 
 set -e
@@ -34,7 +34,7 @@ if [ -z "$PLAN_FILE" ]; then
     exit 1
 fi
 
-echo "🎯 Running enhanced Engineering Plan review with MCP research tools..."
+echo "🎯 Running Engineering Plan review with Cognee retrospective lessons..."
 
 # Check if Claude CLI is available
 if ! command -v claude &> /dev/null; then
@@ -46,7 +46,6 @@ fi
 # Check if plan file exists
 if [ ! -f "$PLAN_FILE" ]; then
     echo "❌ Engineering plan file not found: $PLAN_FILE"
-    echo "Please provide a valid file path"
     exit 1
 fi
 
@@ -55,57 +54,39 @@ PRD_CONTENT=""
 if [ -n "$PRD_FILE" ]; then
     if [ ! -f "$PRD_FILE" ]; then
         echo "❌ PRD file not found: $PRD_FILE"
-        echo "Please provide a valid PRD file path or omit --prd flag"
         exit 1
     fi
-    PRD_CONTENT=$(cat "$PRD_FILE")
+    PRD_CONTENT=$(head -n 50 "$PRD_FILE")
     echo "📋 PRD alignment check enabled with: $PRD_FILE"
 fi
 
-# Create reviews directory if it doesn't exist
+# Create reviews directory
 mkdir -p reviews
 
-# Get plan content
+# Get plan content (limit to avoid issues)
 echo "📋 Reading Engineering Plan file: $PLAN_FILE"
-PLAN_CONTENT=$(cat "$PLAN_FILE")
-PLAN_SIZE=$(echo "$PLAN_CONTENT" | wc -c)
+PLAN_CONTENT=$(head -n 100 "$PLAN_FILE")
 PLAN_LINES=$(echo "$PLAN_CONTENT" | wc -l)
 
-if [ -z "$PLAN_CONTENT" ]; then
-    echo "❌ Engineering plan file is empty"
-    exit 1
-fi
+echo "📝 Engineering plan content loaded ($PLAN_LINES lines)"
 
-echo "📝 Engineering plan content loaded ($PLAN_LINES lines, $PLAN_SIZE chars)"
-if [ -n "$PRD_CONTENT" ]; then
-    echo "📝 PRD content loaded ($(echo "$PRD_CONTENT" | wc -l) lines)"
-fi
-
-# Create output file in reviews directory
+# Create output file
 OUTPUT_FILE="reviews/engineering-plan-review-$(basename "$PLAN_FILE" .md)-$(date +%Y%m%d-%H%M%S).md"
-echo "💾 Analysis will be saved to: $OUTPUT_FILE"
 
-# Check if document is too large and create summary if needed
-if [ "$PLAN_SIZE" -gt 35000 ]; then
-    echo "⚠️ Warning: Engineering plan is large ($PLAN_SIZE characters)"
-    echo "Creating summary for analysis..."
-    PLAN_SUMMARY=$(head -n 100 "$PLAN_FILE" && echo -e "\n...\n[Document continues for $PLAN_LINES total lines]\n..." && tail -n 50 "$PLAN_FILE")
-else
-    PLAN_SUMMARY="$PLAN_CONTENT"
-fi
-
-# Create enhanced engineering plan review prompt
+# Create PRD section if provided
 PRD_SECTION=""
 if [ -n "$PRD_CONTENT" ]; then
-    PRD_SECTION="## PRD CONTENT FOR ALIGNMENT CHECK:
+    PRD_SECTION="
 
+## PRD ALIGNMENT CHECK
+**PRD Content:**
 \`\`\`
-$(echo "$PRD_CONTENT" | head -n 50)
-$(if [ $(echo "$PRD_CONTENT" | wc -l) -gt 50 ]; then echo "...[PRD continues]"; fi)
+$PRD_CONTENT
 \`\`\`"
 fi
 
-PROMPT="You are a senior technical architect with expertise in preventing systematic engineering failures.
+# Comprehensive engineering plan analysis prompt with Clear-Thought integration
+PROMPT="You are a senior technical architect with expertise in preventing systematic engineering failures based on the Cognee retrospective analysis.
 
 **Enhanced Analysis Instructions:**
 1. Use available MCP research tools to validate technical approaches and frameworks
@@ -119,175 +100,146 @@ PROMPT="You are a senior technical architect with expertise in preventing system
    - Employ decision frameworks for critical technical choices
    - Leverage debugging approaches for risk assessment
 
+**Critical Context: Known Failure Patterns**
+
+The Cognee integration failed due to these specific patterns:
+1. **Infrastructure-Without-Implementation**: Building custom HTTP servers instead of using cognee.add() → cognee.cognify() → cognee.search()
+2. **Symptom-Driven Development**: Fixing effects (mock data, no integration) rather than root cause (not using basic API)
+3. **Over-Engineering Bias**: Preferring custom solutions over documented API approaches
+4. **Requirements-First Development**: Elaborate planning without understanding actual API capabilities
+
 **Engineering Anti-Pattern Detection Framework:**
 
-### 1. ARCHITECTURE WITHOUT VALIDATION
+## 1. ARCHITECTURE WITHOUT VALIDATION ⭐⭐⭐⭐⭐
+- Does the plan validate basic integrations work before complex architecture?
+- Are there working POCs for core functionality?
+- Is complexity justified or could simpler approaches work?
 - Research the proposed technical stack for stability and best practices
 - Validate complexity claims against industry standards
 - Check for simpler alternatives using research tools
 - **Apply First Principles thinking:** Break down proposed architecture to fundamental requirements
 - **Use Decision Framework:** Evaluate technical stack choices systematically
 
-### 2. INTEGRATION ASSUMPTION FAILURES  
+## 2. INTEGRATION ASSUMPTION FAILURES ⭐⭐⭐⭐⭐  
+- Are third-party APIs actually tested vs. assumed to work?
+- Does the plan include fallback strategies for API failures?
+- Are integration points validated with real data?
 - Research third-party APIs and SDKs mentioned
 - Validate compatibility and stability claims
 - Look up common integration pitfalls
 - **Apply Sequential Thinking:** Step through integration dependencies and failure points
 - **Use Debugging Approach:** Anticipate and plan for integration failure modes
 
-### 3. SCALE PREMATURE OPTIMIZATION
-- Research performance benchmarks for proposed approaches
-- Validate scaling claims with external data
-- Check industry standards for similar applications
-- **Apply Opportunity Cost Analysis:** Evaluate scaling investment vs. simpler solutions
-- **Use Mental Model:** Assess premature optimization patterns systematically
+## 3. SCALE PREMATURE OPTIMIZATION ⭐⭐⭐⭐⭐
+- Is scaling planned before basic functionality is proven?
+- Are performance assumptions validated with benchmarks?
+- Could MVP approach work before optimization?
+- **Apply Opportunity Cost Analysis:** Evaluate scaling effort vs. core functionality delivery
+- **Use Mental Models:** Assess whether scaling concerns are premature vs. necessary
 
-### 4. TECHNOLOGY SELECTION BIAS
-- Research proposed technologies for production readiness
-- Look up alternatives and comparative analysis
-- Validate team skill requirements
-- **Apply Decision Framework:** Systematic evaluation of technology alternatives
-- **Use First Principles:** Strip away bias to focus on core technical requirements
+## 4. TECHNOLOGY SELECTION BIAS ⭐⭐⭐⭐⭐
+- Are technology choices based on proven stability vs. novelty?
+- Do alternatives exist that are simpler/more established?
+- Is team expertise aligned with chosen technologies?
+- **Apply Decision Framework:** Systematic technology evaluation with pros/cons analysis
+- **Use First Principles:** Evaluate technology choices against core requirements
 
-### 5. RISK ASSESSMENT BLINDNESS
-- Research failure modes for proposed architecture
-- Look up monitoring and observability best practices
-- Validate backup and recovery approaches
+## 5. RISK ASSESSMENT BLINDNESS ⭐⭐⭐⭐⭐
+- Are failure modes identified and mitigated?
+- Does the plan include monitoring and rollback strategies?
+- Are dependencies and their failure impacts mapped?
 - **Apply Debugging Approach:** Systematic identification of potential failure modes
-- **Use Sequential Thinking:** Map out failure cascades and mitigation strategies
-
-## COGNEE RETROSPECTIVE LESSONS WITH RESEARCH VALIDATION
-
-**Infrastructure-Without-Implementation Prevention:**
-- Research if basic integrations work as claimed
-- Validate that standard approaches exist for proposed custom solutions
-- Look up documentation quality for proposed APIs
-- Research complexity vs. benefit trade-offs
+- **Use Sequential Thinking:** Map dependency chains and cascading failure risks
 
 **Required Output Format:**
+# Engineering Plan Technical Assessment
 
-🎯 **Engineering Plan Overview**
-[Brief summary]
+## 🎯 **Plan Overview**
+[Brief summary of what this engineering plan proposes]
 
-🔍 **Technical Research & Validation**
-[Results from researching proposed technologies and approaches]
+## 🚨 **Anti-Pattern Risk Assessment**
+[For each of the 5 categories above, provide: Rating (⭐⭐⭐⭐⭐), Risk Level (HIGH/MEDIUM/LOW), Evidence, Recommendations]
 
-🚨 **Anti-Pattern Risk Assessment**  
-[Detected patterns with research-backed evidence]
+## 🔧 **Technical Validation Requirements**
+[What POCs/validations are needed before proceeding]
 
-🔧 **Technical Validation Requirements**
-[Research-informed POCs needed]
+## ⚖️ **Complexity vs. Value Analysis**
+[Is the proposed complexity justified? Simpler alternatives?]
 
-⚖️ **Complexity vs. Industry Standards**
-[Research comparison of proposed complexity]
+## 🛡️ **Risk Analysis & Mitigation**
+[Key failure modes and how to prevent them]$(if [ -n "$PRD_CONTENT" ]; then echo "
 
-🛡️ **Risk Analysis with External Validation**
-[Research-backed failure modes and mitigation]
+## 🔗 **PRD Alignment Assessment**
+[How well does this technical approach align with PRD requirements?]"; fi)
 
-$(if [ -n "$PRD_CONTENT" ]; then echo "🔗 **PRD Alignment with Research**
-[Technical approach vs. PRD with external validation]"; fi)
-
-🧠 **Clear-Thought Analysis Results**
+## 🧠 **Clear-Thought Analysis Results**
 [Results from systematic thinking tools: mental models applied, decision frameworks used, sequential reasoning outcomes]
 
-💡 **Research-Backed Recommendations**
-[Evidence-based improvements with citations]
+## 🔍 **Research-Backed Analysis** 
+[Results from research tools about technical approaches and frameworks]
 
-📚 **Technical Research Citations**
+## 💡 **Key Recommendations**
+[Top 3-5 actionable improvements with Cognee lessons applied]
+
+## 📚 **Technical Research Citations**
 [Sources used for validation]
 
-🎯 **Systematic Analysis Summary**
+## 🎯 **Systematic Analysis Summary**
 [Key insights from Clear-Thought tools and how they inform the technical decision]
 
 **Overall Assessment**: [APPROVE/NEEDS POC/NEEDS SIMPLIFICATION/REJECT]
 **Infrastructure-Without-Implementation Risk**: [HIGH/MEDIUM/LOW]
 **Research Confidence**: [HIGH/MEDIUM/LOW] - [validation quality]
 **Clear-Thought Confidence**: [HIGH/MEDIUM/LOW] - [systematic analysis quality]
+**Cognee Lessons Applied**: [Evidence of learning from retrospective]
 
-## ENGINEERING PLAN TO ANALYZE:
+Use star ratings and provide detailed evidence for each assessment.
 
+**ENGINEERING PLAN TO ANALYZE:**
 \`\`\`
-$PLAN_SUMMARY
-\`\`\`
+$PLAN_CONTENT
+\`\`\`$PRD_SECTION"
 
-$PRD_SECTION"
-
-# Run Claude analysis with MCP research tools
-echo "🤖 Running enhanced Claude analysis with technical research..."
-echo "🔍 This includes framework validation, best practices research, and technical feasibility..."
-
+# Run Claude analysis
+echo "🤖 Running comprehensive Claude analysis with Cognee lessons..."
 if echo "$PROMPT" | claude -p > "$OUTPUT_FILE" 2>/dev/null; then
-    
-    # Check if output was generated
-    if [ ! -s "$OUTPUT_FILE" ]; then
-        echo "❌ Claude produced no output"
-        echo "Document may be too complex. Trying simplified analysis..."
+    if [ -s "$OUTPUT_FILE" ]; then
+        echo "✅ Analysis complete!"
+        echo ""
+        echo "📊 Analysis Results:"
+        echo "=================="
+        cat "$OUTPUT_FILE"
+        echo ""
+        echo "💾 Full analysis saved to: $OUTPUT_FILE"
         
-        # Fallback: Simplified prompt
-        SIMPLE_PROMPT="Analyze this engineering plan for anti-patterns. Focus on infrastructure-without-implementation risks from Cognee lessons.
-
-Plan excerpt:
-\`\`\`
-$(head -n 50 "$PLAN_FILE")
-\`\`\`"
-        
-        if echo "$SIMPLE_PROMPT" | claude -p > "$OUTPUT_FILE" 2>/dev/null && [ -s "$OUTPUT_FILE" ]; then
-            echo "✅ Simplified analysis complete!"
-        else
-            echo "❌ Claude analysis completely failed"
-            echo "Manual review required"
-            rm -f "$OUTPUT_FILE"
-            exit 1
+        # Check for high-risk patterns with specific messaging
+        if grep -qi "infrastructure-without-implementation.*high" "$OUTPUT_FILE"; then
+            echo ""
+            echo "🚨 CRITICAL COGNEE-STYLE RISK DETECTED"
+            echo "This plan shows infrastructure-without-implementation patterns."
+            echo "Follow Cognee lessons: validate basic functionality before complex architecture."
+        elif grep -qi "HIGH\\|REJECT" "$OUTPUT_FILE"; then
+            echo ""
+            echo "⚠️  HIGH RISK PATTERNS DETECTED"
+            echo "Review recommendations before proceeding."
+        elif grep -qi "APPROVE" "$OUTPUT_FILE"; then
+            echo ""
+            echo "✅ ENGINEERING PLAN APPROVED"
+            echo "Technical approach validated with Cognee lessons."
         fi
     else
-        echo "✅ Enhanced engineering plan analysis complete!"
+        echo "❌ Claude produced no output"
+        exit 1
     fi
-    
-    echo ""
-    echo "📊 Enhanced Analysis Results:"
-    echo "============================"
-    cat "$OUTPUT_FILE"
-    echo ""
-    echo "💾 Full analysis saved to: $OUTPUT_FILE"
-    
-    # Check for high-risk patterns with specific messaging
-    if grep -qi "infrastructure-without-implementation.*high\|infrastructure-without-implementation.*critical" "$OUTPUT_FILE"; then
-        echo ""
-        echo "🚨 CRITICAL COGNEE-STYLE RISK DETECTED"
-        echo "This plan shows research-validated infrastructure-without-implementation patterns."
-        echo "Follow Cognee lessons: validate basic functionality before complex architecture."
-    elif grep -qi "high\|critical\|reject" "$OUTPUT_FILE"; then
-        echo ""
-        echo "⚠️  HIGH RISK PATTERNS DETECTED"
-        echo "Research validation shows significant technical debt risk."
-        echo "Review evidence-based recommendations before proceeding."
-    elif grep -qi "approve" "$OUTPUT_FILE"; then
-        echo ""
-        echo "✅ ENGINEERING PLAN APPROVED WITH RESEARCH VALIDATION"
-        echo "Technical research supports the proposed approach."
-    fi
-    
 else
-    echo "❌ Claude CLI execution failed"
-    echo "Check Claude authentication and network connection"
+    echo "❌ Claude analysis failed"
+    echo "Check Claude authentication and try again"
     exit 1
 fi
 
-# Extract key recommendations if present
-if grep -qi "recommendations\|💡" "$OUTPUT_FILE"; then
-    echo ""
-    echo "🎯 Research-Backed Key Recommendations:"
-    echo "======================================"
-    grep -A 10 -i "recommendations\|💡" "$OUTPUT_FILE" | head -n 10
-fi
-
 echo ""
-echo "🎯 Enhanced engineering plan systematic review complete!"
-echo "📄 Review the research-validated analysis in: $OUTPUT_FILE"
-echo ""
+echo "🎯 Engineering plan systematic review complete!"
 echo "💡 Next steps:"
-echo "   1. Address any research-validated HIGH risk anti-patterns"
-echo "   2. Complete technical validation requirements with external sources"
+echo "   1. Address any HIGH risk anti-patterns identified"
+echo "   2. Complete technical validation requirements"
 echo "   3. Validate basic integrations per Cognee lessons"
-echo "   4. Consider research citations for implementation decisions"
-echo "   5. Use ./scripts/review-issue.sh for implementation validation"

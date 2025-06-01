@@ -121,7 +121,41 @@ fi
 # Get linked issues from PR body
 LINKED_ISSUES=$(echo "$PR_BODY" | grep -oE "(Fixes|Closes|Resolves) #[0-9]+" | grep -oE "[0-9]+" || echo "")
 
-echo "🔍 Running comprehensive analysis with issue validation ($REVIEW_TYPE)..."
+# Get existing PR comments for analysis
+echo "📝 Fetching existing PR comments..."
+EXISTING_COMMENTS=$(gh pr view $PR_NUMBER --json comments --jq '.comments[] | "**@" + .author.login + "** (" + .createdAt + "): " + .body' 2>/dev/null || echo "No comments found")
+
+# Get issue details if linked issues exist
+ISSUE_ANALYSIS=""
+if [ -n "$LINKED_ISSUES" ]; then
+    echo "🔗 Analyzing linked issues: #$LINKED_ISSUES"
+    for issue_num in $LINKED_ISSUES; do
+        echo "🔍 Fetching issue #$issue_num details..."
+        ISSUE_DATA=$(gh issue view $issue_num --json title,body,labels 2>/dev/null || echo "Issue not found")
+        if [ "$ISSUE_DATA" != "Issue not found" ]; then
+            ISSUE_TITLE_LINKED=$(echo "$ISSUE_DATA" | jq -r '.title')
+            ISSUE_BODY_LINKED=$(echo "$ISSUE_DATA" | jq -r '.body // ""')
+            ISSUE_LABELS_LINKED=$(echo "$ISSUE_DATA" | jq -r '.labels[]?.name' | tr '\n' ', ' | sed 's/,$//')
+            
+            ISSUE_ANALYSIS="$ISSUE_ANALYSIS
+
+## Issue #$issue_num Analysis
+**Title:** $ISSUE_TITLE_LINKED
+**Labels:** $ISSUE_LABELS_LINKED
+**Body:** 
+$ISSUE_BODY_LINKED
+"
+        else
+            ISSUE_ANALYSIS="$ISSUE_ANALYSIS
+
+## Issue #$issue_num Analysis
+**Status:** Issue not found or inaccessible
+"
+        fi
+    done
+fi
+
+echo "🔍 Running comprehensive analysis with comment and issue validation ($REVIEW_TYPE)..."
 
 # Create comprehensive review prompt with issue validation
 cat > /tmp/pr_review_prompt_${PR_NUMBER}.md << EOF
@@ -141,11 +175,13 @@ Brief summary of what this PR accomplishes and its scope
 🔗 **Issue Linkage Validation**
 $(if [ -n "$LINKED_ISSUES" ]; then
     echo "- Linked Issues: #$LINKED_ISSUES"
-    echo "- [ ] Use MCP GitHub tools to fetch and validate linked issue details"
     echo "- [ ] Verify PR addresses the core problem described in linked issue(s)"
     echo "- [ ] Check if acceptance criteria from issue are met"
     echo "- [ ] Validate that solution approach aligns with issue requirements"
     echo "- [ ] Apply Clear-Thought decision framework to assess PR-issue alignment"
+    echo "- [ ] Ensure all issue requirements are addressed by this PR"
+    echo ""
+    echo "**Linked Issue Analysis Available Below** - Use this to validate alignment"
 else
     echo "⚠️ NO LINKED ISSUES DETECTED - This PR should reference specific issues it addresses"
     echo "- [ ] PR should link to relevant issues using 'Fixes #XXX' syntax"
@@ -153,14 +189,29 @@ else
     echo "- [ ] Use MCP GitHub search to find related issues if needed"
 fi)
 
-🚫 **Third-Party Integration & Over-Engineering Check**
+📝 **Previous Review Comments Analysis**
+$(if [ "$EXISTING_COMMENTS" != "No comments found" ]; then
+    echo "- [ ] Analyze existing review feedback and concerns raised"
+    echo "- [ ] Verify that previous review issues have been addressed"
+    echo "- [ ] Check if changes align with reviewer suggestions"
+    echo "- [ ] Identify any unresolved review topics that need follow-up"
+    echo "- [ ] Apply Clear-Thought collaborative reasoning to assess reviewer consensus"
+    echo ""
+    echo "**Previous Comments Available Below** - Address any unresolved feedback"
+else
+    echo "✅ This is the first review of this PR"
+    echo "- [ ] Provide comprehensive initial review"
+    echo "- [ ] Set clear expectations for any needed changes"
+fi)
+
+🚫 **Third-Party Integration & Complexity Assessment**
 - [ ] If this involves third-party services: Does it follow API-first development protocol from CLAUDE.md?
 - [ ] Are we using standard APIs/SDKs instead of building custom implementations?
-- [ ] Check for infrastructure-without-implementation patterns (custom solutions when standard approaches exist)
-- [ ] Validate that any custom code is justified over documented standard approaches
-- [ ] Ensure working POC was demonstrated before complex architecture
-- [ ] **Apply Clear-Thought debugging approach:** Systematic analysis of integration complexity
-- [ ] **Use MCP research tools:** Validate third-party service best practices
+- [ ] **Assess (not necessarily block):** Infrastructure-without-implementation patterns
+- [ ] **Consider:** Is custom code justified and well-documented for its purpose?
+- [ ] **Advisory:** Working POC validation for complex third-party integrations
+- [ ] **Apply Clear-Thought debugging approach:** Systematic analysis of complexity trade-offs
+- [ ] **Use MCP research tools:** Validate third-party service integration approaches
 
 ✅ **Strengths** 
 - Key positive aspects and good practices followed
@@ -173,16 +224,24 @@ fi)
 - Bugs or problems that must be fixed before merge
 - Breaking changes or compatibility issues
 - Security vulnerabilities or concerns
-- Over-engineering patterns or unnecessary complexity
 - Missing issue linkage or requirement validation
 - **Clear-Thought analysis:** Systematic identification of failure modes and risks
 
-💡 **Suggestions**
+💡 **Complexity & Architecture Considerations**
+- Over-engineering patterns or unnecessary complexity (advisory, not necessarily blocking)
+- Infrastructure complexity vs. benefit trade-offs
+- Optional vs. required dependencies assessment
+- User experience and setup complexity considerations
+- Alternative implementation approaches worth considering
+
+💡 **Enhancement Suggestions**
 - Code improvements and optimizations
 - Best practice recommendations
 - Performance considerations
 - Architecture improvements
-- Simplification opportunities
+- Simplification opportunities (where beneficial, not dogmatic)
+- Optional dependency management strategies
+- User experience improvements
 - **Research-backed recommendations:** External validation of suggested approaches
 - **Clear-Thought insights:** Systematic thinking results informing suggestions
 
@@ -194,11 +253,13 @@ fi)
 - **Clear-Thought testing strategy:** Systematic approach to test coverage and validation
 
 📋 **Action Items**
-- [ ] Required changes for approval
+- [ ] **Required changes for approval** (critical issues only)
 - [ ] Issue linkage corrections needed
-- [ ] Recommended improvements
+- [ ] **Recommended improvements** (suggestions, not requirements)
+- [ ] **Advisory considerations** (complexity trade-offs to consider)
 - [ ] Documentation updates needed
 - [ ] Third-party integration validation if applicable
+- [ ] **Optional dependency management** (make MCP servers optional where feasible)
 - [ ] **MCP GitHub follow-up:** Use GitHub tools for any additional PR interactions needed
 
 🧠 **Clear-Thought Analysis Summary**
@@ -210,7 +271,14 @@ fi)
 **Recommendation**: [APPROVE / REQUEST CHANGES / NEEDS DISCUSSION]
 **Analysis Confidence**: [HIGH/MEDIUM/LOW] - [systematic validation quality]
 
-Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, systematic prevention of integration failures, and actionable feedback enhanced by MCP tool capabilities.
+**Review Philosophy**: 
+- Distinguish between critical issues (must fix) and advisory considerations (worth considering)
+- Recognize that complexity may be justified for specific purposes (logging, better analysis, etc.)
+- Focus on helping vs. blocking: provide options and considerations rather than dogmatic requirements
+- Validate third-party integrations but recognize their value when well-implemented
+- Consider user experience: optional dependencies and graceful degradation where possible
+
+Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, balanced assessment of complexity trade-offs, and actionable feedback enhanced by MCP tool capabilities.
 EOF
 
 # Create data file for claude -p
@@ -243,6 +311,10 @@ $(echo -e "$PR_DIFF_SAMPLE")
 - Assess security implications of large-scale changes
 - Recommend testing strategies for comprehensive changes
 - Highlight areas that need careful manual review
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+$ISSUE_ANALYSIS
 EOF
 elif [ "$REVIEW_TYPE" = "LARGE_PR_SUMMARY" ]; then
 cat > /tmp/pr_data_${PR_NUMBER}.md << EOF
@@ -268,6 +340,10 @@ ${PR_DIFF_SAMPLE}
 \`\`\`
 
 **Note:** This is a large PR (${DIFF_SIZE} chars). Review focuses on architecture, patterns, and high-level changes rather than line-by-line analysis.
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+$ISSUE_ANALYSIS
 EOF
 else
 cat > /tmp/pr_data_${PR_NUMBER}.md << EOF
@@ -291,6 +367,10 @@ ${FILES_CHANGED}
 \`\`\`diff
 ${PR_DIFF}
 \`\`\`
+
+## Previous Review Comments
+$EXISTING_COMMENTS
+$ISSUE_ANALYSIS
 EOF
 fi
 
