@@ -1,0 +1,114 @@
+name: "Documentation Improvement"
+description: "Request improvements to documentation"
+title: "[Docs]: "
+labels: ["documentation", "status:untriaged"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Documentation Improvement Template
+        
+        Please provide detailed information about the documentation that needs improvement. All fields marked with * are required.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "Priority Level *"
+      description: "How important is this documentation improvement?"
+      options:
+        - P2 - Medium (important documentation gap)
+        - P3 - Low (minor improvement, nice-to-have)
+        - P4 - Trivial (typos, formatting)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: area_labels
+    attributes:
+      label: "Documentation Areas *"
+      description: "Select all areas this documentation affects"
+      options:
+        - label: "area:pattern-detection - Pattern detection documentation"
+        - label: "area:educational-content - Educational content documentation"
+        - label: "area:case-studies - Case study documentation"
+        - label: "area:validation - Testing and validation documentation"
+        - label: "area:cli - CLI usage documentation"
+        - label: "area:mcp-integration - MCP integration documentation"
+        - label: "area:data-management - Data structure documentation"
+        - label: "area:documentation-meta - Project documentation (README, contributing, etc.)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: "Documentation Type *"
+      description: "What type of documentation improvement is this?"
+      options:
+        - API Documentation - Code documentation, docstrings
+        - User Guide - How-to guides, tutorials
+        - Reference - Technical specifications, schemas
+        - Setup/Installation - Getting started documentation
+        - Contributing - Developer documentation
+        - Architecture - System design documentation
+        - Anti-Pattern Guide - Pattern-specific documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_issue
+    attributes:
+      label: "Current Documentation Issue *"
+      description: "What is wrong with the current documentation?"
+      placeholder: "Describe what is missing, unclear, outdated, or incorrect..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_improvement
+    attributes:
+      label: "Proposed Improvement *"
+      description: "How should the documentation be improved?"
+      placeholder: "Describe what should be added, changed, or reorganized..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_audience
+    attributes:
+      label: "Target Audience"
+      description: "Who is the primary audience for this documentation?"
+      placeholder: "e.g., new contributors, end users, MCP developers, pattern researchers..."
+
+  - type: textarea
+    id: existing_content
+    attributes:
+      label: "Existing Content Location"
+      description: "Where is the current documentation located (if any)?"
+      placeholder: "File paths, URLs, or describe where documentation should be added..."
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: "Acceptance Criteria *"
+      description: "How will we know this documentation improvement is complete?"
+      placeholder: |
+        - [ ] Documentation is clear and accurate
+        - [ ] Examples are provided where appropriate
+        - [ ] Documentation follows project style guidelines
+        - [ ] Content is technically reviewed
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: documentation_checklist
+    attributes:
+      label: "Documentation Standards Checklist"
+      description: "Please confirm the following"
+      options:
+        - label: "I have checked existing documentation to avoid duplication"
+        - label: "I have considered the appropriate level of technical detail"
+        - label: "I have identified specific examples or use cases to include"
+        - label: "I have considered how this fits into the overall documentation structure"
+EOF < /dev/null
