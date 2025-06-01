@@ -28,7 +28,7 @@ from ..core.educational_content import DetailLevel
 from ..core.vibe_coaching import get_vibe_coaching_framework, LearningLevel, CoachingTone
 
 # Import Claude CLI debug/verbose config
-from src.vibe_check.utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
 logger = logging.getLogger(__name__)
 
@@ -197,60 +197,39 @@ class VibeCheckFramework:
     
     def _run_claude_analysis(self, issue_data: Dict[str, Any], basic_patterns: List[DetectionResult]) -> Optional[str]:
         """
-        Run Claude-powered sophisticated analysis using prompts ported from review-issue.sh
-        Debug/verbose flags are controlled by src.vibe_check.utils.CLAUDE_CLI_DEBUG/VERBOSE.
+        Run Claude-powered sophisticated analysis using simple approach like working review-pr.sh script.
+        Simplified execution without complex MCP configuration to match working script pattern.
         """
         try:
             # Create sophisticated analysis prompt (ported from bash script)
             prompt = self._create_sophisticated_vibe_prompt(issue_data, basic_patterns)
             
-            # Create selective MCP config to avoid recursive dependency
-            selective_mcp_config = {
-                "mcpServers": {
-                    "clear-thought-server": {
-                        "command": "node",
-                        "args": ["/Users/kesslerio/repos/clear-thought-mcp-server/dist/index.js", "-s", "user"]
-                    },
-                    "brave-search": {
-                        "command": "npx", 
-                        "args": ["-y", "@modelcontextprotocol/server-brave-search"]
-                    },
-                    "github": {
-                        "command": "bash",
-                        "args": ["-c", "docker attach mcp_github || docker run -i --rm --name mcp_github -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"]
-                    }
-                }
-            }
-            
-            # Write selective MCP config to temp file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                json.dump(selective_mcp_config, f)
-                mcp_config_file = f.name
+            # Write prompt to temp file for reliable execution (matches script approach)
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+                f.write(prompt)
+                prompt_file = f.name
             
             try:
-                # Build command with config flags and selective MCP
-                stdin_command = [
-                    'claude',
-                    '--dangerously-skip-permissions',
-                    '--mcp-config', mcp_config_file
-                ]
+                # Simple claude -p command like working script (line 552 in review-pr.sh)
+                simple_command = ['claude', '-p', prompt]
+                
+                # Add debug flags if enabled
                 if CLAUDE_CLI_DEBUG:
-                    stdin_command.append('--debug')
+                    simple_command.insert(1, '--debug')
                 if CLAUDE_CLI_VERBOSE:
-                    stdin_command.append('--verbose')
-                stdin_command.extend(['-p', prompt])
+                    simple_command.insert(1, '--verbose')
                 
                 # Adaptive timeout based on prompt size
                 prompt_size = len(prompt)
                 if prompt_size < 10000:
-                    timeout_seconds = 60  # Increased from 30
+                    timeout_seconds = 60
                 elif prompt_size < 30000:
-                    timeout_seconds = 90  # Increased from 45
+                    timeout_seconds = 90
                 else:
-                    timeout_seconds = 120  # Increased from 60
+                    timeout_seconds = 120
                     
                 result = subprocess.run(
-                    stdin_command,
+                    simple_command,
                     capture_output=True,
                     text=True,
                     timeout=timeout_seconds
@@ -259,13 +238,13 @@ class VibeCheckFramework:
                 if result.returncode == 0 and result.stdout.strip():
                     return result.stdout.strip()
                 else:
-                    logger.warning(f"Claude analysis failed: {result.stderr}")
+                    logger.warning(f"Claude analysis failed - returncode: {result.returncode}, stderr: {result.stderr}")
                     return None
                     
             finally:
-                # Cleanup MCP config file
+                # Cleanup prompt file
                 try:
-                    os.unlink(mcp_config_file)
+                    os.unlink(prompt_file)
                 except OSError:
                     pass
                     

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vibe-check-test": {
+      "command": "python",
+      "args": ["-m", "vibe_check", "server"],
+      "env": {
+        "PYTHONPATH": "src"
+      }
+    }
+  }
+}
