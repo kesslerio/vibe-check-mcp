@@ -248,13 +248,27 @@ class PRReviewTool:
             size_by_files = "VERY_LARGE"
             
         # Character-based classification (from diff size)
+        # Special handling for test PRs - they're legitimate large files
         diff_size = len(pr_data.get("diff", ""))
-        if diff_size > 100000:
-            size_by_chars = "VERY_LARGE"
-        elif diff_size > 50000:
-            size_by_chars = "LARGE"
+        files = pr_data.get("files", [])
+        is_test_pr = any("test" in f.get("path", "").lower() for f in files) and len([f for f in files if "test" in f.get("path", "").lower()]) / len(files) > 0.5
+        
+        if is_test_pr:
+            # Test PRs: More lenient thresholds (tests are verbose but simple)
+            if diff_size > 300000:  # 300k instead of 100k
+                size_by_chars = "VERY_LARGE"
+            elif diff_size > 100000:  # 100k instead of 50k
+                size_by_chars = "LARGE"
+            else:
+                size_by_chars = "SMALL"
         else:
-            size_by_chars = "SMALL"
+            # Regular PRs: Original thresholds
+            if diff_size > 100000:
+                size_by_chars = "VERY_LARGE"
+            elif diff_size > 50000:
+                size_by_chars = "LARGE"
+            else:
+                size_by_chars = "SMALL"
             
         # Overall size determination
         sizes = [size_by_lines, size_by_files, size_by_chars]
@@ -902,25 +916,45 @@ File too large or binary
             combined_size = len(combined_content)
             logger.info(f"🔍 Combined content size: {combined_size} chars")
             
-            # Write to temporary file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-                f.write(combined_content)
-                temp_file = f.name
-            
-            logger.info(f"🔍 Created temporary file: {temp_file}")
+            # Use stdin approach directly (no temp file needed)
+            logger.info(f"🔍 Starting Claude CLI with stdin input (like working script)...")
             
             try:
                 claude_command = self.claude_cmd or "claude"
-                # Build command with config flags
+                # Create selective MCP config to avoid recursive dependency
+                selective_mcp_config = {
+                    "mcpServers": {
+                        "clear-thought-server": {
+                            "command": "node",
+                            "args": ["/Users/kesslerio/repos/clear-thought-mcp-server/dist/index.js", "-s", "user"]
+                        },
+                        "brave-search": {
+                            "command": "npx", 
+                            "args": ["-y", "@modelcontextprotocol/server-brave-search"]
+                        },
+                        "github": {
+                            "command": "bash",
+                            "args": ["-c", "docker attach mcp_github || docker run -i --rm --name mcp_github -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"]
+                        }
+                    }
+                }
+                
+                # Write selective MCP config to temp file
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump(selective_mcp_config, f)
+                    mcp_config_file = f.name
+                
+                # Build command with config flags and selective MCP
                 stdin_command = [
                     claude_command,
-                    "--dangerously-skip-permissions"
+                    "--dangerously-skip-permissions",
+                    "--mcp-config", mcp_config_file
                 ]
                 if CLAUDE_CLI_DEBUG:
                     stdin_command.append("--debug")
                 if CLAUDE_CLI_VERBOSE:
                     stdin_command.append("--verbose")
-                stdin_command.extend(["-p", open(temp_file, 'r').read()])
+                stdin_command.extend(["-p", combined_content])
                 logger.info(f"📝 Running Claude command: {' '.join(stdin_command[:4])} ... [content omitted]")
                 process = subprocess.Popen(
                     stdin_command,
@@ -1067,13 +1101,13 @@ File too large or binary
                     return None
                     
             finally:
-                # Clean up temporary file
+                # Clean up MCP config temp file
                 import os
                 try:
-                    os.unlink(temp_file)
-                    logger.info(f"🔍 Cleaned up temporary file: {temp_file}")
+                    os.unlink(mcp_config_file)
+                    logger.info(f"🔍 Cleaned up MCP config file: {mcp_config_file}")
                 except Exception as cleanup_error:
-                    logger.warning(f"⚠️ Failed to cleanup temp file: {cleanup_error}")
+                    logger.warning(f"⚠️ Failed to cleanup MCP config file: {cleanup_error}")
                     
         except subprocess.TimeoutExpired:
             logger.error(f"❌ Claude analysis timed out after {timeout_seconds} seconds")
