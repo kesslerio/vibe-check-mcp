@@ -20,9 +20,9 @@ This guide provides comprehensive technical implementation details for building 
 
 ---
 
-## Architecture Overview
+## Revised Architecture: Detection-First Approach
 
-### System Architecture
+### Phase 0: Validation Architecture (Addressing Review Concerns)
 ```
 Anti-Pattern Coach - Independent MCP Server Architecture
 ┌─────────────────────────────────────────────────────────────┐

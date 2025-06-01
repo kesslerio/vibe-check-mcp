@@ -1,0 +1,5 @@
+# Phase 0: Validation Requirements
+# MINIMAL dependencies - NO framework dependencies until detection is proven
+
+# Only standard library used for core detection validation
+# No external dependencies required for pattern detection algorithms
