@@ -1,0 +1,185 @@
+{
+  "infrastructure_without_implementation": {
+    "id": "infrastructure_without_implementation",
+    "name": "Infrastructure Without Implementation",
+    "description": "Building custom solutions when standard APIs/SDKs exist and haven't been tested",
+    "severity": "high",
+    "category": "architectural",
+    "detection_threshold": 0.5,
+    "indicators": [
+      {
+        "regex": "\\b(?:custom|build|implement|create)\\s+(?:our\\s+own|new|custom)\\s+(?:http|client|server|api|wrapper)",
+        "description": "mentions building custom infrastructure",
+        "weight": 0.4,
+        "text": "custom infrastructure"
+      },
+      {
+        "regex": "\\b(?:build|implement|create)\\s+(?:custom|our\\s+own)",
+        "description": "planning custom implementation",
+        "weight": 0.4,
+        "text": "custom implementation"
+      },
+      {
+        "regex": "\\b(?:planning|going)\\s+to\\s+(?:build|implement|create)\\s+(?:a\\s+custom|our\\s+own)",
+        "description": "planning custom solution",
+        "weight": 0.3,
+        "text": "planning custom solution"
+      },
+      {
+        "regex": "\\bsdk\\s+(?:might\\s+be|is|could\\s+be)\\s+(?:limiting|limited|insufficient)",
+        "description": "assumes SDK limitations without testing",
+        "weight": 0.3,
+        "text": "SDK limitations assumed"
+      },
+      {
+        "regex": "\\b(?:instead\\s+of|rather\\s+than|avoid)\\s+(?:using|their)\\s+(?:sdk|api|library)",
+        "description": "avoiding standard approach",
+        "weight": 0.4,
+        "text": "avoiding standard approach"
+      },
+      {
+        "regex": "\\b(?:might\\s+not\\s+work|may\\s+not\\s+work|probably\\s+won't|likely\\s+won't)\\b",
+        "description": "assumes failure without testing",
+        "weight": 0.3,
+        "text": "assumes failure without testing"
+      },
+      {
+        "regex": "\\b(?:need|want)\\s+(?:more|full|better)\\s+(?:control|flexibility)",
+        "description": "desires control without justification",
+        "weight": 0.2,
+        "text": "wants more control"
+      },
+      {
+        "regex": "\\b(?:might\\s+be|could\\s+be|probably)\\s+(?:too\\s+)?(?:limiting|limited|restrictive)",
+        "description": "assumes limitations without validation",
+        "weight": 0.3,
+        "text": "assumes limitations"
+      },
+      {
+        "regex": "\\bwon't\\s+meet\\s+(?:our|the)\\s+(?:requirements|needs)",
+        "description": "assumes inadequacy without testing",
+        "weight": 0.3,
+        "text": "assumes inadequacy"
+      },
+      {
+        "regex": "\\b(?:I'll|we'll)\\s+(?:implement|create|build)\\s+(?:our\\s+own|a\\s+custom)",
+        "description": "direct statement of custom implementation",
+        "weight": 0.3,
+        "text": "states custom implementation"
+      },
+      {
+        "regex": "\\bmore\\s+features\\s+than\\s+(?:what\\s+)?(?:standard|typical|most)",
+        "description": "assumes standard solutions insufficient",
+        "weight": 0.3,
+        "text": "assumes standard insufficient"
+      },
+      {
+        "regex": "\\b(?:sophisticated|advanced|enterprise-grade|multi-layered)\\s+(?:system|solution|architecture)",
+        "description": "over-engineering indicators",
+        "weight": 0.3,
+        "text": "over-engineering"
+      },
+      {
+        "regex": "\\b(?:simple|basic)\\s+(?:library|solution|approach)\\s+won't",
+        "description": "dismisses simple solutions",
+        "weight": 0.3,
+        "text": "dismisses simple solutions"
+      }
+    ],
+    "negative_indicators": [
+      {
+        "regex": "\\bofficial\\s+(?:sdk|api|library|documentation)",
+        "description": "mentions official SDK research",
+        "weight": -0.3
+      },
+      {
+        "regex": "\\b(?:tested|tried|reviewed)\\s+(?:the|their)\\s+(?:sdk|api|documentation)",
+        "description": "shows evidence of testing standard approach",
+        "weight": -0.4
+      },
+      {
+        "regex": "\\bdocumentation\\s+(?:shows|says|recommends|suggests)",
+        "description": "references official documentation",
+        "weight": -0.2
+      }
+    ]
+  },
+  "symptom_driven_development": {
+    "id": "symptom_driven_development", 
+    "name": "Symptom-Driven Development",
+    "description": "Addressing symptoms rather than root causes",
+    "severity": "medium",
+    "category": "process",
+    "detection_threshold": 0.6,
+    "indicators": [
+      {
+        "regex": "\\b(?:workaround|hack|quick\\s+fix|band-aid|patch)",
+        "description": "mentions temporary solutions",
+        "weight": 0.3,
+        "text": "temporary solution"
+      },
+      {
+        "regex": "\\bfor\\s+now\\b|\\btemporarily\\b|\\bas\\s+a\\s+quick\\s+fix",
+        "description": "temporary language",
+        "weight": 0.2,
+        "text": "temporary approach"
+      },
+      {
+        "regex": "\\b(?:error|exception|bug)\\s+(?:handling|catching)\\s+(?:to\\s+ignore|to\\s+suppress)",
+        "description": "suppressing errors without fixing cause",
+        "weight": 0.4,
+        "text": "error suppression"
+      }
+    ]
+  },
+  "complexity_escalation": {
+    "id": "complexity_escalation",
+    "name": "Complexity Escalation", 
+    "description": "Adding complexity instead of questioning necessity",
+    "severity": "medium",
+    "category": "design",
+    "detection_threshold": 0.5,
+    "indicators": [
+      {
+        "regex": "\\b(?:complex|sophisticated|advanced)\\s+(?:logic|system|architecture)",
+        "description": "mentions complex systems",
+        "weight": 0.2,
+        "text": "complex system"
+      },
+      {
+        "regex": "\\bmultiple\\s+(?:layers|services|components)\\s+(?:to\\s+handle|for)",
+        "description": "multiple layers for simple functionality",
+        "weight": 0.3,
+        "text": "multiple layers"
+      },
+      {
+        "regex": "\\b(?:enterprise|scalable|robust)\\s+(?:solution|architecture|pattern)",
+        "description": "over-engineering indicators",
+        "weight": 0.2,
+        "text": "over-engineering"
+      }
+    ]
+  },
+  "documentation_neglect": {
+    "id": "documentation_neglect",
+    "name": "Documentation Neglect",
+    "description": "Building solutions without researching standard approaches",
+    "severity": "medium", 
+    "category": "process",
+    "detection_threshold": 0.4,
+    "indicators": [
+      {
+        "regex": "\\b(?:couldn't\\s+find|no|lack\\s+of|missing)\\s+(?:documentation|examples|guides)",
+        "description": "claims lack of documentation",
+        "weight": 0.3,
+        "text": "claims no documentation"
+      },
+      {
+        "regex": "\\b(?:figure\\s+out|work\\s+out)\\s+(?:ourselves|how\\s+to)",
+        "description": "planning to figure it out without research",
+        "weight": 0.2,
+        "text": "skipping research"
+      }
+    ]
+  }
+}

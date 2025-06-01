@@ -1,0 +1,32 @@
+{
+  "case_study": {
+    "id": "cognee_integration_failure",
+    "title": "Cognee Integration: 2+ Years of Technical Debt",
+    "pattern_type": "infrastructure_without_implementation",
+    "timeline": "2+ years",
+    "outcome": "Zero working functionality",
+    "impact": {
+      "technical_debt": "Massive accumulated debt",
+      "opportunity_cost": "2+ years of engineering time",
+      "functionality": "No working vector search integration"
+    },
+    "root_cause": "Built custom HTTP servers instead of using cognee.add() → cognee.cognify() → cognee.search()",
+    "lesson": "Always test standard API approach before building custom infrastructure",
+    "prevention_checklist": [
+      "Research official SDK documentation first",
+      "Test basic integration with 10 lines of code",
+      "Document why standard approach is insufficient (if at all)",
+      "Get second opinion on custom vs standard approach"
+    ]
+  },
+  "example_detection_text": "We need to integrate with Cognee for vector search. I'm planning to build a custom HTTP client with proper error handling and retry logic since their SDK might be limiting. We'll implement our own vector processing pipeline to ensure we have full control.",
+  "expected_detection": {
+    "should_detect": true,
+    "minimum_confidence": 0.7,
+    "expected_evidence": [
+      "mentions building custom infrastructure",
+      "assumes SDK limitations without testing",
+      "planning custom implementation"
+    ]
+  }
+}
