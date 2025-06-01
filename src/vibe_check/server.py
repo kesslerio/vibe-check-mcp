@@ -28,6 +28,7 @@ except ImportError:
 from .tools.demo_tool import demo_analyze_text
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
 from .tools.pr_review import review_pull_request as pr_review_tool
+from .tools.test_claude_cli import register_claude_cli_test_tool
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +43,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("Vibe Check MCP")
+
+# Register Claude CLI test tools
+register_claude_cli_test_tool(mcp)
 
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -182,6 +186,12 @@ def server_status() -> Dict[str, Any]:
             "analyze_text_demo - Demo anti-pattern analysis",
             "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
             "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
+            "test_claude_cli_integration - Test Claude CLI integration via MCP",
+            "test_claude_cli_availability - Check Claude CLI availability and version", 
+            "test_claude_cli_with_file_input - Test Claude CLI with file input",
+            "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
+            "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
+            "test_claude_cli_recursion_detection - Diagnose recursion issues with Claude CLI",
             "server_status - Server status and capabilities"
         ],
         "upcoming_tools": [
