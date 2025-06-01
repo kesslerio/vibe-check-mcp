@@ -13,7 +13,7 @@ from typing import List
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from anti_pattern_coach.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_compass.core.pattern_detector import PatternDetector, DetectionResult
 
 
 def format_detection_result(result: DetectionResult) -> str:

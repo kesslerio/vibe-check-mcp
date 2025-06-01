@@ -173,8 +173,8 @@ If the tool genuinely helps me (and others like me), natural evangelism will hap
   - Impact: Your preferred approach vs. broader accessibility
 
 **Installation Complexity Preference**:
-- [x] **Single Command**: `pip install mcp-code-reviewer` (everything bundled)
-- [ ] **Modular**: Core + optional components (`pip install mcp-code-reviewer[github,security]`)
+- [x] **Single Command**: `pip install vibe-compass-mcp` (everything bundled)
+- [ ] **Modular**: Core + optional components (`pip install vibe-compass-mcp[github,security]`)
 - [ ] **External**: Allow external tool dependencies with clear setup docs
 
 **Answer**: 

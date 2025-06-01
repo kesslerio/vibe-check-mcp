@@ -1,15 +1,15 @@
 # Claude Code Architectural Guidelines Integration
-## Strategic Alignment with Anti-Pattern Coach Development
+## Strategic Alignment with Vibe Compass MCP Development
 
 **Source**: [GitHub Issue #427 Comment](https://github.com/anthropics/claude-code/issues/427#issuecomment-2731384339)  
 **Date**: January 2025  
-**Relevance**: High - Direct alignment with Anti-Pattern Coach goals  
+**Relevance**: High - Direct alignment with Vibe Compass MCP goals  
 
 ---
 
 ## Executive Summary
 
-A GitHub issue comment in the Claude Code repository proposes adding architectural guideline enforcement features that align perfectly with our Anti-Pattern Coach vision. This represents a strategic opportunity to either collaborate with or complement official Claude Code development.
+A GitHub issue comment in the Claude Code repository proposes adding architectural guideline enforcement features that align perfectly with our Vibe Compass MCP vision. This represents a strategic opportunity to either collaborate with or complement official Claude Code development.
 
 ### Key Strategic Insights:
 
@@ -72,7 +72,7 @@ guidelines:
 
 ---
 
-## Strategic Implications for Anti-Pattern Coach
+## Strategic Implications for Vibe Compass MCP
 
 ### 1. Market Validation
 
@@ -114,7 +114,7 @@ anti_patterns:
 
 #### Option A: Complement Claude Code Development
 ```bash
-# Anti-Pattern Coach as Claude Code Extension
+# Vibe Compass MCP as Claude Code Extension
 claude-guidelines --config=antipatterns.yml --educational-mode
 anti-pattern-coach --claude-guidelines-integration
 ```
@@ -341,7 +341,7 @@ Priority Matrix (Accounting for Claude Code Development):
 
 ### Key Decisions
 
-1. **Build for Integration**: Design Anti-Pattern Coach to complement, not compete with Claude Code
+1. **Build for Integration**: Design Vibe Compass MCP to complement, not compete with Claude Code
 2. **Educational Focus**: Make education our primary differentiator
 3. **Community Contribution**: Actively contribute to Claude Code anti-pattern development
 4. **Flexible Architecture**: Maintain ability to pivot based on official development
