@@ -25,7 +25,11 @@ reviews/
 logs/
 
 # Docs
-docs/
+docs/features/
+docs/research/
+docs/review-scripts/
+docs/scripts/
+docs/strategy/
 
 # PyInstaller
 *.manifest
