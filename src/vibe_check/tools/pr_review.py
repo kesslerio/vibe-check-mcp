@@ -41,6 +41,7 @@ class PRReviewTool:
     def __init__(self):
         self.reviews_dir = Path("reviews/pr-reviews")
         self.reviews_dir.mkdir(parents=True, exist_ok=True)
+        self.claude_cmd = None  # Store detected Claude command path
         
     def review_pull_request(
         self,
@@ -353,16 +354,35 @@ class PRReviewTool:
     def _check_claude_availability(self) -> bool:
         """Check for Claude CLI availability (replicating lines 49-54)."""
         try:
-            result = subprocess.run(
-                ["which", "claude"], 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            logger.info("✅ Claude CLI available for enhanced analysis")
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Check if running in Docker container (Claude CLI not available there)
+            import os
+            if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
+                logger.info("🐳 Running in Docker container - Claude CLI not available, using fallback analysis")
+                return False
+            
+            # Try multiple ways to detect Claude Code CLI
+            commands_to_try = ["claude", "/Users/kesslerio/.nvm/versions/node/v22.14.0/bin/claude"]
+            
+            for cmd in commands_to_try:
+                try:
+                    result = subprocess.run(
+                        [cmd, "--version"], 
+                        capture_output=True, 
+                        text=True, 
+                        check=True,
+                        timeout=5
+                    )
+                    if "Claude Code" in result.stdout or "claude" in result.stdout.lower():
+                        logger.info(f"✅ Claude CLI available at {cmd} for enhanced analysis")
+                        self.claude_cmd = cmd  # Store the working command
+                        return True
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                    continue
+            
             logger.warning("⚠️ Claude CLI not available - will use fallback analysis")
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️ Claude CLI check failed: {e} - will use fallback analysis")
             return False
     
     def _create_comprehensive_prompt(
@@ -838,8 +858,10 @@ File too large or binary
             try:
                 # Run claude -p with the combined prompt
                 logger.info("📝 Generating review with Claude CLI...")
+                # Use the detected Claude command
+                claude_command = self.claude_cmd or "claude"
                 result = subprocess.run([
-                    "claude", "-p", combined_content
+                    claude_command, "-p", combined_content
                 ], capture_output=True, text=True, timeout=120)
                 
                 if result.returncode == 0 and result.stdout.strip():
@@ -914,7 +936,7 @@ File too large or binary
             "action_items": self._generate_action_items(pr_data),
             "recommendation": self._generate_recommendation(pr_data),
             "analysis_method": "fallback",
-            "clear_thought_summary": "Claude CLI not available - systematic analysis tools not applied",
+            "clear_thought_summary": "Claude CLI not available in Docker environment - systematic analysis tools not applied",
             "mcp_tools_summary": "GitHub CLI integration used for data collection",
             "timestamp": datetime.now().isoformat()
         }
