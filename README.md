@@ -1,4 +1,4 @@
-# 🧭 Vibe Compass MCP
+# 🧭 Vibe Check MCP
 
 **Engineering Anti-Pattern Detection & Prevention via Model Context Protocol**
 
@@ -11,7 +11,7 @@ A comprehensive MCP server that analyzes code, issues, and development workflows
 
 ## 🎯 What It Does
 
-Vibe Compass MCP detects **systematic engineering anti-patterns** that lead to technical debt and project failures:
+Vibe Check MCP detects **systematic engineering anti-patterns** that lead to technical debt and project failures:
 
 - 🏗️ **Infrastructure-Without-Implementation**: Building custom solutions before testing standard approaches
 - 🩹 **Symptom-Driven Development**: Treating symptoms instead of addressing root causes  
@@ -26,12 +26,12 @@ Get running in 5 minutes:
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/kesslerio/vibe-compass-mcp.git
-cd vibe-compass-mcp
+git clone https://github.com/kesslerio/vibe-check-mcp.git
+cd vibe-check-mcp
 pip install -r requirements.txt
 
 # 2. Start the MCP server
-python -m vibe_compass.server
+python -m vibe_check.server
 
 # 3. Connect to Claude Code (see integration section below)
 ```
@@ -49,8 +49,8 @@ python -m vibe_compass.server
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/kesslerio/vibe-compass-mcp.git
-   cd vibe-compass-mcp
+   git clone https://github.com/kesslerio/vibe-check-mcp.git
+   cd vibe-check-mcp
    ```
 
 2. **Create virtual environment** (recommended):
@@ -66,7 +66,7 @@ python -m vibe_compass.server
 
 4. **Verify installation**:
    ```bash
-   python -c "from vibe_compass.server import run_server; print('✅ Installation successful')"
+   python -c "from vibe_check.server import run_server; print('✅ Installation successful')"
    ```
 
 ### Environment Configuration
@@ -94,8 +94,8 @@ LOG_LEVEL=INFO
 docker-compose up --build
 
 # Or build and run manually
-docker build -t vibe-compass-mcp .
-docker run -p 8000:8000 vibe-compass-mcp
+docker build -t vibe-check-mcp .
+docker run -p 8000:8000 vibe-check-mcp
 ```
 
 ### Docker Compose (Recommended)
@@ -106,7 +106,7 @@ Create a `docker-compose.yml` file:
 version: '3.8'
 
 services:
-  vibe-compass-mcp:
+  vibe-check-mcp:
     build: .
     ports:
       - "8000:8000"
@@ -127,16 +127,16 @@ services:
 
 ```bash
 # Build optimized production image
-docker build --target production -t vibe-compass-mcp:prod .
+docker build --target production -t vibe-check-mcp:prod .
 
 # Run with production settings
 docker run -d \
-  --name vibe-compass-mcp \
+  --name vibe-check-mcp \
   -p 8000:8000 \
   -e GITHUB_TOKEN=${GITHUB_TOKEN} \
   -e LOG_LEVEL=WARNING \
   --restart unless-stopped \
-  vibe-compass-mcp:prod
+  vibe-check-mcp:prod
 ```
 
 ## 🔗 Claude Code Integration
@@ -151,23 +151,23 @@ Add the server at user level (available across all projects):
 
 ```bash
 # Navigate to the project directory
-cd /path/to/vibe-compass-mcp
+cd /path/to/vibe-check-mcp
 
 # Add server with user scope (using JSON config for reliability)
-claude mcp add-json vibe-compass '{
+claude mcp add-json vibe-check '{
   "type": "stdio",
   "command": "python",
-  "args": ["-m", "vibe_compass.server"],
+  "args": ["-m", "vibe_check.server"],
   "env": {
     "PYTHONPATH": "'$(pwd)'/src"
   }
 }' -s user
 
 # Optional: Add GitHub token for private repositories
-claude mcp add-json vibe-compass '{
+claude mcp add-json vibe-check '{
   "type": "stdio", 
   "command": "python",
-  "args": ["-m", "vibe_compass.server"],
+  "args": ["-m", "vibe_check.server"],
   "env": {
     "PYTHONPATH": "'$(pwd)'/src",
     "GITHUB_TOKEN": "your_token_here"
@@ -184,12 +184,12 @@ Add the server for current project only:
 cd /your/project/directory
 
 # Add server with local scope (using JSON config)
-claude mcp add-json vibe-compass '{
+claude mcp add-json vibe-check '{
   "type": "stdio",
   "command": "python", 
-  "args": ["-m", "vibe_compass.server"],
+  "args": ["-m", "vibe_check.server"],
   "env": {
-    "PYTHONPATH": "/path/to/vibe-compass-mcp/src"
+    "PYTHONPATH": "/path/to/vibe-check-mcp/src"
   }
 }' -s local
 ```
@@ -200,16 +200,16 @@ If using Docker:
 
 ```bash
 # Build the Docker image first
-cd /path/to/vibe-compass-mcp
-docker build -t vibe-compass-mcp .
+cd /path/to/vibe-check-mcp
+docker build -t vibe-check-mcp .
 
 # Add Docker-based MCP server (using JSON config like GitHub MCP)
-claude mcp add-json vibe-compass '{
+claude mcp add-json vibe-check '{
   "type": "stdio",
   "command": "bash",
   "args": [
     "-c", 
-    "docker attach vibe_compass_mcp || docker run -i --rm --name vibe_compass_mcp -e GITHUB_TOKEN=${GITHUB_TOKEN:-} vibe-compass-mcp"
+    "docker attach vibe_check_mcp || docker run -i --rm --name vibe_check_mcp -e GITHUB_TOKEN=${GITHUB_TOKEN:-} vibe-check-mcp"
   ],
   "env": {
     "GITHUB_TOKEN": "your_token_here"
@@ -224,18 +224,18 @@ claude mcp add-json vibe-compass '{
    claude mcp list
    ```
 
-2. **You should see vibe-compass listed** with status information
+2. **You should see vibe-check listed** with status information
 
 3. **Test the server**:
    ```bash
-   claude mcp call vibe-compass server_status
+   claude mcp call vibe-check server_status
    ```
 
 ### Step 3: Test GitHub Issue Analysis
 
 Test the main functionality:
 ```bash
-claude mcp call vibe-compass analyze_github_issue --issue_number 22 --repository "kesslerio/vibe-compass-mcp"
+claude mcp call vibe-check analyze_github_issue --issue_number 22 --repository "kesslerio/vibe-check-mcp"
 ```
 
 Expected output includes:
@@ -259,13 +259,13 @@ Analyzes GitHub issues for anti-patterns and provides educational guidance.
 **Example Usage**:
 ```bash
 # Analyze issue #22 in current repository
-/mcp call vibe-compass analyze_github_issue --issue_number 22
+/mcp call vibe-check analyze_github_issue --issue_number 22
 
 # Analyze specific repository with comprehensive detail
-/mcp call vibe-compass analyze_github_issue --issue_number 123 --repository "owner/repo" --detail_level "comprehensive"
+/mcp call vibe-check analyze_github_issue --issue_number 123 --repository "owner/repo" --detail_level "comprehensive"
 
 # Focus on specific anti-patterns
-/mcp call vibe-compass analyze_github_issue --issue_number 456 --focus_patterns "infrastructure_without_implementation,complexity_escalation"
+/mcp call vibe-check analyze_github_issue --issue_number 456 --focus_patterns "infrastructure_without_implementation,complexity_escalation"
 ```
 
 ### `server_status`
@@ -274,7 +274,7 @@ Get server status and capabilities information.
 
 **Example Usage**:
 ```bash
-/mcp call vibe-compass server_status
+/mcp call vibe-check server_status
 ```
 
 ## 📝 Usage Examples
@@ -285,7 +285,7 @@ Analyze a GitHub issue for potential anti-patterns:
 
 ```bash
 # Check issue for any anti-patterns
-/mcp call vibe-compass analyze_github_issue --issue_number 42
+/mcp call vibe-check analyze_github_issue --issue_number 42
 
 # Result includes:
 # - Detected patterns with confidence scores
@@ -300,17 +300,17 @@ Use for code review and team education:
 
 ```bash
 # Comprehensive analysis for learning
-/mcp call vibe-compass analyze_github_issue --issue_number 123 --detail_level "comprehensive"
+/mcp call vibe-check analyze_github_issue --issue_number 123 --detail_level "comprehensive"
 
 # Focus on specific patterns during reviews
-/mcp call vibe-compass analyze_github_issue --issue_number 456 --focus_patterns "infrastructure_without_implementation"
+/mcp call vibe-check analyze_github_issue --issue_number 456 --focus_patterns "infrastructure_without_implementation"
 ```
 
 ### 3. Integration with Development Workflow
 
 ```bash
 # 1. Analyze issues before starting work
-/mcp call vibe-compass analyze_github_issue --issue_number $ISSUE_ID
+/mcp call vibe-check analyze_github_issue --issue_number $ISSUE_ID
 
 # 2. Review recommendations and apply prevention checklist
 
@@ -355,7 +355,7 @@ The server uses FastMCP framework with these defaults:
 ```python
 # Default configuration
 server_config = {
-    "name": "Vibe Compass MCP",
+    "name": "Vibe Check MCP",
     "version": "Phase 2.1",
     "host": "localhost",
     "port": 8000,
@@ -370,11 +370,11 @@ server_config = {
 #### 1. "Module not found" Error
 
 ```bash
-# Issue: ModuleNotFoundError: No module named 'vibe_compass'
+# Issue: ModuleNotFoundError: No module named 'vibe_check'
 # Solution: Ensure you're in the correct directory and dependencies are installed
-cd /path/to/vibe-compass-mcp
+cd /path/to/vibe-check-mcp
 pip install -r requirements.txt
-python -m vibe_compass.server
+python -m vibe_check.server
 ```
 
 #### 2. GitHub API Rate Limiting
@@ -390,7 +390,7 @@ export GITHUB_TOKEN=your_token_here
 ```bash
 # Issue: MCP server not responding
 # Solution: Check server is running and port is correct
-python -m vibe_compass.server  # Should show "Server ready for MCP protocol connections"
+python -m vibe_check.server  # Should show "Server ready for MCP protocol connections"
 
 # Check if port 8000 is in use
 lsof -i :8000
@@ -402,7 +402,7 @@ lsof -i :8000
 # Issue: Docker build fails
 # Solution: Ensure Docker is running and build context is correct
 docker --version  # Verify Docker is installed
-docker build --no-cache -t vibe-compass-mcp .  # Clean build
+docker build --no-cache -t vibe-check-mcp .  # Clean build
 ```
 
 #### 5. Permission Errors
@@ -421,10 +421,10 @@ Enable debug logging for troubleshooting:
 ```bash
 # Set debug logging
 export LOG_LEVEL=DEBUG
-python -m vibe_compass.server
+python -m vibe_check.server
 
 # Or with Docker
-docker run -e LOG_LEVEL=DEBUG vibe-compass-mcp
+docker run -e LOG_LEVEL=DEBUG vibe-check-mcp
 ```
 
 ### Validation Commands
@@ -433,19 +433,19 @@ Test your setup:
 
 ```bash
 # 1. Test Python environment
-python -c "import vibe_compass; print('✅ Module import successful')"
+python -c "import vibe_check; print('✅ Module import successful')"
 
 # 2. Test dependencies
 python -c "from github import Github; print('✅ PyGithub working')"
 python -c "from fastmcp import FastMCP; print('✅ FastMCP working')"
 
 # 3. Test server startup
-timeout 10s python -m vibe_compass.server || echo "✅ Server startup successful"
+timeout 10s python -m vibe_check.server || echo "✅ Server startup successful"
 
 # 4. Test tool functionality
 python -c "
-from vibe_compass.tools.analyze_issue import analyze_issue
-result = analyze_issue(22, 'kesslerio/vibe-compass-mcp', 'all', 'brief')
+from vibe_check.tools.analyze_issue import analyze_issue
+result = analyze_issue(22, 'kesslerio/vibe-check-mcp', 'all', 'brief')
 print('✅ Tool execution successful' if 'status' in result else '❌ Tool execution failed')
 "
 ```
@@ -457,7 +457,7 @@ If you continue to experience issues:
 1. **Check the logs**: Look for error messages in the server output
 2. **Verify your configuration**: Ensure all paths and tokens are correct
 3. **Test with minimal setup**: Try the quick start guide with default settings
-4. **Create an issue**: [Open a GitHub issue](https://github.com/kesslerio/vibe-compass-mcp/issues) with:
+4. **Create an issue**: [Open a GitHub issue](https://github.com/kesslerio/vibe-check-mcp/issues) with:
    - Your operating system and Python version
    - Complete error messages
    - Steps to reproduce the issue
@@ -477,8 +477,8 @@ If you continue to experience issues:
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/kesslerio/vibe-compass-mcp.git
-cd vibe-compass-mcp
+git clone https://github.com/kesslerio/vibe-check-mcp.git
+cd vibe-check-mcp
 python -m venv venv
 source venv/bin/activate
 
@@ -495,7 +495,7 @@ isort src/ tests/
 mypy src/
 
 # 5. Start development server
-python -m vibe_compass.server
+python -m vibe_check.server
 ```
 
 ### Testing
@@ -517,8 +517,8 @@ pytest tests/test_mcp_server.py
 ### Project Structure
 
 ```
-vibe-compass-mcp/
-├── src/vibe_compass/          # Main package
+vibe-check-mcp/
+├── src/vibe_check/          # Main package
 │   ├── core/                  # Core detection engine
 │   ├── tools/                 # MCP tools
 │   ├── server.py              # FastMCP server
@@ -571,4 +571,4 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) file for 
 
 **Built with ❤️ for engineering excellence and anti-pattern prevention**
 
-For questions, issues, or contributions, visit: https://github.com/kesslerio/vibe-compass-mcp
+For questions, issues, or contributions, visit: https://github.com/kesslerio/vibe-check-mcp

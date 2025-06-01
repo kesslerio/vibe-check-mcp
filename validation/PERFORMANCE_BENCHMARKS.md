@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides performance benchmarks and timing thresholds for the validation scripts in the Vibe Compass MCP project. These benchmarks help monitor execution performance and detect regressions.
+This document provides performance benchmarks and timing thresholds for the validation scripts in the Vibe Check MCP project. These benchmarks help monitor execution performance and detect regressions.
 
 ## Timing Thresholds
 

@@ -1,5 +1,5 @@
 """
-Vibe Compass MCP: Engineering Anti-Pattern Detection & Prevention
+Vibe Check MCP: Engineering Anti-Pattern Detection & Prevention
 
 A comprehensive system for detecting and preventing engineering anti-patterns
 through validated detection algorithms and educational content generation.
@@ -9,11 +9,11 @@ Phase 2: ✅ FastMCP Server Integration
 
 Usage:
     # MCP Server
-    from vibe_compass.server import run_server
+    from vibe_check.server import run_server
     run_server()
     
     # Core Detection Engine
-    from vibe_compass.core import PatternDetector, EducationalContentGenerator
+    from vibe_check.core import PatternDetector, EducationalContentGenerator
     
     detector = PatternDetector()
     educator = EducationalContentGenerator()
@@ -24,7 +24,7 @@ from .core.educational_content import EducationalContentGenerator
 from .server import run_server
 
 __version__ = "3.0.0"
-__author__ = "Vibe Compass MCP Development Team"
+__author__ = "Vibe Check MCP Development Team"
 
 __all__ = [
     "PatternDetector",

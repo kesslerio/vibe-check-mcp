@@ -1,4 +1,4 @@
-# Vibe Compass MCP Dependencies
+# Vibe Check MCP Dependencies
 
 # Core MCP Integration
 fastmcp>=0.1.0

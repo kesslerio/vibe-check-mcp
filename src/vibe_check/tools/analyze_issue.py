@@ -146,7 +146,7 @@ class GitHubIssueAnalyzer:
         """
         # Default repository handling (could be enhanced with config)
         if repository is None:
-            repository = "kesslerio/vibe-compass-mcp"  # Default to this project
+            repository = "kesslerio/vibe-check-mcp"  # Default to this project
         
         # Validate repository format
         if "/" not in repository:

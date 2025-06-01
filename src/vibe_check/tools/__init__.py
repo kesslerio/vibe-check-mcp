@@ -1,5 +1,5 @@
 """
-Vibe Compass MCP MCP Tools
+Vibe Check MCP MCP Tools
 
 This module contains the MCP tool implementations that wrap the core 
 anti-pattern detection engine for use via the Model Context Protocol.
