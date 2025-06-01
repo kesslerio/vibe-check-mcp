@@ -1,21 +1,19 @@
 """
 MCP tool for external Claude CLI integration.
 
-This module provides MCP tools that leverage the external Claude CLI script
+This module provides MCP tools that leverage the ExternalClaudeCli class
 to perform analysis tasks without context blocking issues.
 """
 
 import asyncio
-import json
 import logging
-import os
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 from fastmcp import FastMCP
 from pydantic import BaseModel
+
+from .external_claude_cli import ExternalClaudeCli, ClaudeCliResult
 
 logger = logging.getLogger(__name__)
 
