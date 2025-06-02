@@ -17,7 +17,7 @@ from github.Issue import Issue
 
 from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
-from .vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
+from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
 
 # Configure logging
 logger = logging.getLogger(__name__)

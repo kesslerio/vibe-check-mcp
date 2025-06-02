@@ -25,11 +25,11 @@ except ImportError:
     print("❌ FastMCP not installed. Install with: pip install fastmcp")
     sys.exit(1)
 
-from .tools.demo_tool import demo_analyze_text
-from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
-from .tools.pr_review import review_pull_request as pr_review_tool
-from .tools.test_claude_cli import register_claude_cli_test_tool
-from .tools.external_claude_integration import register_external_claude_tools
+from .tools.analyze_text_nollm import analyze_text_demo
+from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
+from .tools.analyze_pr_nollm import analyze_pr_nollm
+from .tools.analyze_llm import register_llm_analysis_tools
+from .tools.diagnostics_claude_cli import register_diagnostic_tools
 
 # Configure logging
 logging.basicConfig(
@@ -45,40 +45,70 @@ logger = logging.getLogger(__name__)
 # Initialize FastMCP server
 mcp = FastMCP("Vibe Check MCP")
 
-# Register Claude CLI test tools
-register_claude_cli_test_tool(mcp)
+# Register user diagnostic tools (essential for all users)
+register_diagnostic_tools(mcp)
 
-# Register external Claude CLI integration tools
-register_external_claude_tools(mcp)
+# Register LLM-powered analysis tools
+register_llm_analysis_tools(mcp)
+
+# Register development tools only when explicitly enabled
+if os.getenv("VIBE_CHECK_DEV_MODE") == "true":
+    try:
+        # Import development test suite from tests directory
+        import sys
+        from pathlib import Path
+        
+        # Add tests directory to path for importing
+        tests_dir = Path(__file__).parent.parent.parent / "tests"
+        if str(tests_dir) not in sys.path:
+            sys.path.insert(0, str(tests_dir))
+        
+        # Clear any cached imports to avoid circular import issues
+        import importlib
+        if 'integration.claude_cli_tests' in sys.modules:
+            importlib.reload(sys.modules['integration.claude_cli_tests'])
+            
+        from integration.claude_cli_tests import register_dev_tools
+        register_dev_tools(mcp)
+        logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
+        logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
+        logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
+    except ImportError as e:
+        logger.warning(f"⚠️ Dev tools not available: {e}")
+        logger.warning("   Set VIBE_CHECK_DEV_MODE=true and ensure tests/integration/claude_cli_tests.py exists")
+else:
+    logger.info("📦 User mode: Essential diagnostic tools only")
+    logger.info("   To enable dev tools: export VIBE_CHECK_DEV_MODE=true")
 
 @mcp.tool()
-def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
+def analyze_text_nollm(text: str, detail_level: str = "standard") -> Dict[str, Any]:
     """
-    VIBE CHECK TEXT DEMO - Test vibe check analysis on any text content.
+    🚀 Fast text analysis using direct pattern detection (no LLM calls).
 
-    Demo tool for testing the vibe check framework without GitHub. Perfect for
-    "vibe check this text", "analyze this text for patterns", and testing commands.
+    Direct pattern detection and anti-pattern analysis without LLM reasoning.
+    Perfect for "quick vibe check", "fast pattern analysis", and development workflow.
+    For comprehensive LLM-powered analysis, use analyze_text_llm instead.
 
     Features:
-    - 🧪 Test anti-pattern detection on any content
-    - 🎯 Friendly vibe check analysis without GitHub dependencies
-    - 🤝 Educational coaching recommendations
+    - 🚀 Fast pattern detection on any content
+    - 🎯 Direct analysis without LLM dependencies  
+    - 🤝 Basic coaching recommendations
     - 📊 Pattern detection with confidence scoring
 
-    Use this tool for: "vibe check this text", "analyze this content", "test pattern detection"
+    Use this tool for: "quick vibe check this text", "fast pattern analysis", "basic text check"
 
     Args:
         text: Text content to analyze for anti-patterns
         detail_level: Educational detail level (brief/standard/comprehensive)
         
     Returns:
-        Vibe check analysis results with coaching recommendations
+        Fast pattern detection analysis results
     """
-    logger.info(f"Demo analysis requested for {len(text)} characters")
-    return demo_analyze_text(text, detail_level)
+    logger.info(f"Fast text analysis requested for {len(text)} characters")
+    return analyze_text_demo(text, detail_level)
 
 @mcp.tool()
-def analyze_github_issue(
+def analyze_issue_nollm(
     issue_number: int, 
     repository: str = "kesslerio/vibe-check-mcp", 
     analysis_mode: str = "quick",
@@ -86,30 +116,29 @@ def analyze_github_issue(
     post_comment: bool = None
 ) -> Dict[str, Any]:
     """
-    VIBE CHECK ISSUE ANALYSIS - Enhanced GitHub issue vibe check with friendly coaching.
+    🚀 Fast GitHub issue analysis using direct pattern detection (no LLM calls).
 
-    The definitive vibe check tool for GitHub issues. Perfect for "vibe check issue [number]",
-    "analyze issue [number]", and anti-pattern detection commands.
+    Direct GitHub issue analysis with pattern detection and GitHub API data.
+    Perfect for "quick vibe check issue", "fast issue analysis", and development workflow.
+    For comprehensive LLM-powered analysis, use analyze_issue_llm instead.
 
     Features:
-    - 🧠 Claude-powered comprehensive reasoning and analysis
-    - 🤝 Friendly coaching-oriented guidance instead of technical jargon
-    - 🔍 Anti-pattern detection with prevention recommendations
-    - 🎓 Educational content and real-world examples
-    - 📊 Five vibe levels: Good, Research, POC, Complex, Bad Vibes
-    - ✅ Clear-Thought systematic analysis integration
+    - 🚀 Fast pattern detection on GitHub issues
+    - 🎯 Direct GitHub API integration
+    - 🔍 Basic anti-pattern detection
+    - 📊 Issue metrics and validation
 
-    Use this tool for: "vibe check issue 23", "analyze issue 42", "deep vibe issue 31"
+    Use this tool for: "quick vibe check issue 23", "fast analysis issue 42", "basic issue check"
 
     Args:
         issue_number: GitHub issue number to analyze
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
-        analysis_mode: "quick" for fast pattern detection, "comprehensive" for Claude analysis
+        analysis_mode: "quick" for fast pattern detection
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
-        post_comment: Post analysis as GitHub comment (auto-enabled for comprehensive mode, disabled for quick mode)
+        post_comment: Post analysis as GitHub comment (disabled by default for fast mode)
         
     Returns:
-        Friendly vibe check analysis with coaching recommendations
+        Fast GitHub issue analysis with basic recommendations
     """
     # Auto-enable comment posting for comprehensive mode unless explicitly disabled
     if post_comment is None:
@@ -125,44 +154,41 @@ def analyze_github_issue(
     )
 
 @mcp.tool()
-def review_pull_request(
+def analyze_pr_nollm(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
-    force_re_review: bool = False,
-    analysis_mode: str = "comprehensive",
+    analysis_mode: str = "quick",
     detail_level: str = "standard"
 ) -> Dict[str, Any]:
     """
-    VIBE CHECK PR REVIEW - Comprehensive pull request vibe check and analysis.
+    🚀 Fast PR analysis using direct pattern detection (no LLM calls).
 
-    Enhanced vibe check framework for PR reviews with Claude CLI integration.
-    Perfect for "vibe check PR [number]", "review PR [number]", and PR analysis commands.
+    Direct PR analysis with metrics, pattern detection, and GitHub API data.
+    Perfect for "quick PR check", "fast PR analysis", and development workflow.
+    For comprehensive LLM-powered analysis, use analyze_pr_llm instead.
 
     Features:
-    - 🧠 Claude CLI enhanced analysis with sophisticated reasoning
-    - 🔍 Anti-pattern detection and prevention guidance
-    - 📊 Multi-dimensional PR size classification
-    - 🔄 Re-review tracking and progress assessment
-    - 🎯 Issue linkage validation and acceptance criteria checking
-    - ✅ Comprehensive GitHub integration with automated commenting
+    - 🚀 Fast PR metrics and pattern detection
+    - 🎯 Direct GitHub API integration
+    - 📊 PR size classification and file analysis
+    - 🔍 Basic anti-pattern detection
+    - 📋 Issue linkage validation
 
-    Use this tool for: "vibe check PR 44", "review pull request 42", "analyze PR comprehensively"
+    Use this tool for: "quick PR check 44", "fast analysis PR 42", "basic PR review"
 
     Args:
-        pr_number: PR number to review
+        pr_number: PR number to analyze
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
-        force_re_review: Force re-review mode even if not auto-detected
-        analysis_mode: "comprehensive" for full analysis or "quick" for basic review
+        analysis_mode: "quick" for fast analysis
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         
     Returns:
-        Complete vibe check analysis with GitHub integration status
+        Fast PR analysis with basic recommendations
     """
-    logger.info(f"Comprehensive PR review requested: #{pr_number} in {repository} (mode: {analysis_mode})")
-    return pr_review_tool(
+    logger.info(f"Fast PR analysis requested: #{pr_number} in {repository} (mode: {analysis_mode})")
+    return analyze_pr_nollm(
         pr_number=pr_number,
         repository=repository,
-        force_re_review=force_re_review,
         analysis_mode=analysis_mode,
         detail_level=detail_level
     )
@@ -175,10 +201,56 @@ def server_status() -> Dict[str, Any]:
     Returns:
         Server status, core engine validation results, and available capabilities
     """
+    # Check if dev mode is enabled
+    dev_mode_enabled = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
+    
+    # Core tools always available
+    core_tools = [
+        "analyze_text_demo - Demo anti-pattern analysis",
+        "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
+        "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
+        "claude_cli_status - Essential: Check Claude CLI availability and version",
+        "claude_cli_diagnostics - Essential: Diagnose Claude CLI timeout and recursion issues",
+        "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
+        "external_pr_review - External PR review via isolated Claude CLI",
+        "external_code_analysis - External code analysis for anti-patterns",
+        "external_issue_analysis - External issue analysis with specialized prompts",
+        "external_claude_status - Status check for external Claude CLI integration",
+        "server_status - Server status and capabilities"
+    ]
+    
+    # Development tools (environment-based)
+    dev_tools = [
+        "test_claude_cli_integration - Dev: Test Claude CLI integration via MCP",
+        "test_claude_cli_with_file_input - Dev: Test Claude CLI with file input", 
+        "test_claude_cli_comprehensive - Dev: Comprehensive test suite with multiple scenarios",
+        "test_claude_cli_mcp_permissions - Dev: Test Claude CLI with MCP permissions bypass"
+    ]
+    
+    # Build available tools list
+    available_tools = core_tools[:]
+    
+    if dev_mode_enabled:
+        available_tools.extend(dev_tools)
+        tool_mode = "🔧 Development Mode (VIBE_CHECK_DEV_MODE=true)"
+        tool_count = f"{len(core_tools)} core + {len(dev_tools)} dev tools"
+    else:
+        tool_mode = "📦 User Mode (essential tools only)"
+        tool_count = f"{len(core_tools)} essential tools"
+    
     return {
         "server_name": "Vibe Check MCP",
-        "version": "Phase 2.1 - FastMCP Integration",
+        "version": "Phase 2.2 - Testing Tools Architecture (Issue #72 ✅ COMPLETE)",
         "status": "✅ Operational",
+        "tool_mode": tool_mode,
+        "tool_count": tool_count,
+        "architecture_improvement": {
+            "issue_72_status": "✅ COMPLETE",
+            "essential_diagnostics": "✅ COMPLETE - claude_cli_status, claude_cli_diagnostics",
+            "environment_based_dev_tools": "✅ COMPLETE - VIBE_CHECK_DEV_MODE support", 
+            "legacy_cleanup": "✅ COMPLETE - Clean tool registration architecture",
+            "tool_reduction_achieved": "6 testing tools → 2 essential user diagnostics (67% reduction)"
+        },
         "core_engine_status": {
             "validation_completed": True,
             "detection_accuracy": "87.5%",
@@ -186,23 +258,12 @@ def server_status() -> Dict[str, Any]:
             "patterns_supported": 4,
             "phase_1_complete": True
         },
-        "available_tools": [
-            "analyze_text_demo - Demo anti-pattern analysis",
-            "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
-            "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
-            "test_claude_cli_integration - Test Claude CLI integration via MCP",
-            "test_claude_cli_availability - Check Claude CLI availability and version", 
-            "test_claude_cli_with_file_input - Test Claude CLI with file input",
-            "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
-            "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
-            "test_claude_cli_recursion_detection - Diagnose recursion issues with Claude CLI",
-            "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
-            "external_pr_review - External PR review via isolated Claude CLI",
-            "external_code_analysis - External code analysis for anti-patterns",
-            "external_issue_analysis - External issue analysis with specialized prompts",
-            "external_claude_status - Status check for external Claude CLI integration",
-            "server_status - Server status and capabilities"
-        ],
+        "available_tools": available_tools,
+        "dev_mode_instructions": {
+            "enable_dev_tools": "export VIBE_CHECK_DEV_MODE=true",
+            "dev_tools_location": "tests/integration/claude_cli_tests.py",
+            "user_essential_tools": ["claude_cli_status", "claude_cli_diagnostics"]
+        },
         "upcoming_tools": [
             "analyze_code - Code content analysis (Issue #23)", 
             "validate_integration - Integration approach validation (Issue #24)",

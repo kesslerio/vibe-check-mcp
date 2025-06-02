@@ -23,12 +23,12 @@ from pathlib import Path
 from github import Github, GithubException
 from github.Issue import Issue
 
-from ..core.pattern_detector import PatternDetector, DetectionResult
-from ..core.educational_content import DetailLevel
-from ..core.vibe_coaching import get_vibe_coaching_framework, LearningLevel, CoachingTone
+from ...core.pattern_detector import PatternDetector, DetectionResult
+from ...core.educational_content import DetailLevel
+from ...core.vibe_coaching import get_vibe_coaching_framework, LearningLevel, CoachingTone
 
 # Import Claude CLI debug/verbose config
-from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+from ...utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
 logger = logging.getLogger(__name__)
 
