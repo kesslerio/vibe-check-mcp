@@ -26,11 +26,11 @@ except ImportError:
     print("❌ FastMCP not installed. Install with: pip install fastmcp")
     sys.exit(1)
 
-from .tools.demo_tool import demo_analyze_text
+from .tools.analyze_text import analyze_text_demo
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
-from .tools.pr_review import review_pull_request as pr_review_tool
+from .tools.review_pr import review_pull_request as pr_review_tool
 from .tools.test_claude_cli import register_claude_cli_test_tool
-from .tools.external_claude_integration import register_external_claude_tools
+from .tools.analyze_external import register_external_claude_tools
 
 # Configure logging
 logging.basicConfig(
@@ -76,7 +76,7 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
         Vibe check analysis results with coaching recommendations
     """
     logger.info(f"Demo analysis requested for {len(text)} characters")
-    return demo_analyze_text(text, detail_level)
+    return analyze_text_demo(text, detail_level)
 
 @mcp.tool()
 def analyze_github_issue(
