@@ -44,7 +44,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP("Vibe Check MCP")
+mcp: FastMCP = FastMCP("Vibe Check MCP")
 
 # Register Claude CLI test tools
 register_claude_cli_test_tool(mcp)
@@ -84,7 +84,7 @@ def analyze_github_issue(
     repository: str = "kesslerio/vibe-check-mcp", 
     analysis_mode: str = "quick",
     detail_level: str = "standard",
-    post_comment: bool = None
+    post_comment: Optional[bool] = None
 ) -> Dict[str, Any]:
     """
     VIBE CHECK ISSUE ANALYSIS - Enhanced GitHub issue vibe check with friendly coaching.
@@ -126,7 +126,7 @@ def analyze_github_issue(
     )
 
 @mcp.tool()
-def review_pull_request(
+async def review_pull_request(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
     force_re_review: bool = False,
@@ -160,7 +160,7 @@ def review_pull_request(
         Complete vibe check analysis with GitHub integration status
     """
     logger.info(f"Comprehensive PR review requested: #{pr_number} in {repository} (mode: {analysis_mode})")
-    return pr_review_tool(
+    return await pr_review_tool(
         pr_number=pr_number,
         repository=repository,
         force_re_review=force_re_review,

@@ -300,7 +300,7 @@ class GitHubIssueAnalyzer:
             else:
                 priority = "💡 CONSIDER"
             
-            pattern_name = pattern.educational_content.get("pattern_name", pattern.pattern_type)
+            pattern_name = pattern.educational_content.get("pattern_name", pattern.pattern_type) if pattern.educational_content else pattern.pattern_type
             actions.append(f"{priority}: Address {pattern_name} pattern (confidence: {pattern.confidence:.0%})")
             
             # Add specific immediate actions from educational content

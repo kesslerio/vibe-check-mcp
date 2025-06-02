@@ -130,7 +130,7 @@ class VibeCheckFramework:
             )
             
             # Phase 5: Post GitHub comment if requested
-            if post_comment and mode == VibeCheckMode.COMPREHENSIVE:
+            if post_comment and mode == VibeCheckMode.COMPREHENSIVE and repository:
                 self._post_github_comment(issue_number, repository, vibe_result)
             
             return vibe_result

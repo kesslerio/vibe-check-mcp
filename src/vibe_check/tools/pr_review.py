@@ -1111,7 +1111,7 @@ can process the request successfully.
             "timestamp": datetime.now().isoformat()
         }
         if pr_number:
-            result["pr_number"] = pr_number
+            result["pr_number"] = str(pr_number)
         return result
     
     def _generate_fallback_analysis(
@@ -1198,7 +1198,7 @@ can process the request successfully.
         strengths = []
         
         # Check for good practices
-        if self._analyze_issue_linkage(pr_data)["has_linkage"]:
+        if self._analyze_issue_linkage(pr_data).get("has_linkage", False):
             strengths.append("✅ Proper issue linkage with 'Fixes #XXX' syntax")
             
         if pr_data["statistics"]["total_changes"] < 500:
@@ -1210,7 +1210,7 @@ can process the request successfully.
         """Identify critical issues that must be addressed."""
         issues = []
         
-        if not self._analyze_issue_linkage(pr_data)["has_linkage"]:
+        if not self._analyze_issue_linkage(pr_data).get("has_linkage", False):
             issues.append("❌ Missing issue linkage - PR should reference specific issues")
             
         if pr_data["statistics"]["total_changes"] > 5000:
@@ -1225,7 +1225,7 @@ can process the request successfully.
         if pr_data["statistics"]["files_count"] > 20:
             considerations.append("📁 High file count - verify architectural impact")
             
-        if self._assess_third_party_integration(pr_data)["has_third_party_integration"]:
+        if self._assess_third_party_integration(pr_data).get("has_third_party_integration", False):
             considerations.append("🔗 Third-party integration detected - validate API-first approach")
             
         return considerations
@@ -1424,14 +1424,14 @@ can process the request successfully.
     
     def _format_comments_section(self, comments_data: Dict) -> str:
         """Format previous comments analysis section."""
-        if comments_data["has_feedback"]:
-            return f"📝 **{comments_data['comment_count']} existing comments** - Previous feedback should be addressed"
+        if comments_data.get("has_feedback", False):
+            return f"📝 **{comments_data.get('comment_count', 0)} existing comments** - Previous feedback should be addressed"
         else:
             return "✨ **First review** - No previous comments to address"
     
     def _format_third_party_section(self, third_party_data: Dict) -> str:
         """Format third-party integration assessment."""
-        if third_party_data["has_third_party_integration"]:
+        if third_party_data.get("has_third_party_integration", False):
             return """⚠️ **Third-party integration detected**
 - [ ] API-first development protocol validation needed
 - [ ] Working POC demonstration required
@@ -1449,17 +1449,17 @@ can process the request successfully.
         """Format action items section."""
         sections = []
         
-        if action_items["required_changes"]:
+        if action_items.get("required_changes", []):
             sections.append("**Required Changes for Approval:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["required_changes"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("required_changes", [])])
             
-        if action_items["recommended_improvements"]:
+        if action_items.get("recommended_improvements", []):
             sections.append("\n**Recommended Improvements:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["recommended_improvements"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("recommended_improvements", [])])
             
-        if action_items["testing_actions"]:
+        if action_items.get("testing_actions", []):
             sections.append("\n**Testing Actions:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["testing_actions"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("testing_actions", [])])
             
         return "\n".join(sections) if sections else "*No specific actions required*"
     
