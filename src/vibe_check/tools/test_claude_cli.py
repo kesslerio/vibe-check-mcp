@@ -363,7 +363,7 @@ if __name__ == "__main__":
         for scenario in test_scenarios:
             try:
                 # Use the existing integration test for each scenario
-                test_result = await test_claude_cli_integration(
+                test_result: ClaudeCliTestResponse = await test_claude_cli_integration(
                     test_prompt=scenario["prompt"],
                     timeout_seconds=scenario["timeout"],
                     debug_mode=True
