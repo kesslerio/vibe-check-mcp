@@ -27,7 +27,7 @@ except ImportError:
 
 from .tools.analyze_text_nollm import analyze_text_demo
 from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
-from .tools.analyze_pr_nollm import analyze_pr_nollm
+from .tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
 from .tools.analyze_llm import register_llm_analysis_tools
 from .tools.diagnostics_claude_cli import register_diagnostic_tools
 
@@ -186,7 +186,7 @@ def analyze_pr_nollm(
         Fast PR analysis with basic recommendations
     """
     logger.info(f"Fast PR analysis requested: #{pr_number} in {repository} (mode: {analysis_mode})")
-    return analyze_pr_nollm(
+    return analyze_pr_nollm_function(
         pr_number=pr_number,
         repository=repository,
         analysis_mode=analysis_mode,

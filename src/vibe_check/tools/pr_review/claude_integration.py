@@ -8,6 +8,7 @@ This module extracts Claude CLI functionality from the monolithic PRReviewTool.
 import json
 import logging
 import os
+import re
 import subprocess
 import tempfile
 import time
