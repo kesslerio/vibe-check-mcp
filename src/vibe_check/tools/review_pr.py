@@ -31,7 +31,7 @@ from pathlib import Path
 from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
 # Import external Claude CLI integration
-from .external_claude_cli import ExternalClaudeCli
+from .analyze_external import ExternalClaudeCli
 
 logger = logging.getLogger(__name__)
 

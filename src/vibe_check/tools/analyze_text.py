@@ -1,7 +1,8 @@
 """
-Text Analysis Demo Tool
+Text Analysis Tool
 
-Provides demo text analysis for vibe check framework testing.
+Provides text analysis for vibe check framework testing and demonstration.
+Follows action_what naming convention: analyze_text.
 """
 
 import logging
@@ -13,9 +14,9 @@ from ..core.educational_content import EducationalContentGenerator
 logger = logging.getLogger(__name__)
 
 
-def demo_analyze_text(text: str, detail_level: str = "standard") -> Dict[str, Any]:
+def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
     """
-    Demo tool: Analyze text for anti-patterns using the validated core engine.
+    Analyze text for anti-patterns using the validated core engine.
     
     Args:
         text: Text content to analyze for anti-patterns
@@ -61,7 +62,7 @@ def demo_analyze_text(text: str, detail_level: str = "standard") -> Dict[str, An
             educational_content = asdict(educational_response)
         
         return {
-            "demo_analysis": {
+            "analysis_results": {
                 "text_length": len(text),
                 "patterns_detected": len([p for p in patterns if p.detected]),
                 "analysis_method": "Phase 1 validated core engine"
@@ -73,10 +74,10 @@ def demo_analyze_text(text: str, detail_level: str = "standard") -> Dict[str, An
         }
         
     except Exception as e:
-        logger.error(f"Demo analysis failed: {e}")
+        logger.error(f"Text analysis failed: {e}")
         return {
             "error": f"Analysis failed: {str(e)}",
-            "demo_analysis": {
+            "analysis_results": {
                 "patterns_detected": 0,
                 "analysis_method": "Error occurred"
             }

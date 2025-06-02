@@ -20,7 +20,7 @@ from fastmcp import FastMCP
 from pydantic import BaseModel
 
 # Import the external Claude CLI wrapper
-from .external_claude_cli import ExternalClaudeCli, ClaudeCliResult
+from .analyze_external import ExternalClaudeCli, ClaudeCliResult
 
 logger = logging.getLogger(__name__)
 

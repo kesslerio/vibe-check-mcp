@@ -7,6 +7,6 @@ anti-pattern detection engine for use via the Model Context Protocol.
 All tools maintain the validated 87.5% detection accuracy from Phase 1.
 """
 
-from .demo_tool import demo_analyze_text
+from .analyze_text import analyze_text_demo
 
-__all__ = ["demo_analyze_text"]
+__all__ = ["analyze_text_demo"]
