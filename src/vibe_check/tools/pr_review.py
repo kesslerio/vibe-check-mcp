@@ -1345,14 +1345,14 @@ can process the request successfully.
 **Previous Reviews**: {review_count} automated review(s) completed
 **Re-Review Focus**: Changes since last review, progress assessment, new issues
 **Analysis Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-**Analysis Method**: {'🧠 Claude CLI Enhanced' if analysis_method == 'claude-cli' else '⚠️ Fallback Analysis'}
+**Analysis Method**: {'🧠 Claude CLI Enhanced' if analysis_method in ['claude-cli', 'external-claude-cli'] else '⚠️ Fallback Analysis'}
 
 ---
 
 """
         else:
-            method_icon = "🧠" if analysis_method == "claude-cli" else "⚠️"
-            method_name = "Claude CLI Enhanced Analysis" if analysis_method == "claude-cli" else "Fallback Analysis (Claude CLI not available)"
+            method_icon = "🧠" if analysis_method in ["claude-cli", "external-claude-cli"] else "⚠️"
+            method_name = "Claude CLI Enhanced Analysis" if analysis_method in ["claude-cli", "external-claude-cli"] else "Fallback Analysis (Claude CLI not available)"
             header = f"""## 🎯 **Deep Vibe Check PR #{analysis.get('pr_number', 'XX')}**
 
 **Analysis Method**: {method_name}
@@ -1361,7 +1361,7 @@ can process the request successfully.
 """
         
         # If we have Claude analysis, use it directly
-        if analysis_method == "claude-cli" and "claude_analysis" in analysis:
+        if analysis_method in ["claude-cli", "external-claude-cli"] and "claude_analysis" in analysis:
             comment = f"""{header}{analysis['claude_analysis']}
 
 ---
