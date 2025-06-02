@@ -263,7 +263,7 @@ if __name__ == "__main__":
                         command,
                         capture_output=True,
                         text=True,
-                        timeout=45,
+                        timeout=120,
                         env=dict(os.environ, CLAUDE_PARENT_PROCESS="mcp-server")
                     )
                     return result
@@ -443,7 +443,7 @@ if __name__ == "__main__":
                         command,
                         capture_output=True,
                         text=True,
-                        timeout=45,  # Longer timeout for MCP operations
+                        timeout=120,
                         env=dict(os.environ, CLAUDE_PARENT_PROCESS="mcp-server")
                     )
                     return result

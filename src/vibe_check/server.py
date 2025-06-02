@@ -18,6 +18,7 @@ import os
 import sys
 import argparse
 from typing import Dict, Any, Optional
+from pathlib import Path
 
 try:
     from fastmcp import FastMCP
@@ -37,7 +38,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('vibe_check.log')
+        logging.FileHandler(Path(__file__).parent.parent.parent / "logs" / "vibe_check.log")
     ]
 )
 logger = logging.getLogger(__name__)
@@ -213,21 +214,27 @@ def server_status() -> Dict[str, Any]:
 
 def detect_transport_mode() -> str:
     """Auto-detect the best transport mode based on environment."""
+    logger.info(f"Detecting transport mode. CLAUDE_CODE_MODE: {os.environ.get('CLAUDE_CODE_MODE')}, MCP_CLAUDE_DESKTOP: {os.environ.get('MCP_CLAUDE_DESKTOP')}, TERM: {os.environ.get('TERM')}, /.dockerenv exists: {os.path.exists('/.dockerenv')}, RUNNING_IN_DOCKER: {os.environ.get('RUNNING_IN_DOCKER')}, MCP_TRANSPORT: {os.environ.get('MCP_TRANSPORT')}")
     # Check if running in Docker
     if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
+        logger.info("Detected Docker environment, choosing streamable-http.")
         return "streamable-http"
     
     # Check if Claude Desktop/Code is the client (stdio preferred)
     if os.environ.get("MCP_CLAUDE_DESKTOP") or os.environ.get("CLAUDE_CODE_MODE"):
+        logger.info("Detected Claude client environment, choosing stdio.")
         return "stdio"
     
     # Check for explicit transport override
     transport_override = os.environ.get("MCP_TRANSPORT")
     if transport_override in ["stdio", "streamable-http"]:
+        logger.info(f"Detected MCP_TRANSPORT override: {transport_override}, choosing {transport_override}.")
         return transport_override
     
     # Default to stdio for local development, HTTP for server deployment
-    return "stdio" if os.environ.get("TERM") else "streamable-http"
+    chosen_default = "stdio" if os.environ.get("TERM") else "streamable-http"
+    logger.info(f"Using default based on TERM: {chosen_default}.")
+    return chosen_default
 
 
 def run_server(transport: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = None):
