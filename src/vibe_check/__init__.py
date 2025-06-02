@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Vibe Check MCP: Engineering Anti-Pattern Detection & Prevention
 

@@ -464,30 +464,31 @@ class CodeAnalysisRequest(BaseModel):
     timeout_seconds: int = 60
 
 
-def register_external_claude_tools(mcp: FastMCP) -> None:
-    """Register external Claude CLI integration tools with the MCP server."""
+def register_llm_analysis_tools(mcp: FastMCP) -> None:
+    """Register LLM-powered analysis tools with the MCP server."""
     
     @mcp.tool()
-    async def external_claude_analyze(
+    async def analyze_text_llm(
         content: str,
         task_type: str = "general",
         additional_context: Optional[str] = None,
         timeout_seconds: int = 60
     ) -> ExternalClaudeResponse:
         """
-        Analyze content using external Claude CLI to avoid context blocking.
+        🧠 Deep text analysis using Claude CLI reasoning.
         
-        This tool executes Claude CLI in a separate process to prevent the
-        timeout issues that occur when calling Claude CLI from within Claude Code.
+        This tool executes Claude CLI in a separate process to provide comprehensive
+        LLM-powered analysis with full reasoning capabilities. For fast pattern 
+        detection without LLM calls, use analyze_text_nollm instead.
         
         Args:
-            content: Content to analyze
+            content: Text content to analyze
             task_type: Type of analysis (general, pr_review, code_analysis, issue_analysis)
             additional_context: Optional additional context for the analysis
             timeout_seconds: Maximum time to wait for response
             
         Returns:
-            Analysis results from external Claude CLI execution
+            Comprehensive Claude CLI analysis results
         """
         logger.info(f"Starting external Claude analysis for task type: {task_type}")
         
@@ -602,17 +603,18 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
             )
     
     @mcp.tool()
-    async def external_pr_review(
+    async def analyze_pr_llm(
         pr_diff: str,
         pr_description: str = "",
         file_changes: Optional[List[str]] = None,
         timeout_seconds: int = 90
     ) -> ExternalClaudeResponse:
         """
-        Perform comprehensive PR review using external Claude CLI.
+        🧠 Comprehensive PR review using Claude CLI reasoning.
         
-        This tool provides specialized PR review capabilities with anti-pattern
-        detection, security analysis, and code quality assessment.
+        This tool provides deep PR analysis with LLM-powered reasoning including
+        anti-pattern detection, security analysis, and code quality assessment.
+        For fast direct PR analysis, use analyze_pr_nollm instead.
         
         Args:
             pr_diff: The full diff content of the pull request
@@ -621,7 +623,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
             timeout_seconds: Maximum time to wait for analysis
             
         Returns:
-            Comprehensive PR review results
+            Comprehensive Claude CLI PR review results
         """
         logger.info("Starting external PR review")
         
@@ -634,7 +636,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         
         additional_context = "\n".join(context_parts) if context_parts else None
         
-        return await external_claude_analyze(
+        return await analyze_text_llm(
             content=pr_diff,
             task_type="pr_review",
             additional_context=additional_context,
@@ -642,17 +644,17 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         )
     
     @mcp.tool()
-    async def external_code_analysis(
+    async def analyze_code_llm(
         code_content: str,
         file_path: Optional[str] = None,
         language: Optional[str] = None,
         timeout_seconds: int = 60
     ) -> ExternalClaudeResponse:
         """
-        Analyze code for anti-patterns and quality issues using external Claude CLI.
+        🧠 Deep code analysis using Claude CLI reasoning.
         
-        This tool provides specialized code analysis focusing on anti-pattern
-        detection, security vulnerabilities, and maintainability concerns.
+        This tool provides comprehensive code analysis with LLM-powered reasoning
+        for anti-pattern detection, security vulnerabilities, and maintainability.
         
         Args:
             code_content: The code to analyze
@@ -661,7 +663,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
             timeout_seconds: Maximum time to wait for analysis
             
         Returns:
-            Detailed code analysis results
+            Detailed Claude CLI code analysis results
         """
         logger.info(f"Starting external code analysis for {language or 'unknown'} code")
         
@@ -674,7 +676,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         
         additional_context = "\n".join(context_parts) if context_parts else None
         
-        return await external_claude_analyze(
+        return await analyze_text_llm(
             content=code_content,
             task_type="code_analysis",
             additional_context=additional_context,
@@ -682,17 +684,18 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         )
     
     @mcp.tool()
-    async def external_issue_analysis(
+    async def analyze_issue_llm(
         issue_content: str,
         issue_title: str = "",
         issue_labels: Optional[List[str]] = None,
         timeout_seconds: int = 60
     ) -> ExternalClaudeResponse:
         """
-        Analyze GitHub issues for anti-patterns and quality using external Claude CLI.
+        🧠 Deep GitHub issue analysis using Claude CLI reasoning.
         
-        This tool provides specialized issue analysis focusing on anti-pattern
-        prevention, requirements quality, and implementation guidance.
+        This tool provides comprehensive issue analysis with LLM-powered reasoning
+        for anti-pattern prevention, requirements quality, and implementation guidance.
+        For fast direct issue analysis, use analyze_issue_nollm instead.
         
         Args:
             issue_content: The issue body/content
@@ -701,7 +704,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
             timeout_seconds: Maximum time to wait for analysis
             
         Returns:
-            Issue analysis with anti-pattern prevention guidance
+            Comprehensive Claude CLI issue analysis with anti-pattern prevention guidance
         """
         logger.info("Starting external issue analysis")
         
@@ -714,7 +717,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         
         additional_context = "\n".join(context_parts) if context_parts else None
         
-        return await external_claude_analyze(
+        return await analyze_text_llm(
             content=issue_content,
             task_type="issue_analysis",
             additional_context=additional_context,
@@ -722,7 +725,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         )
     
     @mcp.tool()
-    async def external_github_issue_vibe_check(
+    async def analyze_github_issue_llm(
         issue_number: int,
         repository: str = "kesslerio/vibe-check-mcp",
         post_comment: bool = False,
@@ -844,7 +847,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
             }
     
     @mcp.tool()
-    async def external_claude_status() -> Dict[str, Any]:
+    async def analyze_llm_status() -> Dict[str, Any]:
         """
         Check the status of external Claude CLI integration.
         
