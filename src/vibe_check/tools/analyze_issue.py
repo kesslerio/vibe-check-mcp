@@ -344,7 +344,7 @@ def get_github_analyzer(github_token: Optional[str] = None) -> GitHubIssueAnalyz
     return _github_analyzer
 
 
-def analyze_issue(
+async def analyze_issue(
     issue_number: int,
     repository: Optional[str] = None,
     analysis_mode: str = "quick",
@@ -393,7 +393,7 @@ def analyze_issue(
         framework = get_vibe_check_framework()
         
         # Run comprehensive vibe check
-        vibe_result = framework.check_issue_vibes(
+        vibe_result = await framework.check_issue_vibes(
             issue_number=issue_number,
             repository=repository,
             mode=mode,

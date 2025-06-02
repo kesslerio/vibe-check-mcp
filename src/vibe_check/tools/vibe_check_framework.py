@@ -20,8 +20,12 @@ import tempfile
 import os
 from pathlib import Path
 
-from github import Github, GithubException
-from github.Issue import Issue
+try:
+    from github import Github, GithubException
+    from github.Issue import Issue
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
 
 from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
@@ -30,7 +34,51 @@ from ..core.vibe_coaching import get_vibe_coaching_framework, LearningLevel, Coa
 # Import Claude CLI debug/verbose config
 from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
+# Import external Claude integration
+from .external_claude_cli import ExternalClaudeCli, ClaudeCliResult
+
 logger = logging.getLogger(__name__)
+
+
+def _get_github_token() -> Optional[str]:
+    """Get GitHub token from environment or gh CLI with proper error handling."""
+    # Try environment variable first
+    token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    
+    # Fallback to gh CLI
+    try:
+        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception as e:
+        logger.warning(f"Could not get GitHub token from gh CLI: {e}")
+    
+    return None
+
+
+def _post_github_comment(issue_number: int, repository: str, comment_body: str) -> bool:
+    """Post comment to GitHub issue using proper authentication."""
+    if not GITHUB_AVAILABLE:
+        logger.error("GitHub library not available for posting comments")
+        return False
+    
+    token = _get_github_token()
+    if not token:
+        logger.error("No GitHub token available for posting comments")
+        return False
+    
+    try:
+        github_client = Github(token)
+        repo = github_client.get_repo(repository)
+        issue = repo.get_issue(issue_number)
+        issue.create_comment(comment_body)
+        logger.info(f"Successfully posted comment to {repository}#{issue_number}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to post GitHub comment: {e}")
+        return False
 
 
 class VibeCheckMode(Enum):
@@ -77,12 +125,13 @@ class VibeCheckFramework:
     
     def __init__(self, github_token: Optional[str] = None):
         """Initialize the vibe check framework"""
-        self.github_client = Github(github_token) if github_token else Github()
+        # GitHub client will be created when needed with proper authentication
         self.pattern_detector = PatternDetector()
+        self.external_claude = ExternalClaudeCli(timeout_seconds=120)  # Increased timeout
         self.claude_available = self._check_claude_availability()
         logger.info("Vibe Check Framework initialized")
     
-    def check_issue_vibes(
+    async def check_issue_vibes(
         self,
         issue_number: int,
         repository: Optional[str] = None,
@@ -113,7 +162,7 @@ class VibeCheckFramework:
             # Phase 2: Claude-powered reasoning (if available and comprehensive mode)
             claude_analysis = None
             if mode == VibeCheckMode.COMPREHENSIVE and self.claude_available:
-                claude_analysis = self._run_claude_analysis(issue_data, basic_patterns)
+                claude_analysis = await self._run_claude_analysis(issue_data, basic_patterns)
             
             # Phase 3: Clear-Thought systematic analysis (for complex issues)
             clear_thought_analysis = None
@@ -146,15 +195,23 @@ class VibeCheckFramework:
             )
     
     def _fetch_issue_data(self, issue_number: int, repository: Optional[str]) -> Dict[str, Any]:
-        """Fetch GitHub issue data (same as original implementation)"""
+        """Fetch GitHub issue data with proper authentication"""
         if repository is None:
             repository = "kesslerio/vibe-check-mcp"
         
         if "/" not in repository:
             raise ValueError("Repository must be in format 'owner/repo'")
         
+        if not GITHUB_AVAILABLE:
+            raise Exception("GitHub library not available")
+        
+        token = _get_github_token()
+        if not token:
+            raise Exception("No GitHub token available - set GITHUB_TOKEN or run 'gh auth login'")
+        
         try:
-            repo = self.github_client.get_repo(repository)
+            github_client = Github(token)
+            repo = github_client.get_repo(repository)
             issue: Issue = repo.get_issue(issue_number)
             
             return {
@@ -195,96 +252,46 @@ class VibeCheckFramework:
         except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
             return False
     
-    def _run_claude_analysis(self, issue_data: Dict[str, Any], basic_patterns: List[DetectionResult]) -> Optional[str]:
+    async def _run_claude_analysis(self, issue_data: Dict[str, Any], basic_patterns: List[DetectionResult]) -> Optional[str]:
         """
-        Run Claude-powered sophisticated analysis using prompts ported from review-issue.sh
-        Debug/verbose flags are controlled by src.vibe_check.utils.CLAUDE_CLI_DEBUG/VERBOSE.
+        Run Claude-powered sophisticated analysis using external Claude integration to avoid recursion.
         """
         try:
             # Create sophisticated analysis prompt (ported from bash script)
             prompt = self._create_sophisticated_vibe_prompt(issue_data, basic_patterns)
             
-            # Get GitHub token from environment or gh CLI
-            github_token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
-            if not github_token:
-                try:
-                    result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True)
-                    if result.returncode == 0:
-                        github_token = result.stdout.strip()
-                except Exception as e:
-                    logger.warning(f"Could not get GitHub token from gh CLI: {e}")
-                    github_token = ""
+            # Build additional context for the external Claude instance
+            context_parts = [
+                f"GitHub Issue Analysis",
+                f"Repository: {issue_data.get('repository', 'Unknown')}",
+                f"Issue #{issue_data.get('number', 'Unknown')}: {issue_data.get('title', 'No title')}",
+                f"Author: {issue_data.get('author', 'Unknown')}",
+                f"Labels: {', '.join(issue_data.get('labels', []))}"
+            ]
             
-            # Create selective MCP config to avoid recursive dependency
-            selective_mcp_config = {
-                "mcpServers": {
-                    "clear-thought-server": {
-                        "command": "npx",
-                        "args": ["-y", "@modelcontextprotocol/server-clear-thought"]
-                    },
-                    "brave-search": {
-                        "command": "npx", 
-                        "args": ["-y", "@modelcontextprotocol/server-brave-search"]
-                    },
-                    "github": {
-                        "command": "npx",
-                        "args": ["-y", "@modelcontextprotocol/server-github"],
-                        "env": {
-                            "GITHUB_PERSONAL_ACCESS_TOKEN": github_token
-                        }
-                    }
-                }
-            }
+            if basic_patterns:
+                context_parts.append(f"Basic patterns detected: {len(basic_patterns)} patterns")
             
-            # Write selective MCP config to temp file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                json.dump(selective_mcp_config, f)
-                mcp_config_file = f.name
+            additional_context = "\n".join(context_parts)
             
-            try:
-                # Build command with config flags and selective MCP
-                stdin_command = [
-                    'claude',
-                    '--dangerously-skip-permissions',
-                    '--mcp-config', mcp_config_file
-                ]
-                if CLAUDE_CLI_DEBUG:
-                    stdin_command.append('--debug')
-                if CLAUDE_CLI_VERBOSE:
-                    stdin_command.append('--verbose')
-                stdin_command.extend(['-p', prompt])
+            # Use external Claude CLI for issue analysis
+            logger.info("Using external Claude CLI integration for comprehensive analysis")
+            result: ClaudeCliResult = await self.external_claude.analyze_content(
+                content=prompt,
+                task_type="issue_analysis",
+                additional_context=additional_context,
+                prefer_claude_cli=True
+            )
+            
+            if result.success and result.output:
+                logger.info(f"External Claude analysis completed successfully in {result.execution_time:.2f}s")
+                return result.output
+            else:
+                logger.warning(f"External Claude analysis failed: {result.error}")
+                return None
                 
-                # Adaptive timeout based on prompt size
-                prompt_size = len(prompt)
-                if prompt_size < 10000:
-                    timeout_seconds = 60  # Increased from 30
-                elif prompt_size < 30000:
-                    timeout_seconds = 90  # Increased from 45
-                else:
-                    timeout_seconds = 120  # Increased from 60
-                    
-                result = subprocess.run(
-                    stdin_command,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout_seconds
-                )
-                
-                if result.returncode == 0 and result.stdout.strip():
-                    return result.stdout.strip()
-                else:
-                    logger.warning(f"Claude analysis failed: {result.stderr}")
-                    return None
-                    
-            finally:
-                # Cleanup MCP config file
-                try:
-                    os.unlink(mcp_config_file)
-                except OSError:
-                    pass
-                    
         except Exception as e:
-            logger.error(f"Claude analysis error: {str(e)}")
+            logger.error(f"External Claude analysis error: {str(e)}")
             return None
     
     def _create_sophisticated_vibe_prompt(self, issue_data: Dict[str, Any], basic_patterns: List[DetectionResult]) -> str:
@@ -906,17 +913,17 @@ Remember: Use encouraging, friendly language that helps developers learn rather 
         return vibes[vibe_level]
     
     def _post_github_comment(self, issue_number: int, repository: str, vibe_result: VibeCheckResult) -> None:
-        """Post vibe check result as GitHub comment"""
+        """Post vibe check result as GitHub comment using proper authentication"""
         try:
-            repo = self.github_client.get_repo(repository)
-            issue = repo.get_issue(issue_number)
-            
             # Format comment
             comment_body = self._format_github_comment(vibe_result)
             
-            # Post comment
-            issue.create_comment(comment_body)
-            logger.info(f"Posted vibe check comment to issue #{issue_number}")
+            # Post comment using global function with proper auth
+            success = _post_github_comment(issue_number, repository, comment_body)
+            if success:
+                logger.info(f"Posted vibe check comment to issue #{issue_number}")
+            else:
+                logger.error(f"Failed to post vibe check comment to issue #{issue_number}")
             
         except Exception as e:
             logger.error(f"Failed to post GitHub comment: {str(e)}")

@@ -163,11 +163,11 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 prompt = f"{system_prompts.get(task_type, system_prompts['general'])}\n\n{full_content}"
                 
                 command = [
-                    "claude", "-p", "--dangerously-skip-permissions",
+                    "claude", "--dangerously-skip-permissions", "-p",
                     prompt
                 ]
                 
-                logger.debug(f"Executing Claude CLI directly: claude -p --dangerously-skip-permissions <prompt>")
+                logger.debug(f"Executing Claude CLI directly: claude --dangerously-skip-permissions -p <prompt>")
                 
                 # Execute Claude CLI directly (like ! bash mode)
                 start_time = time.time()
@@ -198,7 +198,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                         execution_time_seconds=execution_time,
                         task_type=task_type,
                         timestamp=time.time(),
-                        command_used="claude -p --dangerously-skip-permissions"
+                        command_used="claude --dangerously-skip-permissions -p"
                     )
                 else:
                     # Handle error
@@ -212,7 +212,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                         execution_time_seconds=execution_time,
                         task_type=task_type,
                         timestamp=time.time(),
-                        command_used="claude -p --dangerously-skip-permissions"
+                        command_used="claude --dangerously-skip-permissions -p"
                     )
             
             finally:
@@ -231,7 +231,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 execution_time_seconds=timeout_seconds + 10,
                 task_type=task_type,
                 timestamp=time.time(),
-                command_used="claude -p --dangerously-skip-permissions (timeout)"
+                command_used="claude --dangerously-skip-permissions -p (timeout)"
             )
             
         except Exception as e:
@@ -243,7 +243,7 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 execution_time_seconds=0.0,
                 task_type=task_type,
                 timestamp=time.time(),
-                command_used="claude -p --dangerously-skip-permissions (error)"
+                command_used="claude --dangerously-skip-permissions -p (error)"
             )
     
     @mcp.tool()
@@ -550,176 +550,6 @@ Use friendly, coaching language that helps developers learn rather than intimida
                 "integration_ready": False
             }
 
-    @mcp.tool()
-    async def test_claude_cli_integration(
-        test_prompt: str = "What is 2+2?",
-        timeout_seconds: int = 30,
-        debug_mode: bool = False,
-        task_type: str = "general"
-    ) -> Dict[str, Any]:
-        """
-        Test external Claude CLI integration via ExternalClaudeCli wrapper.
-        
-        This tool uses the ExternalClaudeCli wrapper to execute Claude CLI in an
-        independent session, preventing the timeout issues that occur with direct
-        subprocess calls from within Claude Code MCP context.
-        
-        Args:
-            test_prompt: The prompt to send to Claude CLI (default: "What is 2+2?")
-            timeout_seconds: Timeout for the command execution (default: 30)
-            debug_mode: Enable detailed logging and diagnostics (default: False)
-            task_type: Task type for specialized system prompts (general, pr_review, code_analysis, issue_analysis)
-            
-        Returns:
-            Test results including success status, output, timing, and diagnostics
-        """
-        logger.info(f"Testing Claude CLI integration with prompt: {test_prompt[:50]}...")
-        
-        start_time = time.time()
-        
-        try:
-            # Use the EXACT same approach as test_direct_claude.py
-            # Try environment isolation to prevent Claude Code context inheritance
-            # Keep essential environment variables but remove Claude Code specific ones
-            clean_env = {
-                'PATH': os.environ.get('PATH', ''),
-                'HOME': os.environ.get('HOME', ''),
-                'USER': os.environ.get('USER', ''),
-                'SHELL': os.environ.get('SHELL', ''),
-                'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
-                'LC_ALL': os.environ.get('LC_ALL', ''),
-                'TERM': os.environ.get('TERM', 'xterm-256color'),
-                'TMPDIR': os.environ.get('TMPDIR', '/tmp'),
-                'PWD': os.environ.get('PWD', os.getcwd()),
-                # Keep any ANTHROPIC_ variables that might be needed
-                **{k: v for k, v in os.environ.items() if k.startswith('ANTHROPIC_')}
-            }
-            
-            # Remove Claude Code specific environment variables
-            excluded_vars = ['CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_MODE']
-            if debug_mode:
-                logger.info(f"Excluded environment variables: {[var for var in excluded_vars if var in os.environ]}")
-            
-            command = [
-                "claude", "-p", "--dangerously-skip-permissions",
-                test_prompt
-            ]
-            
-            if debug_mode:
-                logger.info(f"Executing command: {' '.join(command[:3])} <prompt>")
-                logger.info(f"Using clean environment (no CLAUDE_CODE_SSE_PORT)")
-            
-            # Test with asyncio subprocess (same as test_direct_claude.py)
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                stdin=asyncio.subprocess.DEVNULL,  # Fix: Isolate stdin like Node.js spawn
-                env=clean_env
-            )
-            
-            if debug_mode:
-                logger.info("Process started, waiting for completion...")
-            
-            # Wait with timeout and ensure process cleanup
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=timeout_seconds
-                )
-            except asyncio.TimeoutError:
-                # Ensure process is terminated on timeout
-                if process.returncode is None:
-                    try:
-                        process.terminate()
-                        await asyncio.wait_for(process.wait(), timeout=5)
-                    except:
-                        try:
-                            process.kill()
-                            await process.wait()
-                        except:
-                            pass
-                raise  # Re-raise the timeout error
-            
-            execution_time = time.time() - start_time
-            
-            if debug_mode:
-                logger.info(f"Process completed with return code: {process.returncode}")
-            
-            if process.returncode == 0:
-                output = stdout.decode('utf-8').strip()
-                
-                result = {
-                    "success": True,
-                    "exit_code": 0,
-                    "output": output,
-                    "output_length": len(output),
-                    "execution_time_seconds": execution_time,
-                    "command_used": "claude -p --dangerously-skip-permissions",
-                    "test_prompt": test_prompt,
-                    "debug_mode": debug_mode,
-                    "timestamp": time.time()
-                }
-                
-                if debug_mode:
-                    result["output_preview"] = output[:200] + ("..." if len(output) > 200 else "")
-                
-                logger.info(f"✅ Claude CLI succeeded in {execution_time:.2f}s, output length: {len(output)} chars")
-                return result
-                
-            else:
-                error = stderr.decode('utf-8').strip()
-                logger.error(f"❌ Claude CLI failed (exit code {process.returncode}): {error}")
-                
-                return {
-                    "success": False,
-                    "exit_code": process.returncode,
-                    "error": error,
-                    "execution_time_seconds": execution_time,
-                    "command_used": "claude -p --dangerously-skip-permissions",
-                    "test_prompt": test_prompt,
-                    "debug_mode": debug_mode,
-                    "timestamp": time.time()
-                }
-                
-        except asyncio.TimeoutError:
-            execution_time = time.time() - start_time
-            logger.warning(f"❌ Claude CLI timed out after {timeout_seconds} seconds")
-            
-            return {
-                "success": False,
-                "error": f"Process timed out after {timeout_seconds} seconds",
-                "execution_time_seconds": execution_time,
-                "command_used": "claude -p --dangerously-skip-permissions (timeout)",
-                "test_prompt": test_prompt,
-                "debug_mode": debug_mode,
-                "timestamp": time.time()
-            }
-            
-        except Exception as e:
-            execution_time = time.time() - start_time
-            logger.error(f"❌ Exception during Claude CLI test: {e}")
-            
-            # Ensure we don't crash the server
-            try:
-                return {
-                    "success": False,
-                    "error": f"Exception: {str(e)}",
-                    "execution_time_seconds": execution_time,
-                    "command_used": "claude -p --dangerously-skip-permissions (error)",
-                    "test_prompt": test_prompt,
-                    "debug_mode": debug_mode,
-                    "timestamp": time.time(),
-                    "exception_type": type(e).__name__
-                }
-            except Exception as nested_e:
-                logger.error(f"❌ Nested exception in error handling: {nested_e}")
-                return {
-                    "success": False,
-                    "error": "Critical error in test execution",
-                    "execution_time_seconds": execution_time,
-                    "timestamp": time.time()
-                }
 
     @mcp.tool()
     async def test_claude_cli_with_env(
@@ -735,7 +565,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
         
         try:
             command = [
-                "claude", "-p", "--dangerously-skip-permissions",
+                "claude", "--dangerously-skip-permissions", "-p",
                 test_prompt
             ]
             

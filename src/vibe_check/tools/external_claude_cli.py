@@ -133,7 +133,6 @@ Promote good engineering practices through constructive analysis.""",
         self.timeout_seconds = timeout_seconds
         self.claude_cli_path = self._find_claude_cli()
         
-        
         # NO Anthropic API client - Claude subscription only via Claude Code
         # This ensures we never use API tokens, only Claude subscription
         self.anthropic_client = None
@@ -357,7 +356,8 @@ Promote good engineering practices through constructive analysis.""",
                 text=True,
                 timeout=self.timeout_seconds,
                 cwd=os.getcwd(),
-                env=clean_env
+                env=clean_env,
+                stdin=subprocess.DEVNULL  # Explicit stdin isolation fix
             )
             
             execution_time = time.time() - start_time
@@ -433,41 +433,42 @@ Promote good engineering practices through constructive analysis.""",
         prefer_claude_cli: bool = True
     ) -> ClaudeCliResult:
         """
-        Analyze content using Claude CLI direct (preferred) or Anthropic SDK (fallback).
+        Analyze content using FRESH Claude CLI instance directly.
+        
+        This spawns a fresh Claude CLI process with NO CONTEXT to get 
+        truly unbiased analysis from your own MCP server.
         
         Args:
             content: Content to analyze
             task_type: Type of analysis (pr_review, code_analysis, etc.)
             additional_context: Optional additional context
-            prefer_claude_cli: Whether to prefer Claude CLI direct execution (default: True)
+            prefer_claude_cli: Whether to prefer Claude CLI execution (default: True)
             
         Returns:
-            ClaudeCliResult with analysis
+            ClaudeCliResult with analysis from fresh Claude instance
         """
-        # Build prompt with context and content
+        # Build prompt with context and content for fresh Claude analysis
         prompt_parts = []
         
-        if additional_context:
-            prompt_parts.append(f"Context: {additional_context}")
+        # Add system context for the fresh Claude instance
+        system_prompt = self._get_system_prompt(task_type)
+        if system_prompt != self.SYSTEM_PROMPTS["general"]:
+            prompt_parts.append(f"SYSTEM CONTEXT: {system_prompt}")
         
-        prompt_parts.append(f"Content to analyze:\n{content}")
+        if additional_context:
+            prompt_parts.append(f"CONTEXT: {additional_context}")
+        
+        prompt_parts.append(f"CONTENT TO ANALYZE:\n{content}")
         
         prompt = "\n\n".join(prompt_parts)
         
-        # ONLY use Claude CLI direct execution - NO API fallback
-        # This ensures we use Claude subscription via Claude Code, not API tokens
-        logger.info("Using Claude CLI direct execution (subscription-based, no API)")
-        result = self.execute_claude_cli_direct(
+        # Use FRESH Claude CLI directly - no external MCP server needed!
+        logger.info("🧠 Running FRESH Claude CLI for unbiased analysis...")
+        return self.execute_claude_cli_direct(
             prompt=prompt,
             task_type=task_type
         )
-        
-        # Return result (success or failure) - no API fallback
-        if not result.success:
-            logger.error(f"Claude CLI execution failed: {result.error}")
-            logger.error("NO API FALLBACK - Fix Claude Code integration or check subscription")
-        
-        return result
+    
 
 
 async def main():

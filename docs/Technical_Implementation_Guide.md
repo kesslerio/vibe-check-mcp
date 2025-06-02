@@ -103,15 +103,18 @@ vibe-check-mcp/                          # ACTUAL REPOSITORY
 │   │   ├── pr_review.py                   # ✅ ENHANCED: External Claude CLI integration (1477 lines)
 │   │   ├── analyze_issue.py               # ✅ COMPLETED: GitHub issue analysis
 │   │   └── demo_tool.py                   # ✅ COMPLETED: Text analysis demo
-│   │   └── demo_tool.py                   # ✅ COMPLETED: GitHub issue analysis (dual-mode)
 │   └── # Additional tools pending (Issues #23-25, #35-37)
 ```
+
+**Note**: Following uniform `action_what` naming convention for tool consolidation (Issue #70):
+- demo_tool.py → analyze_text.py (analyze + text)
+- pr_review.py → review_pr.py (review + pr)
 
 ### 🔄 IN PROGRESS: Phase 2.3+ MCP Tool Expansion
 **Priority 1 - Development Workflow** (Issues #35, #23, #24):
 ```
 ├── src/vibe_check/tools/
-│   ├── review_pr.py                       # 🔄 URGENT: Wrap scripts/review-pr.sh
+│   ├── review_pr.py                       # ✅ COMPLETED: Renamed from pr_review.py
 │   ├── analyze_code.py                    # 🔄 HIGH: Real-time pattern detection  
 │   └── validate_integration.py            # 🔄 HIGH: Integration validation
 ```
@@ -119,8 +122,8 @@ vibe-check-mcp/                          # ACTUAL REPOSITORY
 **Priority 2 - Review Automation** (Issues #36, #37, #25):
 ```
 ├── src/vibe_check/tools/
-│   ├── review_engineering_plan.py         # 🔄 MED: Wrap scripts/review-engineering-plan.sh
-│   ├── review_prd.py                      # 🔄 MED: Wrap scripts/review-prd.sh
+│   ├── review_plan.py                     # 🔄 MED: Renamed from review_engineering_plan.py
+│   ├── review_prd.py                      # 🔄 MED: PRD analysis
 │   └── explain_pattern.py                 # 🔄 LOW: Educational content tool
 ```
 

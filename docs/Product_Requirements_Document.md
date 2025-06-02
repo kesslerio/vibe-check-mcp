@@ -200,30 +200,42 @@ analyze_github_issue(issue_number=23, analysis_mode="comprehensive")
 **Input**: Code content, context, language  
 **Output**: Systematic problem identification with educational guidance
 
+**Note**: Following uniform `action_what` naming convention (analyze + code)
+
 #### 3. `validate_integration` Tool 🔄 **PLANNED** (Issue #24)
 **Purpose**: Prevent infrastructure-without-implementation patterns  
 **Input**: Service name, proposed approach, documentation status  
 **Output**: Integration risk assessment with standard approach recommendations
+
+**Note**: Following uniform `action_what` naming convention (validate + integration)
 
 #### 4. `explain_pattern` Tool 🔄 **PLANNED** (Issue #25)
 **Purpose**: Educational content about specific anti-patterns  
 **Input**: Pattern ID, case study preferences  
 **Output**: Comprehensive explanation with real-world examples
 
-#### 5. `review_pull_request` Tool 🔄 **PLANNED** (Issue #35)
+**Note**: Following uniform `action_what` naming convention (explain + pattern)
+
+#### 5. `review_pr` Tool ✅ **IMPLEMENTED** (Issue #35)
 **Purpose**: Comprehensive PR review with anti-pattern detection  
 **Input**: PR number, repository context  
-**Output**: Detailed code review with systematic analysis (wraps `scripts/review-pr.sh`)
+**Output**: Detailed code review with systematic analysis
 
-#### 6. `review_engineering_plan` Tool 🔄 **PLANNED** (Issue #36)  
+**Note**: Following uniform `action_what` naming convention (review + pr) - renamed from review_pull_request
+
+#### 6. `review_plan` Tool 🔄 **PLANNED** (Issue #36)  
 **Purpose**: Technical plan validation with Cognee lessons  
 **Input**: Plan file path, optional PRD reference  
-**Output**: Technical validation with risk assessment (wraps `scripts/review-engineering-plan.sh`)
+**Output**: Technical validation with risk assessment
+
+**Note**: Following uniform `action_what` naming convention (review + plan) - renamed from review_engineering_plan
 
 #### 7. `review_prd` Tool 🔄 **PLANNED** (Issue #37)
 **Purpose**: PRD review with anti-pattern detection  
 **Input**: PRD file path  
-**Output**: Strategic assessment with systematic analysis (wraps `scripts/review-prd.sh`)
+**Output**: Strategic assessment with systematic analysis
+
+**Note**: Following uniform `action_what` naming convention (review + prd)
 
 ### Educational Response System
 
