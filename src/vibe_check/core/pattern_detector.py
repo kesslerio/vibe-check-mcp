@@ -42,9 +42,11 @@ class PatternDetector:
         
         # Load pattern definitions
         if patterns_file is None:
-            patterns_file = Path(__file__).parent.parent.parent.parent / "data" / "anti_patterns.json"
+            patterns_path = Path(__file__).parent.parent.parent.parent / "data" / "anti_patterns.json"
+        else:
+            patterns_path = Path(patterns_file)
         
-        with open(patterns_file) as f:
+        with open(patterns_path) as f:
             pattern_data = json.load(f)
         
         # Extract version information if present
@@ -59,9 +61,11 @@ class PatternDetector:
         
         # Load case studies
         if case_studies_file is None:
-            case_studies_file = Path(__file__).parent.parent.parent.parent / "data" / "cognee_case_study.json"
+            case_studies_path = Path(__file__).parent.parent.parent.parent / "data" / "cognee_case_study.json"
+        else:
+            case_studies_path = Path(case_studies_file)
         
-        with open(case_studies_file) as f:
+        with open(case_studies_path) as f:
             self.case_studies = json.load(f)
         
         # Initialize educational content generator with comprehensive capabilities

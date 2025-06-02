@@ -92,6 +92,7 @@ class PRReviewTool:
             review_context = self._detect_re_review(pr_data, force_re_review)
             
             # Phase 4: Analysis Generation (replaces lines 260-572)
+            logger.info(f"🔍 Generating analysis for PR #{pr_number} (Size: {size_analysis.get('overall_size', 'Unknown')})")
             analysis_result = await self._generate_comprehensive_analysis(
                 pr_data, size_analysis, review_context, analysis_mode, detail_level
             )
@@ -368,7 +369,8 @@ class PRReviewTool:
                 logger.info("✅ Claude CLI available - attempting enhanced analysis")
                 # Use claude -p for comprehensive analysis (lines 549-572)
                 analysis = await self._run_claude_analysis(
-                    prompt_content, data_content, pr_data["metadata"]["number"]
+                    prompt_content, data_content, pr_data["metadata"]["number"],
+                    pr_data, size_analysis, review_context
                 )
                 
                 if analysis:
@@ -780,6 +782,8 @@ Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, balanc
 """
         return content
     
+    
+    
     def _extract_diff_patterns(self, diff_content: str, max_lines: int) -> str:
         """Extract key patterns from diff content."""
         if not diff_content:
@@ -824,6 +828,68 @@ File too large or binary
 """)
         
         return "\n".join(samples) if samples else "No sample content available"
+    
+    def _create_summary_data_content(self, pr_data: Dict, review_context: Dict) -> str:
+        """
+        Create summary data content for large PRs to prevent prompt overflow.
+        
+        This implements the same strategy as scripts/review-pr.sh for handling
+        large PRs by using file statistics and sample diffs instead of full content.
+        """
+        metadata = pr_data["metadata"]
+        stats = pr_data["statistics"]
+        
+        # Get file stats summary (same as bash script approach)
+        file_stats = []
+        for file_info in pr_data.get("files", []):
+            if "path" in file_info:
+                file_stats.append(f"{file_info['path']}: +{file_info.get('additions', 0)}/-{file_info.get('deletions', 0)}")
+        
+        # Extract representative diff patterns (same as bash script: first 200 lines of key patterns)
+        diff_content = pr_data.get("diff", "")
+        diff_sample = self._extract_diff_patterns(diff_content, 200)  # Use existing method
+        
+        content = f"""# PR #{metadata['number']} Review Data (Large PR - Summary Analysis)
+
+## PR Information
+**Title:** {metadata['title']}
+**Author:** {metadata['author']}
+**Created:** {metadata['created_at']}
+**Branch:** {metadata['head_branch']} → {metadata['base_branch']}
+**Files Changed:** {stats['files_count']}
+**Lines:** +{stats['additions']}/-{stats['deletions']}
+
+**Description:**
+{metadata['body']}
+
+**File Change Summary (Summary Analysis Mode):**
+{chr(10).join(file_stats)}
+
+**Representative Diff Patterns (200 lines sample):**
+```diff
+{diff_sample}
+```
+
+**Large PR Analysis Note:** 
+This PR exceeds the 50k character prompt limit. Analysis uses file-level summaries
+and representative diff patterns instead of complete content to ensure Claude CLI
+can process the request successfully.
+
+**Review Strategy for Large PRs:**
+- Focus on architectural changes and high-level patterns
+- Identify potential breaking changes or compatibility issues  
+- Assess security implications of large-scale changes
+- Recommend testing strategies for comprehensive changes
+- Highlight areas that need careful manual review
+
+## Previous Review Comments
+{self._format_existing_comments(pr_data.get('comments', []))}
+
+{self._format_re_review_data_section(review_context)}
+
+{self._format_issue_analysis_section(pr_data.get('linked_issues', []))}
+"""
+        return content
     
     def _format_existing_comments(self, comments: List[Dict]) -> str:
         """Format existing PR comments."""
@@ -891,23 +957,46 @@ File too large or binary
         self, 
         prompt_content: str, 
         data_content: str, 
-        pr_number: int
+        pr_number: int,
+        pr_data: Dict[str, Any],
+        size_analysis: Dict[str, Any],
+        review_context: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        Run Claude analysis using external Claude CLI integration.
+        Run Claude analysis using external Claude CLI integration with adaptive prompt sizing.
         
-        Replaces the complex subprocess implementation with our external Claude CLI
-        integration that eliminates context blocking and timeout issues.
+        Implements adaptive content reduction for large PRs to prevent Claude CLI from
+        returning empty content due to oversized prompts.
         """
         logger.info(f"🔍 Starting external Claude analysis for PR #{pr_number}")
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
         logger.info(f"🔍 Data content size: {len(data_content)} chars")
         
         try:
-            # Create combined content for analysis
+            # Create initial combined content for size check
             combined_content = f"{prompt_content}\n\n{data_content}"
             combined_size = len(combined_content)
             logger.info(f"🔍 Combined content size: {combined_size} chars")
+            
+            # ADAPTIVE PROMPT SIZING: If content is too large, reduce it
+            MAX_PROMPT_SIZE = 50000  # 50k character threshold from bash script
+            if combined_size > MAX_PROMPT_SIZE:
+                logger.warning(f"⚠️ Large prompt detected ({combined_size} chars > {MAX_PROMPT_SIZE}) - switching to summary analysis")
+                
+                # Create reduced data content for large PRs
+                reduced_data_content = self._create_summary_data_content(pr_data, review_context)
+                combined_content = f"{prompt_content}\n\n{reduced_data_content}"
+                new_size = len(combined_content)
+                
+                logger.info(f"🔍 Reduced content size: {new_size} chars (reduction: {combined_size - new_size} chars)")
+                combined_size = new_size
+                
+                # Update the prompt to indicate summary mode
+                prompt_content = prompt_content.replace(
+                    "Analyze this pull request comprehensively",
+                    "Analyze this pull request using summary mode (large PR detected)"
+                )
+                combined_content = f"{prompt_content}\n\n{reduced_data_content}"
             
             # Set adaptive timeout based on content size
             timeout_seconds = self._calculate_adaptive_timeout(combined_size, pr_number)
@@ -1012,7 +1101,7 @@ File too large or binary
             logger.debug(f"Stack trace: {traceback.format_exc()}")
             return None
     
-    def _parse_claude_output(self, claude_output: str, pr_number: int = None) -> Dict[str, Any]:
+    def _parse_claude_output(self, claude_output: str, pr_number: Optional[int] = None) -> Dict[str, Any]:
         """Parse Claude output into structured analysis format."""
         # For now, return the raw Claude output
         # This could be enhanced to parse specific sections
@@ -1022,7 +1111,7 @@ File too large or binary
             "timestamp": datetime.now().isoformat()
         }
         if pr_number:
-            result["pr_number"] = pr_number
+            result["pr_number"] = str(pr_number)
         return result
     
     def _generate_fallback_analysis(
@@ -1109,7 +1198,7 @@ File too large or binary
         strengths = []
         
         # Check for good practices
-        if self._analyze_issue_linkage(pr_data)["has_linkage"]:
+        if self._analyze_issue_linkage(pr_data).get("has_linkage", False):
             strengths.append("✅ Proper issue linkage with 'Fixes #XXX' syntax")
             
         if pr_data["statistics"]["total_changes"] < 500:
@@ -1121,7 +1210,7 @@ File too large or binary
         """Identify critical issues that must be addressed."""
         issues = []
         
-        if not self._analyze_issue_linkage(pr_data)["has_linkage"]:
+        if not self._analyze_issue_linkage(pr_data).get("has_linkage", False):
             issues.append("❌ Missing issue linkage - PR should reference specific issues")
             
         if pr_data["statistics"]["total_changes"] > 5000:
@@ -1136,7 +1225,7 @@ File too large or binary
         if pr_data["statistics"]["files_count"] > 20:
             considerations.append("📁 High file count - verify architectural impact")
             
-        if self._assess_third_party_integration(pr_data)["has_third_party_integration"]:
+        if self._assess_third_party_integration(pr_data).get("has_third_party_integration", False):
             considerations.append("🔗 Third-party integration detected - validate API-first approach")
             
         return considerations
@@ -1256,14 +1345,14 @@ File too large or binary
 **Previous Reviews**: {review_count} automated review(s) completed
 **Re-Review Focus**: Changes since last review, progress assessment, new issues
 **Analysis Date**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-**Analysis Method**: {'🧠 Claude CLI Enhanced' if analysis_method == 'claude-cli' else '⚠️ Fallback Analysis'}
+**Analysis Method**: {'🧠 Claude CLI Enhanced' if analysis_method in ['claude-cli', 'external-claude-cli'] else '⚠️ Fallback Analysis'}
 
 ---
 
 """
         else:
-            method_icon = "🧠" if analysis_method == "claude-cli" else "⚠️"
-            method_name = "Claude CLI Enhanced Analysis" if analysis_method == "claude-cli" else "Fallback Analysis (Claude CLI not available)"
+            method_icon = "🧠" if analysis_method in ["claude-cli", "external-claude-cli"] else "⚠️"
+            method_name = "Claude CLI Enhanced Analysis" if analysis_method in ["claude-cli", "external-claude-cli"] else "Fallback Analysis (Claude CLI not available)"
             header = f"""## 🎯 **Deep Vibe Check PR #{analysis.get('pr_number', 'XX')}**
 
 **Analysis Method**: {method_name}
@@ -1272,7 +1361,7 @@ File too large or binary
 """
         
         # If we have Claude analysis, use it directly
-        if analysis_method == "claude-cli" and "claude_analysis" in analysis:
+        if analysis_method in ["claude-cli", "external-claude-cli"] and "claude_analysis" in analysis:
             comment = f"""{header}{analysis['claude_analysis']}
 
 ---
@@ -1335,14 +1424,14 @@ File too large or binary
     
     def _format_comments_section(self, comments_data: Dict) -> str:
         """Format previous comments analysis section."""
-        if comments_data["has_feedback"]:
-            return f"📝 **{comments_data['comment_count']} existing comments** - Previous feedback should be addressed"
+        if comments_data.get("has_feedback", False):
+            return f"📝 **{comments_data.get('comment_count', 0)} existing comments** - Previous feedback should be addressed"
         else:
             return "✨ **First review** - No previous comments to address"
     
     def _format_third_party_section(self, third_party_data: Dict) -> str:
         """Format third-party integration assessment."""
-        if third_party_data["has_third_party_integration"]:
+        if third_party_data.get("has_third_party_integration", False):
             return """⚠️ **Third-party integration detected**
 - [ ] API-first development protocol validation needed
 - [ ] Working POC demonstration required
@@ -1360,17 +1449,17 @@ File too large or binary
         """Format action items section."""
         sections = []
         
-        if action_items["required_changes"]:
+        if action_items.get("required_changes", []):
             sections.append("**Required Changes for Approval:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["required_changes"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("required_changes", [])])
             
-        if action_items["recommended_improvements"]:
+        if action_items.get("recommended_improvements", []):
             sections.append("\n**Recommended Improvements:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["recommended_improvements"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("recommended_improvements", [])])
             
-        if action_items["testing_actions"]:
+        if action_items.get("testing_actions", []):
             sections.append("\n**Testing Actions:**")
-            sections.extend([f"- [ ] {item}" for item in action_items["testing_actions"]])
+            sections.extend([f"- [ ] {item}" for item in action_items.get("testing_actions", [])])
             
         return "\n".join(sections) if sections else "*No specific actions required*"
     

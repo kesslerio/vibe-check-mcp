@@ -357,7 +357,8 @@ Promote good engineering practices through constructive analysis.""",
                 text=True,
                 timeout=self.timeout_seconds,
                 cwd=os.getcwd(),
-                env=clean_env
+                env=clean_env,
+                stdin=subprocess.DEVNULL  # Fix: Isolate stdin to prevent Claude CLI hanging
             )
             
             execution_time = time.time() - start_time

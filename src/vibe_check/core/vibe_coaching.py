@@ -10,7 +10,7 @@ This implements the educational coaching framework described in Issue #40.
 
 from typing import Dict, Any, List, Optional
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .educational_content import DetailLevel
 from .pattern_detector import DetectionResult
@@ -39,7 +39,7 @@ class CoachingRecommendation:
     learning_resources: List[str]
     prevention_checklist: List[str]
     real_world_example: Optional[str] = None
-    common_mistakes: List[str] = None
+    common_mistakes: List[str] = field(default_factory=list)
 
 
 class VibeCoachingFramework:
@@ -259,20 +259,37 @@ class VibeCoachingFramework:
         if not template:
             return None
         
+        # Convert sequences to proper types
+        title = template["title"] if isinstance(template["title"], str) else " ".join(template["title"])
+        description = template["description"] if isinstance(template["description"], str) else " ".join(template["description"])
+        action_items = template["action_items"] if isinstance(template["action_items"], list) else list(template["action_items"])
+        learning_resources = template["learning_resources"] if isinstance(template["learning_resources"], list) else list(template["learning_resources"])
+        prevention_checklist = template["prevention_checklist"] if isinstance(template["prevention_checklist"], list) else list(template["prevention_checklist"])
+        real_world_example_raw = template.get("real_world_example")
+        if real_world_example_raw is None:
+            real_world_example = None
+        elif isinstance(real_world_example_raw, str):
+            real_world_example = real_world_example_raw
+        else:
+            real_world_example = " ".join(real_world_example_raw)
+        common_mistakes = template.get("common_mistakes", [])
+        if not isinstance(common_mistakes, list):
+            common_mistakes = list(common_mistakes) if common_mistakes else []
+        
         # Adjust tone based on preference
         if tone == CoachingTone.DIRECT:
-            template["description"] = self._make_more_direct(template["description"])
+            description = self._make_more_direct(description)
         elif tone == CoachingTone.SUPPORTIVE:
-            template["description"] = self._make_more_supportive(template["description"])
+            description = self._make_more_supportive(description)
         
         return CoachingRecommendation(
-            title=template["title"],
-            description=template["description"],
-            action_items=template["action_items"],
-            learning_resources=template["learning_resources"],
-            prevention_checklist=template["prevention_checklist"],
-            real_world_example=template.get("real_world_example"),
-            common_mistakes=template.get("common_mistakes", [])
+            title=title,
+            description=description,
+            action_items=action_items,
+            learning_resources=learning_resources,
+            prevention_checklist=prevention_checklist,
+            real_world_example=real_world_example,
+            common_mistakes=common_mistakes
         )
     
     def _generate_pattern_coaching(
@@ -363,12 +380,19 @@ class VibeCoachingFramework:
         if not coaching:
             return None
         
+        # Convert sequences to proper types
+        title = coaching["title"] if isinstance(coaching["title"], str) else " ".join(coaching["title"])
+        description = coaching["description"] if isinstance(coaching["description"], str) else " ".join(coaching["description"])
+        action_items = coaching["action_items"] if isinstance(coaching["action_items"], list) else list(coaching["action_items"])
+        learning_resources = coaching["learning_resources"] if isinstance(coaching["learning_resources"], list) else list(coaching["learning_resources"])
+        prevention_checklist = coaching["prevention_checklist"] if isinstance(coaching["prevention_checklist"], list) else list(coaching["prevention_checklist"])
+        
         return CoachingRecommendation(
-            title=coaching["title"],
-            description=coaching["description"],
-            action_items=coaching["action_items"],
-            learning_resources=coaching["learning_resources"],
-            prevention_checklist=coaching["prevention_checklist"]
+            title=title,
+            description=description,
+            action_items=action_items,
+            learning_resources=learning_resources,
+            prevention_checklist=prevention_checklist
         )
     
     def _generate_general_learning_recommendations(
