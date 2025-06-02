@@ -133,8 +133,6 @@ Promote good engineering practices through constructive analysis.""",
         self.timeout_seconds = timeout_seconds
         self.claude_cli_path = self._find_claude_cli()
         
-        # Find shell wrapper script
-        self.shell_wrapper_path = Path(__file__).parent / "claude_cli_wrapper.sh"
         
         # Initialize Anthropic client if available (fallback option)
         self.anthropic_client = None
