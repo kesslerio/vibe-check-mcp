@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 build/
+clean_env/
 develop-eggs/
 dist/
 downloads/
@@ -30,6 +31,7 @@ docs/research/
 docs/review-scripts/
 docs/scripts/
 docs/strategy/
+docs/issues/
 
 # PyInstaller
 *.manifest
@@ -173,4 +175,6 @@ Desktop.ini
 CLAUDE.md
 CLAUDE*.md
 .claude/
-.qodo/claude-code-mcp/
+.qodo/
+claude-code-mcp/
+.cursor/
