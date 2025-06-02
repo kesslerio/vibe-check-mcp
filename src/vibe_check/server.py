@@ -29,7 +29,6 @@ except ImportError:
 from .tools.analyze_text import analyze_text_demo
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
 from .tools.pr_review import review_pull_request as pr_review_tool
-from .tools.test_claude_cli import register_claude_cli_test_tool
 from .tools.analyze_external import register_external_claude_tools
 from .tools.diagnostics import register_diagnostic_tools
 
@@ -49,9 +48,6 @@ mcp: FastMCP = FastMCP("Vibe Check MCP")
 
 # Register user diagnostic tools (essential for all users)
 register_diagnostic_tools(mcp)
-
-# Register Claude CLI test tools
-register_claude_cli_test_tool(mcp)
 
 # Register external Claude CLI integration tools
 register_external_claude_tools(mcp)
@@ -222,20 +218,10 @@ def server_status() -> Dict[str, Any]:
         "server_status - Server status and capabilities"
     ]
     
-    # Development tools (legacy - still available but marked for cleanup)
-    legacy_dev_tools = [
-        "test_claude_cli_integration - Legacy: Test Claude CLI integration via MCP",
-        "test_claude_cli_availability - Legacy: Check Claude CLI availability and version", 
-        "test_claude_cli_with_file_input - Legacy: Test Claude CLI with file input",
-        "test_claude_cli_comprehensive - Legacy: Comprehensive test suite with multiple scenarios",
-        "test_claude_cli_mcp_permissions - Legacy: Test Claude CLI with MCP permissions bypass",
-        "test_claude_cli_recursion_detection - Legacy: Diagnose recursion issues with Claude CLI"
-    ]
-    
-    # New dev tools (environment-based)
-    new_dev_tools = [
+    # Development tools (environment-based)
+    dev_tools = [
         "test_claude_cli_integration - Dev: Test Claude CLI integration via MCP",
-        "test_claude_cli_with_file_input - Dev: Test Claude CLI with file input",
+        "test_claude_cli_with_file_input - Dev: Test Claude CLI with file input", 
         "test_claude_cli_comprehensive - Dev: Comprehensive test suite with multiple scenarios",
         "test_claude_cli_mcp_permissions - Dev: Test Claude CLI with MCP permissions bypass"
     ]
@@ -244,28 +230,25 @@ def server_status() -> Dict[str, Any]:
     available_tools = core_tools[:]
     
     if dev_mode_enabled:
-        # Add both legacy and new dev tools when in dev mode
-        available_tools.extend(legacy_dev_tools)
-        available_tools.extend(new_dev_tools)
+        available_tools.extend(dev_tools)
         tool_mode = "🔧 Development Mode (VIBE_CHECK_DEV_MODE=true)"
-        tool_count = f"{len(core_tools)} core + {len(legacy_dev_tools)} legacy + {len(new_dev_tools)} dev tools"
+        tool_count = f"{len(core_tools)} core + {len(dev_tools)} dev tools"
     else:
-        # Only legacy dev tools available in user mode (for now)
-        available_tools.extend(legacy_dev_tools)
-        tool_mode = "📦 User Mode (essential tools + legacy testing)"
-        tool_count = f"{len(core_tools)} core + {len(legacy_dev_tools)} testing tools"
+        tool_mode = "📦 User Mode (essential tools only)"
+        tool_count = f"{len(core_tools)} essential tools"
     
     return {
         "server_name": "Vibe Check MCP",
-        "version": "Phase 2.2 - Testing Tools Architecture (Issue #72 🚧 IN PROGRESS)",
+        "version": "Phase 2.2 - Testing Tools Architecture (Issue #72 ✅ COMPLETE)",
         "status": "✅ Operational",
         "tool_mode": tool_mode,
         "tool_count": tool_count,
         "architecture_improvement": {
-            "issue_72_status": "🚧 IN PROGRESS",
+            "issue_72_status": "✅ COMPLETE",
             "essential_diagnostics": "✅ COMPLETE - claude_cli_status, claude_cli_diagnostics",
-            "environment_based_dev_tools": "✅ COMPLETE - VIBE_CHECK_DEV_MODE support",
-            "legacy_cleanup_pending": "⏳ NEXT - Remove original test_claude_cli.py"
+            "environment_based_dev_tools": "✅ COMPLETE - VIBE_CHECK_DEV_MODE support", 
+            "legacy_cleanup": "✅ COMPLETE - Clean tool registration architecture",
+            "tool_reduction_achieved": "6 testing tools → 2 essential user diagnostics (67% reduction)"
         },
         "core_engine_status": {
             "validation_completed": True,
