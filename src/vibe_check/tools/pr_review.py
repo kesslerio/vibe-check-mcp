@@ -906,6 +906,68 @@ File too large or binary
         
         return "\n".join(samples) if samples else "No sample content available"
     
+    def _create_summary_data_content(self, pr_data: Dict, review_context: Dict) -> str:
+        """
+        Create summary data content for large PRs to prevent prompt overflow.
+        
+        This implements the same strategy as scripts/review-pr.sh for handling
+        large PRs by using file statistics and sample diffs instead of full content.
+        """
+        metadata = pr_data["metadata"]
+        stats = pr_data["statistics"]
+        
+        # Get file stats summary (same as bash script approach)
+        file_stats = []
+        for file_info in pr_data.get("files", []):
+            if "path" in file_info:
+                file_stats.append(f"{file_info['path']}: +{file_info.get('additions', 0)}/-{file_info.get('deletions', 0)}")
+        
+        # Extract representative diff patterns (same as bash script: first 200 lines of key patterns)
+        diff_content = pr_data.get("diff", "")
+        diff_sample = self._extract_diff_patterns(diff_content, 200)  # Use existing method
+        
+        content = f"""# PR #{metadata['number']} Review Data (Large PR - Summary Analysis)
+
+## PR Information
+**Title:** {metadata['title']}
+**Author:** {metadata['author']}
+**Created:** {metadata['created_at']}
+**Branch:** {metadata['head_branch']} → {metadata['base_branch']}
+**Files Changed:** {stats['files_count']}
+**Lines:** +{stats['additions']}/-{stats['deletions']}
+
+**Description:**
+{metadata['body']}
+
+**File Change Summary (Summary Analysis Mode):**
+{chr(10).join(file_stats)}
+
+**Representative Diff Patterns (200 lines sample):**
+```diff
+{diff_sample}
+```
+
+**Large PR Analysis Note:** 
+This PR exceeds the 50k character prompt limit. Analysis uses file-level summaries
+and representative diff patterns instead of complete content to ensure Claude CLI
+can process the request successfully.
+
+**Review Strategy for Large PRs:**
+- Focus on architectural changes and high-level patterns
+- Identify potential breaking changes or compatibility issues  
+- Assess security implications of large-scale changes
+- Recommend testing strategies for comprehensive changes
+- Highlight areas that need careful manual review
+
+## Previous Review Comments
+{self._format_existing_comments(pr_data.get('comments', []))}
+
+{self._format_re_review_data_section(review_context)}
+
+{self._format_issue_analysis_section(pr_data.get('linked_issues', []))}
+"""
+        return content
+    
     def _format_existing_comments(self, comments: List[Dict]) -> str:
         """Format existing PR comments."""
         if not comments:
