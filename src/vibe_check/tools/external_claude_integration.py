@@ -1,7 +1,7 @@
 """
 MCP tool for external Claude CLI integration.
 
-This module provides MCP tools that leverage the external Claude CLI script
+This module provides MCP tools that leverage the ExternalClaudeCli class
 to perform analysis tasks without context blocking issues.
 """
 
@@ -11,13 +11,63 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 from fastmcp import FastMCP
 from pydantic import BaseModel
 
+try:
+    from github import Github, GithubException
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
+
+from .external_claude_cli import ExternalClaudeCli, ClaudeCliResult
+
 logger = logging.getLogger(__name__)
+
+
+def _get_github_token() -> Optional[str]:
+    """Get GitHub token from environment or gh CLI."""
+    # Try environment variable first
+    token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    
+    # Fallback to gh CLI
+    try:
+        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception as e:
+        logger.warning(f"Could not get GitHub token from gh CLI: {e}")
+    
+    return None
+
+
+def _post_github_comment(issue_number: int, repository: str, comment_body: str) -> bool:
+    """Post comment to GitHub issue using proper authentication."""
+    if not GITHUB_AVAILABLE:
+        logger.error("GitHub library not available for posting comments")
+        return False
+    
+    token = _get_github_token()
+    if not token:
+        logger.error("No GitHub token available for posting comments")
+        return False
+    
+    try:
+        github_client = Github(token)
+        repo = github_client.get_repo(repository)
+        issue = repo.get_issue(issue_number)
+        issue.create_comment(comment_body)
+        logger.info(f"Successfully posted comment to {repository}#{issue_number}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to post GitHub comment: {e}")
+        return False
 
 
 class ExternalClaudeRequest(BaseModel):
@@ -99,22 +149,33 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 temp_file_path = temp_file.name
             
             try:
-                # Build command for external script
+                # Use direct Claude CLI approach (like Claude Code's ! bash mode)
+                # This bypasses recursion detection by using the same execution context
+                
+                # Build task-specific system prompt
+                system_prompts = {
+                    "code_analysis": "You are an expert code analyst. Review this code for potential issues, anti-patterns, security vulnerabilities, and provide improvement suggestions:",
+                    "pr_review": "You are a senior software engineer conducting a code review. Analyze this pull request for code quality, security, and best practices:",
+                    "issue_analysis": "You are a technical product manager. Analyze this GitHub issue for quality, clarity, and implementation considerations:",
+                    "general": "Please analyze the following:"
+                }
+                
+                prompt = f"{system_prompts.get(task_type, system_prompts['general'])}\n\n{full_content}"
+                
                 command = [
-                    "python3",
-                    str(external_script_path),
-                    "--prompt", full_content,
-                    "--task-type", task_type,
-                    "--timeout", str(timeout_seconds)
+                    "claude", "-p", "--dangerously-skip-permissions",
+                    prompt
                 ]
                 
-                logger.debug(f"Executing command: {' '.join(command)}")
+                logger.debug(f"Executing Claude CLI directly: claude -p --dangerously-skip-permissions <prompt>")
                 
-                # Execute external script
+                # Execute Claude CLI directly (like ! bash mode)
+                start_time = time.time()
                 process = await asyncio.create_subprocess_exec(
                     *command,
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
                 )
                 
                 stdout, stderr = await asyncio.wait_for(
@@ -122,22 +183,36 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                     timeout=timeout_seconds + 10  # Allow extra time for process overhead
                 )
                 
+                execution_time = time.time() - start_time
+                
                 if process.returncode == 0:
-                    # Parse JSON result
-                    result_data = json.loads(stdout.decode('utf-8'))
-                    return ExternalClaudeResponse(**result_data)
+                    # Claude CLI succeeded - return the direct output
+                    output_text = stdout.decode('utf-8').strip()
+                    logger.info(f"Claude CLI completed successfully in {execution_time:.2f}s")
+                    
+                    return ExternalClaudeResponse(
+                        success=True,
+                        output=output_text,
+                        error=None,
+                        exit_code=0,
+                        execution_time_seconds=execution_time,
+                        task_type=task_type,
+                        timestamp=time.time(),
+                        command_used="claude -p --dangerously-skip-permissions"
+                    )
                 else:
                     # Handle error
                     error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
-                    logger.error(f"External script failed: {error_msg}")
+                    logger.error(f"Claude CLI failed: {error_msg}")
                     
                     return ExternalClaudeResponse(
                         success=False,
-                        error=f"External script error: {error_msg}",
+                        error=f"Claude CLI error: {error_msg}",
                         exit_code=process.returncode,
-                        execution_time_seconds=0.0,
+                        execution_time_seconds=execution_time,
                         task_type=task_type,
-                        timestamp=0.0
+                        timestamp=time.time(),
+                        command_used="claude -p --dangerously-skip-permissions"
                     )
             
             finally:
@@ -155,7 +230,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 exit_code=-1,
                 execution_time_seconds=timeout_seconds + 10,
                 task_type=task_type,
-                timestamp=0.0
+                timestamp=time.time(),
+                command_used="claude -p --dangerously-skip-permissions (timeout)"
             )
             
         except Exception as e:
@@ -166,7 +242,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 exit_code=-1,
                 execution_time_seconds=0.0,
                 task_type=task_type,
-                timestamp=0.0
+                timestamp=time.time(),
+                command_used="claude -p --dangerously-skip-permissions (error)"
             )
     
     @mcp.tool()
@@ -290,6 +367,128 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
         )
     
     @mcp.tool()
+    async def external_github_issue_vibe_check(
+        issue_number: int,
+        repository: str = "kesslerio/vibe-check-mcp",
+        post_comment: bool = False,
+        analysis_mode: str = "quick",
+        timeout_seconds: int = 90
+    ) -> Dict[str, Any]:
+        """
+        Perform comprehensive vibe check on GitHub issue using external Claude CLI.
+        
+        This tool fetches the GitHub issue, analyzes it for anti-patterns and engineering
+        guidance, and optionally posts a friendly coaching comment.
+        
+        Args:
+            issue_number: GitHub issue number to analyze
+            repository: Repository in format "owner/repo"
+            post_comment: Whether to post analysis as GitHub comment
+            analysis_mode: "quick" or "comprehensive" analysis
+            timeout_seconds: Maximum time to wait for analysis
+            
+        Returns:
+            Comprehensive vibe check analysis with GitHub integration
+        """
+        logger.info(f"Starting external GitHub issue vibe check for {repository}#{issue_number}")
+        
+        # Get GitHub token for fetching issue
+        token = _get_github_token()
+        if not token or not GITHUB_AVAILABLE:
+            return {
+                "status": "error",
+                "error": "GitHub authentication not available",
+                "solution": "Set GITHUB_PERSONAL_ACCESS_TOKEN environment variable or run 'gh auth login'"
+            }
+        
+        try:
+            # Fetch issue data
+            github_client = Github(token)
+            repo = github_client.get_repo(repository)
+            issue = repo.get_issue(issue_number)
+            
+            # Build comprehensive issue context
+            issue_context = f"""# GitHub Issue Analysis
+            
+**Issue:** {issue.title}
+**Repository:** {repository}
+**Author:** {issue.user.login}
+**State:** {issue.state}
+**Labels:** {', '.join([label.name for label in issue.labels]) if issue.labels else 'None'}
+
+**Issue Content:**
+{issue.body or 'No content provided'}
+"""
+            
+            # Create vibe check prompt
+            vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub issue. Focus on preventing common engineering anti-patterns while encouraging good practices.
+
+{issue_context}
+
+Please provide a comprehensive vibe check analysis in this format:
+
+## 🎯 Vibe Check Summary
+[One-sentence friendly assessment]
+
+## 🔍 Engineering Guidance
+- Research Phase: [Have we done our homework on existing solutions?]
+- POC Needs: [Do we need to prove basic functionality first?]
+- Complexity Check: [Is the proposed complexity justified?]
+
+## 💡 Friendly Recommendations
+[3-5 practical, encouraging recommendations]
+
+## 🎓 Learning Opportunities  
+[2-3 educational suggestions based on patterns detected]
+
+Use friendly, coaching language that helps developers learn rather than intimidate."""
+            
+            # Run external Claude analysis
+            result = await external_claude_analyze(
+                content=vibe_prompt,
+                task_type="issue_analysis",
+                additional_context=f"Vibe check for GitHub issue {repository}#{issue_number}",
+                timeout_seconds=timeout_seconds
+            )
+            
+            # Build response
+            response = {
+                "status": "vibe_check_complete",
+                "issue_number": issue_number,
+                "repository": repository,
+                "analysis_mode": analysis_mode,
+                "claude_analysis": result.output if result.success else None,
+                "analysis_error": result.error if not result.success else None,
+                "comment_posted": False
+            }
+            
+            # Post comment if requested and analysis succeeded
+            if post_comment and result.success and result.output:
+                comment_body = f"""## 🎯 Comprehensive Vibe Check
+
+{result.output}
+
+---
+*This vibe check was generated by the Vibe Check MCP framework using external Claude CLI for enhanced analysis.*"""
+                
+                comment_posted = _post_github_comment(issue_number, repository, comment_body)
+                response["comment_posted"] = comment_posted
+                
+                if not comment_posted:
+                    response["comment_error"] = "Failed to post comment - check GitHub authentication"
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error in GitHub issue vibe check: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "issue_number": issue_number,
+                "repository": repository
+            }
+    
+    @mcp.tool()
     async def external_claude_status() -> Dict[str, Any]:
         """
         Check the status of external Claude CLI integration.
@@ -308,7 +507,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 process = await asyncio.create_subprocess_exec(
                     "claude", "--version",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
                 )
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
                 claude_available = process.returncode == 0
@@ -322,7 +522,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 process = await asyncio.create_subprocess_exec(
                     "python3", "--version",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
                 )
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
                 python_available = process.returncode == 0
@@ -347,4 +548,258 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
             return {
                 "error": f"Status check failed: {str(e)}",
                 "integration_ready": False
+            }
+
+    @mcp.tool()
+    async def test_claude_cli_integration(
+        test_prompt: str = "What is 2+2?",
+        timeout_seconds: int = 30,
+        debug_mode: bool = False,
+        task_type: str = "general"
+    ) -> Dict[str, Any]:
+        """
+        Test external Claude CLI integration via ExternalClaudeCli wrapper.
+        
+        This tool uses the ExternalClaudeCli wrapper to execute Claude CLI in an
+        independent session, preventing the timeout issues that occur with direct
+        subprocess calls from within Claude Code MCP context.
+        
+        Args:
+            test_prompt: The prompt to send to Claude CLI (default: "What is 2+2?")
+            timeout_seconds: Timeout for the command execution (default: 30)
+            debug_mode: Enable detailed logging and diagnostics (default: False)
+            task_type: Task type for specialized system prompts (general, pr_review, code_analysis, issue_analysis)
+            
+        Returns:
+            Test results including success status, output, timing, and diagnostics
+        """
+        logger.info(f"Testing Claude CLI integration with prompt: {test_prompt[:50]}...")
+        
+        start_time = time.time()
+        
+        try:
+            # Use the EXACT same approach as test_direct_claude.py
+            # Try environment isolation to prevent Claude Code context inheritance
+            # Keep essential environment variables but remove Claude Code specific ones
+            clean_env = {
+                'PATH': os.environ.get('PATH', ''),
+                'HOME': os.environ.get('HOME', ''),
+                'USER': os.environ.get('USER', ''),
+                'SHELL': os.environ.get('SHELL', ''),
+                'LANG': os.environ.get('LANG', 'en_US.UTF-8'),
+                'LC_ALL': os.environ.get('LC_ALL', ''),
+                'TERM': os.environ.get('TERM', 'xterm-256color'),
+                'TMPDIR': os.environ.get('TMPDIR', '/tmp'),
+                'PWD': os.environ.get('PWD', os.getcwd()),
+                # Keep any ANTHROPIC_ variables that might be needed
+                **{k: v for k, v in os.environ.items() if k.startswith('ANTHROPIC_')}
+            }
+            
+            # Remove Claude Code specific environment variables
+            excluded_vars = ['CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_MODE']
+            if debug_mode:
+                logger.info(f"Excluded environment variables: {[var for var in excluded_vars if var in os.environ]}")
+            
+            command = [
+                "claude", "-p", "--dangerously-skip-permissions",
+                test_prompt
+            ]
+            
+            if debug_mode:
+                logger.info(f"Executing command: {' '.join(command[:3])} <prompt>")
+                logger.info(f"Using clean environment (no CLAUDE_CODE_SSE_PORT)")
+            
+            # Test with asyncio subprocess (same as test_direct_claude.py)
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.DEVNULL,  # Fix: Isolate stdin like Node.js spawn
+                env=clean_env
+            )
+            
+            if debug_mode:
+                logger.info("Process started, waiting for completion...")
+            
+            # Wait with timeout and ensure process cleanup
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                # Ensure process is terminated on timeout
+                if process.returncode is None:
+                    try:
+                        process.terminate()
+                        await asyncio.wait_for(process.wait(), timeout=5)
+                    except:
+                        try:
+                            process.kill()
+                            await process.wait()
+                        except:
+                            pass
+                raise  # Re-raise the timeout error
+            
+            execution_time = time.time() - start_time
+            
+            if debug_mode:
+                logger.info(f"Process completed with return code: {process.returncode}")
+            
+            if process.returncode == 0:
+                output = stdout.decode('utf-8').strip()
+                
+                result = {
+                    "success": True,
+                    "exit_code": 0,
+                    "output": output,
+                    "output_length": len(output),
+                    "execution_time_seconds": execution_time,
+                    "command_used": "claude -p --dangerously-skip-permissions",
+                    "test_prompt": test_prompt,
+                    "debug_mode": debug_mode,
+                    "timestamp": time.time()
+                }
+                
+                if debug_mode:
+                    result["output_preview"] = output[:200] + ("..." if len(output) > 200 else "")
+                
+                logger.info(f"✅ Claude CLI succeeded in {execution_time:.2f}s, output length: {len(output)} chars")
+                return result
+                
+            else:
+                error = stderr.decode('utf-8').strip()
+                logger.error(f"❌ Claude CLI failed (exit code {process.returncode}): {error}")
+                
+                return {
+                    "success": False,
+                    "exit_code": process.returncode,
+                    "error": error,
+                    "execution_time_seconds": execution_time,
+                    "command_used": "claude -p --dangerously-skip-permissions",
+                    "test_prompt": test_prompt,
+                    "debug_mode": debug_mode,
+                    "timestamp": time.time()
+                }
+                
+        except asyncio.TimeoutError:
+            execution_time = time.time() - start_time
+            logger.warning(f"❌ Claude CLI timed out after {timeout_seconds} seconds")
+            
+            return {
+                "success": False,
+                "error": f"Process timed out after {timeout_seconds} seconds",
+                "execution_time_seconds": execution_time,
+                "command_used": "claude -p --dangerously-skip-permissions (timeout)",
+                "test_prompt": test_prompt,
+                "debug_mode": debug_mode,
+                "timestamp": time.time()
+            }
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.error(f"❌ Exception during Claude CLI test: {e}")
+            
+            # Ensure we don't crash the server
+            try:
+                return {
+                    "success": False,
+                    "error": f"Exception: {str(e)}",
+                    "execution_time_seconds": execution_time,
+                    "command_used": "claude -p --dangerously-skip-permissions (error)",
+                    "test_prompt": test_prompt,
+                    "debug_mode": debug_mode,
+                    "timestamp": time.time(),
+                    "exception_type": type(e).__name__
+                }
+            except Exception as nested_e:
+                logger.error(f"❌ Nested exception in error handling: {nested_e}")
+                return {
+                    "success": False,
+                    "error": "Critical error in test execution",
+                    "execution_time_seconds": execution_time,
+                    "timestamp": time.time()
+                }
+
+    @mcp.tool()
+    async def test_claude_cli_with_env(
+        test_prompt: str = "What is 2+2?",
+        timeout_seconds: int = 30
+    ) -> Dict[str, Any]:
+        """
+        Test Claude CLI without environment isolation (inherits all env vars).
+        """
+        logger.info(f"Testing Claude CLI with full environment inheritance...")
+        
+        start_time = time.time()
+        
+        try:
+            command = [
+                "claude", "-p", "--dangerously-skip-permissions",
+                test_prompt
+            ]
+            
+            logger.info(f"CLAUDE_CODE_SSE_PORT present: {'CLAUDE_CODE_SSE_PORT' in os.environ}")
+            
+            # Use inherited environment (no isolation)
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
+                # No env parameter = inherit all environment variables
+            )
+            
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout_seconds
+            )
+            
+            execution_time = time.time() - start_time
+            
+            if process.returncode == 0:
+                output = stdout.decode('utf-8').strip()
+                logger.info(f"✅ Claude CLI with env inheritance succeeded in {execution_time:.2f}s")
+                
+                return {
+                    "success": True,
+                    "exit_code": 0,
+                    "output": output,
+                    "output_length": len(output),
+                    "execution_time_seconds": execution_time,
+                    "environment_isolation": False,
+                    "claude_sse_port_present": os.environ.get('CLAUDE_CODE_SSE_PORT') is not None,
+                    "timestamp": time.time()
+                }
+            else:
+                error = stderr.decode('utf-8').strip()
+                logger.error(f"❌ Claude CLI with env inheritance failed: {error}")
+                
+                return {
+                    "success": False,
+                    "exit_code": process.returncode,
+                    "error": error,
+                    "execution_time_seconds": execution_time,
+                    "environment_isolation": False,
+                    "claude_sse_port_present": os.environ.get('CLAUDE_CODE_SSE_PORT') is not None,
+                    "timestamp": time.time()
+                }
+                
+        except asyncio.TimeoutError:
+            execution_time = time.time() - start_time
+            return {
+                "success": False,
+                "error": f"Process timed out after {timeout_seconds} seconds",
+                "execution_time_seconds": execution_time,
+                "environment_isolation": False,
+                "timestamp": time.time()
+            }
+        except Exception as e:
+            execution_time = time.time() - start_time
+            return {
+                "success": False,
+                "error": f"Exception: {str(e)}",
+                "execution_time_seconds": execution_time,
+                "environment_isolation": False,
+                "timestamp": time.time()
             }

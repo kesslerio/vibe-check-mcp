@@ -1,8 +1,9 @@
 """
-Test MCP tool for Claude CLI integration.
+Test MCP tool for external Claude CLI integration.
 
-This tool tests if Claude Code CLI (claude -p) can be invoked successfully
-via MCP tools to verify integration functionality.
+This tool tests the ExternalClaudeCli wrapper to verify that independent
+Claude CLI sessions work correctly from within MCP tools, preventing
+the timeout issues that occur with direct subprocess calls.
 """
 
 import asyncio
@@ -11,11 +12,15 @@ import tempfile
 import json
 import os
 import logging
+import time
 from typing import Dict, Any, Optional
 from pathlib import Path
 
 from fastmcp import FastMCP
 from pydantic import BaseModel
+
+# Import the external Claude CLI wrapper
+from .external_claude_cli import ExternalClaudeCli, ClaudeCliResult
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +41,11 @@ class ClaudeCliTestResponse(BaseModel):
     execution_time_seconds: float
     diagnostics: Optional[Dict[str, Any]] = None
     validation: Optional[Dict[str, Any]] = None
+    # Additional fields from ExternalClaudeCli
+    task_type: Optional[str] = None
+    cost_usd: Optional[float] = None
+    session_id: Optional[str] = None
+    uses_external_wrapper: bool = False
 
 
 def register_claude_cli_test_tool(mcp: FastMCP) -> None:
@@ -45,184 +55,110 @@ def register_claude_cli_test_tool(mcp: FastMCP) -> None:
     async def test_claude_cli_integration(
         test_prompt: str = "What is 2+2?",
         timeout_seconds: int = 30,
-        debug_mode: bool = False
+        debug_mode: bool = False,
+        task_type: str = "general"
     ) -> ClaudeCliTestResponse:
         """
-        Test Claude CLI integration via MCP tool with enhanced diagnostics.
+        Test external Claude CLI integration via ExternalClaudeCli wrapper.
         
-        This tool attempts to execute the Claude Code CLI (claude -p) with a simple
-        prompt to verify that the integration works correctly from within MCP tools.
-        Includes comprehensive error reporting and validation.
+        This tool uses the ExternalClaudeCli wrapper to execute Claude CLI in an
+        independent session, preventing the timeout issues that occur with direct
+        subprocess calls from within Claude Code MCP context.
         
         Args:
             test_prompt: The prompt to send to Claude CLI (default: "What is 2+2?")
             timeout_seconds: Timeout for the command execution (default: 30)
             debug_mode: Enable detailed logging and diagnostics (default: False)
+            task_type: Task type for specialized system prompts (general, pr_review, code_analysis, issue_analysis)
             
         Returns:
             Test results including success status, output, timing, and diagnostics
         """
-        import time
         start_time = time.time()
         
         if debug_mode:
-            logger.info(f"Starting Claude CLI integration test with prompt: {test_prompt[:50]}...")
-            logger.info(f"Environment: MCP_SERVER={os.environ.get('MCP_SERVER', 'unknown')}")
-            logger.info(f"Claude CLI path: {os.environ.get('PATH', '').split(':')[0]}...")
+            logger.info(f"Starting external Claude CLI test with prompt: {test_prompt[:50]}...")
+            logger.info(f"Task type: {task_type}")
+            logger.info(f"Timeout: {timeout_seconds}s")
         
-        # Create a temporary file for the prompt
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write(test_prompt)
-            prompt_file = f.name
+        # Initialize external Claude CLI wrapper
+        external_cli = ExternalClaudeCli(timeout_seconds=timeout_seconds)
         
         try:
-            # Construct the Claude CLI command
-            command = ["claude", "-p", test_prompt]
-            command_str = " ".join(command)
-            
-            # Use a thread executor to avoid async subprocess issues with Claude CLI
-            import concurrent.futures
-            import subprocess
-            
-            def run_claude_command():
-                try:
-                    # Create a modified environment to prevent recursion
-                    env = dict(os.environ)
-                    env["CLAUDE_PARENT_PROCESS"] = "mcp-server"
-                    # Remove any existing Claude-related environment variables that might cause issues
-                    env.pop("CLAUDE_CLI_SESSION", None)
-                    env.pop("CLAUDE_CODE_MODE", None)
-                    
-                    if debug_mode:
-                        logger.info(f"Executing command: {' '.join(command)}")
-                        logger.info(f"Working directory: {Path.cwd()}")
-                        logger.info(f"Environment additions: CLAUDE_PARENT_PROCESS=mcp-server")
-                    
-                    result = subprocess.run(
-                        command,
-                        capture_output=True,
-                        text=True,
-                        timeout=timeout_seconds,
-                        cwd=Path.cwd(),
-                        env=env
-                    )
-                    return result
-                except subprocess.TimeoutExpired as e:
-                    if debug_mode:
-                        logger.warning(f"Command timed out after {timeout_seconds} seconds")
-                    return None
-                except Exception as e:
-                    if debug_mode:
-                        logger.error(f"Subprocess error: {str(e)}")
-                    raise e
-            
-            loop = asyncio.get_event_loop()
-            
-            try:
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    result = await loop.run_in_executor(executor, run_claude_command)
+            # Test external Claude CLI wrapper
+            if debug_mode:
+                logger.info("Using ExternalClaudeCli wrapper to avoid timeout issues")
                 
-                execution_time = time.time() - start_time
-                
-                if result is None:
-                    return ClaudeCliTestResponse(
-                        success=False,
-                        output=None,
-                        error=f"Command timed out after {timeout_seconds} seconds. This may indicate a recursive execution issue when Claude CLI is called from within Claude Code.",
-                        exit_code=-1,
-                        command_used=command_str,
-                        execution_time_seconds=execution_time,
-                        diagnostics={
-                            "timeout_reason": "Likely recursive execution conflict",
-                            "suggested_solution": "Claude CLI may not be designed to run from within Claude Code MCP context",
-                            "environment_check": f"CLAUDE_PARENT_PROCESS={os.environ.get('CLAUDE_PARENT_PROCESS', 'not-set')}",
-                            "recursive_detection": "Claude CLI called from within Claude Code may cause infinite recursion"
-                        }
-                    )
-                
-                # Enhanced validation and diagnostics
-                diagnostics = {
-                    "process_id": os.getpid(),
-                    "working_directory": str(Path.cwd()),
-                    "environment_vars": {
-                        "CLAUDE_PARENT_PROCESS": os.environ.get("CLAUDE_PARENT_PROCESS"),
-                        "PATH_contains_claude": "/claude" in os.environ.get("PATH", ""),
-                        "TERM": os.environ.get("TERM"),
-                    },
-                    "command_length": len(command_str),
-                    "prompt_length": len(test_prompt)
-                }
-                
-                validation = {}
-                if result.returncode == 0 and result.stdout:
-                    output_text = result.stdout.strip()
-                    validation = {
-                        "has_output": bool(output_text),
-                        "output_length": len(output_text),
-                        "appears_reasonable": len(output_text) > 0 and len(output_text) < 10000,
-                        "contains_expected_answer": "4" in output_text if "2+2" in test_prompt else None
-                    }
-                
-                if result.returncode == 0:
-                    return ClaudeCliTestResponse(
-                        success=True,
-                        output=result.stdout.strip(),
-                        error=result.stderr.strip() if result.stderr else None,
-                        exit_code=result.returncode,
-                        command_used=command_str,
-                        execution_time_seconds=execution_time,
-                        diagnostics=diagnostics,
-                        validation=validation
-                    )
-                else:
-                    return ClaudeCliTestResponse(
-                        success=False,
-                        output=result.stdout.strip() if result.stdout else None,
-                        error=result.stderr.strip(),
-                        exit_code=result.returncode,
-                        command_used=command_str,
-                        execution_time_seconds=execution_time,
-                        diagnostics=diagnostics,
-                        validation=validation
-                    )
-                    
-            except Exception as subprocess_error:
-                execution_time = time.time() - start_time
-                return ClaudeCliTestResponse(
-                    success=False,
-                    output=None,
-                    error=f"Subprocess error: {str(subprocess_error)}",
-                    exit_code=-1,
-                    command_used=command_str,
-                    execution_time_seconds=execution_time
-                )
-                
-        except FileNotFoundError:
-            execution_time = time.time() - start_time
-            return ClaudeCliTestResponse(
-                success=False,
-                output=None,
-                error="Claude CLI not found. Make sure 'claude' command is available in PATH.",
-                exit_code=-1,
-                command_used=command_str,
-                execution_time_seconds=execution_time
+            # Execute using external wrapper
+            result: ClaudeCliResult = await external_cli.analyze_content(
+                content=test_prompt,
+                task_type=task_type
             )
+            
+            execution_time = time.time() - start_time
+            
+            if debug_mode:
+                logger.info(f"External CLI execution completed in {execution_time:.2f}s")
+                logger.info(f"Success: {result.success}")
+                if result.cost_usd:
+                    logger.info(f"Cost: ${result.cost_usd:.4f}")
+            
+            # Enhanced diagnostics specific to external wrapper
+            diagnostics = {
+                "uses_external_wrapper": True,
+                "execution_method": "ExternalClaudeCli",
+                "task_type": task_type,
+                "timeout_used": timeout_seconds,
+                "wrapper_version": "v1.0",
+                "environment_isolated": True,
+                "process_id": os.getpid(),
+                "working_directory": str(Path.cwd())
+            }
+            
+            # Enhanced validation
+            validation = {}
+            if result.success and result.output:
+                output_text = result.output.strip()
+                validation = {
+                    "has_output": bool(output_text),
+                    "output_length": len(output_text),
+                    "appears_reasonable": len(output_text) > 0 and len(output_text) < 50000,
+                    "contains_expected_answer": "4" in output_text if "2+2" in test_prompt else None,
+                    "has_cost_info": result.cost_usd is not None,
+                    "has_session_info": result.session_id is not None
+                }
+            
+            return ClaudeCliTestResponse(
+                success=result.success,
+                output=result.output,
+                error=result.error,
+                exit_code=result.exit_code or 0,
+                command_used=result.command_used or f"ExternalClaudeCli.analyze_content(task_type='{task_type}')",
+                execution_time_seconds=execution_time,
+                diagnostics=diagnostics,
+                validation=validation,
+                task_type=task_type,
+                cost_usd=result.cost_usd,
+                session_id=result.session_id,
+                uses_external_wrapper=True
+            )
+            
         except Exception as e:
             execution_time = time.time() - start_time
+            
+            if debug_mode:
+                logger.error(f"External Claude CLI execution failed: {e}")
+            
             return ClaudeCliTestResponse(
                 success=False,
                 output=None,
-                error=f"Unexpected error: {str(e)}",
+                error=f"External Claude CLI error: {str(e)}",
                 exit_code=-1,
-                command_used=command_str,
-                execution_time_seconds=execution_time
+                command_used=f"ExternalClaudeCli.analyze_content(task_type='{task_type}')",
+                execution_time_seconds=execution_time,
+                task_type=task_type,
+                uses_external_wrapper=True
             )
-        finally:
-            # Clean up temporary file
-            try:
-                Path(prompt_file).unlink()
-            except Exception:
-                pass
 
 
     @mcp.tool()
@@ -327,7 +263,7 @@ if __name__ == "__main__":
                         command,
                         capture_output=True,
                         text=True,
-                        timeout=45,
+                        timeout=120,
                         env=dict(os.environ, CLAUDE_PARENT_PROCESS="mcp-server")
                     )
                     return result
@@ -507,7 +443,7 @@ if __name__ == "__main__":
                         command,
                         capture_output=True,
                         text=True,
-                        timeout=45,  # Longer timeout for MCP operations
+                        timeout=120,
                         env=dict(os.environ, CLAUDE_PARENT_PROCESS="mcp-server")
                     )
                     return result

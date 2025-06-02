@@ -434,14 +434,21 @@ vibe-check: comprehensive PR review of 44
 
 ### Enhanced Analysis Output
 
-When using explicit vibe-check tool calls, you'll receive:
+When using explicit vibe-check tool calls, you'll receive comprehensive analysis with external Claude CLI integration:
 
 ```json
 {
   "pr_number": 44,
   "analysis": {
     "claude_analysis": "Full Claude CLI enhanced review...",
-    "analysis_method": "claude-cli",
+    "analysis_method": "external-claude-cli",
+    "cost_usd": 0.35,
+    "session_id": "pr-review-789",
+    "execution_time": 27.5,
+    "sdk_metadata": {
+      "model": "claude-3-sonnet",
+      "provider": "anthropic"
+    },
     "timestamp": "2025-06-01T12:37:36"
   },
   "github_integration": {
@@ -454,6 +461,18 @@ When using explicit vibe-check tool calls, you'll receive:
   }
 }
 ```
+
+### External Claude CLI Features
+
+**NEW: Enhanced Analysis Engine**
+
+The external Claude CLI integration provides advanced capabilities:
+
+- **🔥 No Context Blocking**: External subprocess execution eliminates timeout issues
+- **💰 Cost Tracking**: Real-time cost monitoring for optimization
+- **📊 SDK Compliance**: Structured JSON responses with detailed metadata
+- **🎯 Specialized Prompts**: Task-specific system prompts for better analysis quality
+- **⚡ Reliable Performance**: Consistent execution times with adaptive timeouts
 
 ### GitHub Integration
 
@@ -490,11 +509,91 @@ When using explicit vibe-check tool calls, you'll receive:
 - Enhanced analysis provides 8000+ character detailed reviews
 - Real-time output streaming working correctly
 
+## External Claude CLI Tools
+
+**NEW: Advanced Analysis Capabilities**
+
+The enhanced Vibe Check MCP now includes external Claude CLI tools for specialized analysis:
+
+### Available External Tools
+
+#### `external_claude_analyze`
+Advanced content analysis using isolated Claude CLI execution:
+```
+claude "analyze this code with external Claude CLI"
+claude "use external Claude analysis on this text"
+```
+
+#### `external_pr_review`
+Specialized PR review with enhanced anti-pattern detection:
+```
+claude "external PR review of number 42"
+claude "deep analysis of PR 42 with external Claude"
+```
+
+#### `external_code_analysis`
+Deep code quality assessment with security insights:
+```
+claude "external code analysis of file.py"
+claude "analyze this code for security patterns"
+```
+
+#### `external_issue_analysis`
+Strategic issue analysis with implementation guidance:
+```
+claude "external analysis of issue 23"
+claude "strategic review of issue 23"
+```
+
+#### `external_claude_status`
+Check external Claude CLI integration status:
+```
+claude "check external Claude status"
+claude "is external Claude CLI available?"
+```
+
+### External Claude CLI Benefits
+
+**Performance Improvements**:
+- **No Context Blocking**: Eliminates 30-second timeout issues
+- **Adaptive Timeouts**: Dynamic timeout calculation based on content size
+- **Reliable Execution**: Consistent performance across different content types
+
+**Enhanced Capabilities**:
+- **Cost Tracking**: Monitor analysis costs for budget optimization
+- **Session Management**: Track analysis sessions for debugging
+- **SDK Metadata**: Detailed execution information and model usage
+- **Specialized Prompts**: Task-specific system prompts for better analysis quality
+
+**Fallback Support**:
+- **Automatic Fallback**: Falls back to standard analysis when Claude CLI unavailable
+- **Graceful Degradation**: No functionality lost when external Claude not available
+- **Status Monitoring**: Real-time status checks for external Claude CLI availability
+
+### Usage Examples
+
+**Code Analysis with Cost Tracking**:
+```
+claude "analyze this Python code with external Claude CLI for security patterns"
+# Returns analysis with cost information: $0.12, 2.5s execution time
+```
+
+**Large PR Review with Performance Optimization**:
+```
+claude "external PR review of 42"
+# Uses adaptive timeout (90s for large PRs) and provides detailed analysis
+```
+
+**Issue Analysis with Strategic Guidance**:
+```
+claude "external strategic analysis of issue 23"
+# Provides implementation guidance with anti-pattern prevention
+```
+
 ## Upcoming Features
 
-The following tools are planned for Phase 2 expansion:
+The following tools are planned for future expansion:
 
-- **Code Analysis**: `analyze this code for patterns`
 - **Integration Validation**: `validate Stripe integration approach`
 - **Engineering Plan Review**: `review engineering plan docs/plan.md`
 - **PRD Review**: `review PRD docs/requirements.md`
