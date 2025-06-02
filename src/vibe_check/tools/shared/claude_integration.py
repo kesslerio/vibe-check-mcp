@@ -179,7 +179,7 @@ Promote good engineering practices through constructive analysis.""",
         system_prompt = self._get_system_prompt(task_type)
         if task_type != "general" and system_prompt != self.SYSTEM_PROMPTS["general"]:
             # Add system prompt as additional context in the prompt itself
-            enhanced_prompt = f"System: {system_prompt}\\n\\nUser: {prompt}"
+            enhanced_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
             args = ['--dangerously-skip-permissions', '-p', enhanced_prompt]
         
         logger.debug(f'[Debug] Claude CLI args: {args}')
@@ -413,9 +413,9 @@ async def analyze_content_async(
     if additional_context:
         prompt_parts.append(f"Context: {additional_context}")
     
-    prompt_parts.append(f"Content to analyze:\\n{content}")
+    prompt_parts.append(f"Content to analyze:\n{content}")
     
-    prompt = "\\n\\n".join(prompt_parts)
+    prompt = "\n\n".join(prompt_parts)
     
     executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
     return await executor.execute_async(prompt=prompt, task_type=task_type)
@@ -445,9 +445,9 @@ def analyze_content_sync(
     if additional_context:
         prompt_parts.append(f"Context: {additional_context}")
     
-    prompt_parts.append(f"Content to analyze:\\n{content}")
+    prompt_parts.append(f"Content to analyze:\n{content}")
     
-    prompt = "\\n\\n".join(prompt_parts)
+    prompt = "\n\n".join(prompt_parts)
     
     executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
     return executor.execute_sync(prompt=prompt, task_type=task_type)
