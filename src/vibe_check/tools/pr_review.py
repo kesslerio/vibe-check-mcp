@@ -1327,8 +1327,8 @@ File too large or binary
     
     def _format_issue_linkage_section(self, linkage_data: Dict) -> str:
         """Format issue linkage validation section."""
-        if linkage_data["has_linkage"]:
-            issues = ", ".join([f"#{num}" for _, num in linkage_data["linked_issues"]])
+        if linkage_data.get("has_linkage", False):
+            issues = ", ".join([f"#{num}" for _, num in linkage_data.get("linked_issues", [])])
             return f"✅ **Linked Issues Found**: {issues}"
         else:
             return "⚠️ **NO LINKED ISSUES DETECTED** - PR should reference specific issues using 'Fixes #XXX' syntax"

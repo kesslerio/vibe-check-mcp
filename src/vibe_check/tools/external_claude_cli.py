@@ -133,19 +133,11 @@ Promote good engineering practices through constructive analysis.""",
         self.timeout_seconds = timeout_seconds
         self.claude_cli_path = self._find_claude_cli()
         
-        # Find shell wrapper script
-        self.shell_wrapper_path = Path(__file__).parent / "claude_cli_wrapper.sh"
         
-        # Initialize Anthropic client if available (fallback option)
+        # NO Anthropic API client - Claude subscription only via Claude Code
+        # This ensures we never use API tokens, only Claude subscription
         self.anthropic_client = None
-        if ANTHROPIC_AVAILABLE:
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-            if api_key:
-                try:
-                    self.anthropic_client = anthropic.Anthropic(api_key=api_key)
-                    logger.info("Anthropic SDK client initialized successfully")
-                except Exception as e:
-                    logger.warning(f"Failed to initialize Anthropic client: {e}")
+        logger.info("Anthropic API disabled - using Claude subscription via Claude Code only")
     
     def _find_claude_cli(self) -> str:
         """Find the Claude CLI executable path using claude-code-mcp approach."""
@@ -462,39 +454,20 @@ Promote good engineering practices through constructive analysis.""",
         
         prompt = "\n\n".join(prompt_parts)
         
-        # Try Claude CLI direct execution first (preferred, using claude-code-mcp approach)
-        if prefer_claude_cli:
-            logger.info("Using Claude CLI direct execution (claude-code-mcp approach)")
-            result = self.execute_claude_cli_direct(
-                prompt=prompt,
-                task_type=task_type
-            )
-            
-            # If Claude CLI succeeds, return immediately
-            if result.success:
-                return result
-            
-            # If Claude CLI fails, log warning and try fallback
-            logger.warning(f"Claude CLI direct execution failed: {result.error}")
-            logger.info("Attempting fallback to Anthropic SDK...")
+        # ONLY use Claude CLI direct execution - NO API fallback
+        # This ensures we use Claude subscription via Claude Code, not API tokens
+        logger.info("Using Claude CLI direct execution (subscription-based, no API)")
+        result = self.execute_claude_cli_direct(
+            prompt=prompt,
+            task_type=task_type
+        )
         
-        # Fallback to Anthropic SDK if available
-        if self.anthropic_client:
-            logger.info("Using Anthropic SDK fallback")
-            return await self.execute_anthropic_sdk(
-                prompt=prompt,
-                task_type=task_type
-            )
-        else:
-            # No fallback available
-            return ClaudeCliResult(
-                success=False,
-                error="Both Claude CLI direct execution and Anthropic SDK are unavailable",
-                exit_code=-1,
-                execution_time=0.0,
-                command_used="none",
-                task_type=task_type
-            )
+        # Return result (success or failure) - no API fallback
+        if not result.success:
+            logger.error(f"Claude CLI execution failed: {result.error}")
+            logger.error("NO API FALLBACK - Fix Claude Code integration or check subscription")
+        
+        return result
 
 
 async def main():

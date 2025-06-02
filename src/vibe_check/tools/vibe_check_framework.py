@@ -204,20 +204,34 @@ class VibeCheckFramework:
             # Create sophisticated analysis prompt (ported from bash script)
             prompt = self._create_sophisticated_vibe_prompt(issue_data, basic_patterns)
             
+            # Get GitHub token from environment or gh CLI
+            github_token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN")
+            if not github_token:
+                try:
+                    result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        github_token = result.stdout.strip()
+                except Exception as e:
+                    logger.warning(f"Could not get GitHub token from gh CLI: {e}")
+                    github_token = ""
+            
             # Create selective MCP config to avoid recursive dependency
             selective_mcp_config = {
                 "mcpServers": {
                     "clear-thought-server": {
-                        "command": "node",
-                        "args": ["/Users/kesslerio/repos/clear-thought-mcp-server/dist/index.js", "-s", "user"]
+                        "command": "npx",
+                        "args": ["-y", "@modelcontextprotocol/server-clear-thought"]
                     },
                     "brave-search": {
                         "command": "npx", 
                         "args": ["-y", "@modelcontextprotocol/server-brave-search"]
                     },
                     "github": {
-                        "command": "bash",
-                        "args": ["-c", "docker attach mcp_github || docker run -i --rm --name mcp_github -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/github/github-mcp-server"]
+                        "command": "npx",
+                        "args": ["-y", "@modelcontextprotocol/server-github"],
+                        "env": {
+                            "GITHUB_PERSONAL_ACCESS_TOKEN": github_token
+                        }
                     }
                 }
             }
