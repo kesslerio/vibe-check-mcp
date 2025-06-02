@@ -1,12 +1,22 @@
 {
   "mcpServers": {
-    "claude_permission_server": {
-      "command": "echo",
-      "args": ["MCP server claude_permission_server is pre-configured for HTTP transport"],
-      "transport": {
-        "type": "http",
-        "url": "http://127.0.0.1:39999/mcp"
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
+    },
+    "brave-search": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    "clear-thought-server": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-clear-thought"]
     }
   }
 } 
