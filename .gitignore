@@ -175,7 +175,7 @@ Desktop.ini
 CLAUDE.md
 CLAUDE*.md
 .claude/
-.qodo/claude-code-mcp/
+.qodo/
 .cursor/
 
 # Cloned repositories

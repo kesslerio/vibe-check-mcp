@@ -92,6 +92,7 @@ class PRReviewTool:
             review_context = self._detect_re_review(pr_data, force_re_review)
             
             # Phase 4: Analysis Generation (replaces lines 260-572)
+            logger.info(f"🔍 Generating analysis for PR #{pr_number} (Size: {size_analysis.get('overall_size', 'Unknown')})")
             analysis_result = await self._generate_comprehensive_analysis(
                 pr_data, size_analysis, review_context, analysis_mode, detail_level
             )
@@ -368,7 +369,8 @@ class PRReviewTool:
                 logger.info("✅ Claude CLI available - attempting enhanced analysis")
                 # Use claude -p for comprehensive analysis (lines 549-572)
                 analysis = await self._run_claude_analysis(
-                    prompt_content, data_content, pr_data["metadata"]["number"]
+                    prompt_content, data_content, pr_data["metadata"]["number"],
+                    pr_data, size_analysis, review_context
                 )
                 
                 if analysis:
@@ -780,6 +782,85 @@ Focus on project conventions from CLAUDE.md/.cursor/rules/.windsurfrules, balanc
 """
         return content
     
+    def _create_summary_data_content(self, pr_data: Dict, review_context: Dict) -> str:
+        """
+        Create reduced data content for large PRs to prevent Claude CLI timeout.
+        
+        Implements the same adaptive sizing strategy as scripts/review-pr.sh
+        using file statistics and sample diffs instead of full content.
+        """
+        metadata = pr_data["metadata"]
+        stats = pr_data["statistics"]
+        
+        # Get file stats summary (from bash script lines 128, 184)
+        file_stats = []
+        for file_info in pr_data.get("files", []):
+            if "path" in file_info:
+                file_stats.append(f"{file_info['path']}: +{file_info.get('additions', 0)}/-{file_info.get('deletions', 0)}")
+        
+        # Extract key diff patterns instead of full diff (from bash script lines 185, 190)
+        sample_diff = self._extract_key_diff_patterns(pr_data.get("diff", ""))
+        
+        content = f"""# PR #{metadata['number']} Review Data (Large PR - Summary Analysis)
+
+## PR Information
+**Title:** {metadata['title']}
+**Author:** {metadata['author']}
+**Created:** {metadata['created_at']}
+**Branch:** {metadata['head_branch']} → {metadata['base_branch']}
+**Files Changed:** {stats['files_count']}
+**Lines:** +{stats['additions']}/-{stats['deletions']}
+
+**Description:**
+{metadata['body'][:2000]}{'...' if len(metadata['body']) > 2000 else ''}
+
+**File Change Summary:**
+{chr(10).join(file_stats[:20])}{'...' if len(file_stats) > 20 else ''}
+
+**Key Diff Patterns (Sample):**
+```diff
+{sample_diff}
+```
+
+**Note:** Large PR content reduced for analysis. Focus on high-level patterns, file-level changes, and architectural impact.
+
+## Previous Review Comments
+{self._format_existing_comments(pr_data.get('comments', []))}
+
+{self._format_re_review_data_section(review_context)}
+
+{self._format_issue_analysis_section(pr_data.get('linked_issues', []))}
+"""
+        return content
+    
+    def _extract_key_diff_patterns(self, diff_content: str) -> str:
+        """
+        Extract key diff patterns from full diff content.
+        
+        Mimics bash script approach: grep -E "^(diff|@@|\\+\\+\\+|---|\\+[^+]|\\-[^-])" | head -200
+        """
+        if not diff_content:
+            return "No diff content available"
+        
+        lines = diff_content.split('\n')
+        pattern_lines = []
+        
+        for line in lines:
+            # Match key diff patterns (file headers, hunks, changes)
+            if (line.startswith('diff ') or 
+                line.startswith('@@') or 
+                line.startswith('+++') or 
+                line.startswith('---') or 
+                (line.startswith('+') and not line.startswith('++')) or
+                (line.startswith('-') and not line.startswith('--'))):
+                pattern_lines.append(line)
+                
+                # Limit to 200 lines like bash script
+                if len(pattern_lines) >= 200:
+                    break
+        
+        return '\n'.join(pattern_lines)
+    
     def _extract_diff_patterns(self, diff_content: str, max_lines: int) -> str:
         """Extract key patterns from diff content."""
         if not diff_content:
@@ -891,23 +972,46 @@ File too large or binary
         self, 
         prompt_content: str, 
         data_content: str, 
-        pr_number: int
+        pr_number: int,
+        pr_data: Dict[str, Any],
+        size_analysis: Dict[str, Any],
+        review_context: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
         """
-        Run Claude analysis using external Claude CLI integration.
+        Run Claude analysis using external Claude CLI integration with adaptive prompt sizing.
         
-        Replaces the complex subprocess implementation with our external Claude CLI
-        integration that eliminates context blocking and timeout issues.
+        Implements adaptive content reduction for large PRs to prevent Claude CLI from
+        returning empty content due to oversized prompts.
         """
         logger.info(f"🔍 Starting external Claude analysis for PR #{pr_number}")
         logger.info(f"🔍 Prompt content size: {len(prompt_content)} chars")
         logger.info(f"🔍 Data content size: {len(data_content)} chars")
         
         try:
-            # Create combined content for analysis
+            # Create initial combined content for size check
             combined_content = f"{prompt_content}\n\n{data_content}"
             combined_size = len(combined_content)
             logger.info(f"🔍 Combined content size: {combined_size} chars")
+            
+            # ADAPTIVE PROMPT SIZING: If content is too large, reduce it
+            MAX_PROMPT_SIZE = 50000  # 50k character threshold from bash script
+            if combined_size > MAX_PROMPT_SIZE:
+                logger.warning(f"⚠️ Large prompt detected ({combined_size} chars > {MAX_PROMPT_SIZE}) - switching to summary analysis")
+                
+                # Create reduced data content for large PRs
+                reduced_data_content = self._create_summary_data_content(pr_data, review_context)
+                combined_content = f"{prompt_content}\n\n{reduced_data_content}"
+                new_size = len(combined_content)
+                
+                logger.info(f"🔍 Reduced content size: {new_size} chars (reduction: {combined_size - new_size} chars)")
+                combined_size = new_size
+                
+                # Update the prompt to indicate summary mode
+                prompt_content = prompt_content.replace(
+                    "Analyze this pull request comprehensively",
+                    "Analyze this pull request using summary mode (large PR detected)"
+                )
+                combined_content = f"{prompt_content}\n\n{reduced_data_content}"
             
             # Set adaptive timeout based on content size
             timeout_seconds = self._calculate_adaptive_timeout(combined_size, pr_number)
@@ -1012,7 +1116,7 @@ File too large or binary
             logger.debug(f"Stack trace: {traceback.format_exc()}")
             return None
     
-    def _parse_claude_output(self, claude_output: str, pr_number: int = None) -> Dict[str, Any]:
+    def _parse_claude_output(self, claude_output: str, pr_number: Optional[int] = None) -> Dict[str, Any]:
         """Parse Claude output into structured analysis format."""
         # For now, return the raw Claude output
         # This could be enhanced to parse specific sections
