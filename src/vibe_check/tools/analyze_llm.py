@@ -11,12 +11,12 @@ Usage as script:
     python analyze_external.py --input-file path/to/file.txt --task-type code_analysis
 
 Usage as MCP tools:
-    - external_claude_analyze: General content analysis
-    - external_pr_review: Pull request review
-    - external_code_analysis: Code analysis
-    - external_issue_analysis: Issue analysis
-    - external_github_issue_vibe_check: GitHub issue vibe check
-    - external_claude_status: Status check
+    - analyze_text_llm: General content analysis with Claude CLI reasoning
+    - analyze_pr_llm: Pull request review with Claude CLI reasoning
+    - analyze_code_llm: Code analysis with Claude CLI reasoning
+    - analyze_issue_llm: Issue analysis with Claude CLI reasoning
+    - analyze_github_issue_llm: GitHub issue vibe check with Claude CLI reasoning
+    - analyze_llm_status: Status check for Claude CLI integration
 """
 
 import argparse
@@ -728,25 +728,28 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
     async def analyze_github_issue_llm(
         issue_number: int,
         repository: str = "kesslerio/vibe-check-mcp",
-        post_comment: bool = False,
-        analysis_mode: str = "quick",
+        post_comment: bool = True,
+        analysis_mode: str = "comprehensive",
+        detail_level: str = "standard",
         timeout_seconds: int = 90
     ) -> Dict[str, Any]:
         """
-        Perform comprehensive vibe check on GitHub issue using external Claude CLI.
+        🧠 Comprehensive GitHub issue vibe check using Claude CLI reasoning.
         
         This tool fetches the GitHub issue, analyzes it for anti-patterns and engineering
-        guidance, and optionally posts a friendly coaching comment.
+        guidance using Claude CLI, and optionally posts a friendly coaching comment.
+        For fast direct issue analysis, use analyze_issue_nollm instead.
         
         Args:
             issue_number: GitHub issue number to analyze
-            repository: Repository in format "owner/repo"
-            post_comment: Whether to post analysis as GitHub comment
-            analysis_mode: "quick" or "comprehensive" analysis
-            timeout_seconds: Maximum time to wait for analysis
+            repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
+            post_comment: Whether to post analysis as GitHub comment (default: True)
+            analysis_mode: "quick" or "comprehensive" analysis (default: "comprehensive")
+            detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
+            timeout_seconds: Maximum time to wait for analysis (default: 90)
             
         Returns:
-            Comprehensive vibe check analysis with GitHub integration
+            Comprehensive Claude CLI vibe check analysis with GitHub integration
         """
         logger.info(f"Starting external GitHub issue vibe check for {repository}#{issue_number}")
         
@@ -778,12 +781,22 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
 {issue.body or 'No content provided'}
 """
             
-            # Create vibe check prompt
+            # Create vibe check prompt based on detail level
+            detail_instructions = {
+                "brief": "Provide a concise 3-section analysis with key points only.",
+                "standard": "Provide a balanced analysis with practical guidance and clear recommendations.",
+                "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities."
+            }
+            
+            detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
+            
             vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub issue. Focus on preventing common engineering anti-patterns while encouraging good practices.
+
+{detail_instruction}
 
 {issue_context}
 
-Please provide a comprehensive vibe check analysis in this format:
+Please provide a vibe check analysis in this format:
 
 ## 🎯 Vibe Check Summary
 [One-sentence friendly assessment]
@@ -802,7 +815,7 @@ Please provide a comprehensive vibe check analysis in this format:
 Use friendly, coaching language that helps developers learn rather than intimidate."""
             
             # Run external Claude analysis
-            result = await external_claude_analyze(
+            result = await analyze_text_llm(
                 content=vibe_prompt,
                 task_type="issue_analysis",
                 additional_context=f"Vibe check for GitHub issue {repository}#{issue_number}",

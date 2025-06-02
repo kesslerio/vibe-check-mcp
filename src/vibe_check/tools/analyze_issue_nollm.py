@@ -11,6 +11,8 @@ Issue #40 implementation: Claude-powered comprehensive vibe check framework.
 """
 
 import logging
+import os
+import subprocess
 from typing import Dict, Any, Optional, List
 from github import Github, GithubException
 from github.Issue import Issue
@@ -21,6 +23,24 @@ from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def _get_github_token() -> Optional[str]:
+    """Get GitHub token from environment or gh CLI."""
+    # Try environment variable first
+    token = os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    
+    # Fallback to gh CLI
+    try:
+        result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception as e:
+        logger.warning(f"Could not get GitHub token from gh CLI: {e}")
+    
+    return None
 
 
 class GitHubIssueAnalyzer:
@@ -389,8 +409,9 @@ def analyze_issue(
         if mode == VibeCheckMode.COMPREHENSIVE and post_comment is None:
             post_comment = True
         
-        # Get vibe check framework
-        framework = get_vibe_check_framework()
+        # Get vibe check framework with GitHub token
+        github_token = _get_github_token()
+        framework = get_vibe_check_framework(github_token)
         
         # Run comprehensive vibe check
         vibe_result = framework.check_issue_vibes(

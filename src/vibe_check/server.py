@@ -211,11 +211,12 @@ def server_status() -> Dict[str, Any]:
         "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
         "claude_cli_status - Essential: Check Claude CLI availability and version",
         "claude_cli_diagnostics - Essential: Diagnose Claude CLI timeout and recursion issues",
-        "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
-        "external_pr_review - External PR review via isolated Claude CLI",
-        "external_code_analysis - External code analysis for anti-patterns",
-        "external_issue_analysis - External issue analysis with specialized prompts",
-        "external_claude_status - Status check for external Claude CLI integration",
+        "analyze_text_llm - Claude CLI content analysis with LLM reasoning",
+        "analyze_pr_llm - Claude CLI PR review with comprehensive analysis",
+        "analyze_code_llm - Claude CLI code analysis for anti-patterns",
+        "analyze_issue_llm - Claude CLI issue analysis with specialized prompts",
+        "analyze_github_issue_llm - GitHub issue vibe check with Claude CLI reasoning",
+        "analyze_llm_status - Status check for Claude CLI integration",
         "server_status - Server status and capabilities"
     ]
     
