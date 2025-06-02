@@ -23,6 +23,13 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+# Add Anthropic SDK import
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -125,24 +132,58 @@ Promote good engineering practices through constructive analysis.""",
         """
         self.timeout_seconds = timeout_seconds
         self.claude_cli_path = self._find_claude_cli()
+        
+        # Find shell wrapper script
+        self.shell_wrapper_path = Path(__file__).parent / "claude_cli_wrapper.sh"
+        
+        # Initialize Anthropic client if available (fallback option)
+        self.anthropic_client = None
+        if ANTHROPIC_AVAILABLE:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if api_key:
+                try:
+                    self.anthropic_client = anthropic.Anthropic(api_key=api_key)
+                    logger.info("Anthropic SDK client initialized successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Anthropic client: {e}")
     
     def _find_claude_cli(self) -> str:
-        """Find the Claude CLI executable path."""
-        # Check if claude is in PATH
-        try:
-            result = subprocess.run(
-                ["which", "claude"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            if result.returncode == 0:
-                return result.stdout.strip()
-        except Exception as e:
-            logger.warning(f"Error finding Claude CLI: {e}")
+        """Find the Claude CLI executable path using claude-code-mcp approach."""
+        logger.debug('[Debug] Attempting to find Claude CLI...')
         
-        # Return default assumption
-        return "claude"
+        # Check for custom CLI name from environment variable (claude-code-mcp pattern)
+        custom_cli_name = os.environ.get('CLAUDE_CLI_NAME')
+        if custom_cli_name:
+            logger.debug(f'[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}')
+            
+            # If it's an absolute path, use it directly
+            if os.path.isabs(custom_cli_name):
+                logger.debug(f'[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}')
+                return custom_cli_name
+            
+            # If it contains path separators (relative path), reject it
+            if '/' in custom_cli_name or '\\' in custom_cli_name:
+                raise ValueError(
+                    f"Invalid CLAUDE_CLI_NAME: Relative paths are not allowed. "
+                    f"Use either a simple name (e.g., 'claude') or an absolute path"
+                )
+        
+        cli_name = custom_cli_name or 'claude'
+        
+        # Try local install path: ~/.claude/local/claude (claude-code-mcp pattern)
+        user_path = os.path.expanduser('~/.claude/local/claude')
+        logger.debug(f'[Debug] Checking for Claude CLI at local user path: {user_path}')
+        
+        if os.path.exists(user_path):
+            logger.debug(f'[Debug] Found Claude CLI at local user path: {user_path}')
+            return user_path
+        else:
+            logger.debug(f'[Debug] Claude CLI not found at local user path: {user_path}')
+        
+        # Fallback to CLI name (PATH lookup)
+        logger.debug(f'[Debug] Falling back to "{cli_name}" command name, relying on PATH lookup')
+        logger.warning(f'[Warning] Claude CLI not found at ~/.claude/local/claude. Falling back to "{cli_name}" in PATH')
+        return cli_name
     
     def _get_system_prompt(self, task_type: str) -> str:
         """
@@ -156,158 +197,239 @@ Promote good engineering practices through constructive analysis.""",
         """
         return self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
     
-    def _create_isolated_environment(self) -> Dict[str, str]:
+    def _get_claude_args(self, prompt: str, task_type: str) -> List[str]:
         """
-        Create isolated environment variables for Claude CLI execution.
+        Build Claude CLI arguments using claude-code-mcp approach.
         
+        Args:
+            prompt: The prompt to send to Claude
+            task_type: Type of task for specialized handling
+            
         Returns:
-            Environment dictionary with isolation markers
+            List of command line arguments
         """
-        env = dict(os.environ)
+        # Use the same pattern as claude-code-mcp: --dangerously-skip-permissions -p prompt
+        args = ['--dangerously-skip-permissions', '-p', prompt]
         
-        # Add isolation markers
-        env["CLAUDE_EXTERNAL_EXECUTION"] = "true"
-        env["CLAUDE_MCP_ISOLATED"] = "true"
-        env["CLAUDE_TASK_ID"] = f"external_{int(time.time() * 1000)}"
+        # Add system prompt if we have specialized task types
+        system_prompt = self._get_system_prompt(task_type)
+        if task_type != "general" and system_prompt != self.SYSTEM_PROMPTS["general"]:
+            # Add system prompt as additional context in the prompt itself
+            enhanced_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
+            args = ['--dangerously-skip-permissions', '-p', enhanced_prompt]
         
-        # Remove potentially conflicting variables
-        for var in ["CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "MCP_SERVER"]:
-            env.pop(var, None)
-        
-        return env
+        logger.debug(f'[Debug] Claude CLI args: {args}')
+        return args
     
-    async def execute_claude_cli(
+    async def execute_anthropic_sdk(
         self,
         prompt: str,
-        task_type: str = "general",
-        additional_args: Optional[List[str]] = None
+        task_type: str = "general"
     ) -> ClaudeCliResult:
         """
-        Execute Claude CLI using SDK best practices with JSON output and system prompts.
+        Execute using Anthropic SDK directly (preferred method to avoid CLI recursion).
+        
+        Args:
+            prompt: The prompt to send to Claude
+            task_type: Type of task for specialized handling
+            
+        Returns:
+            ClaudeCliResult with execution details
+        """
+        start_time = time.time()
+        logger.info(f"Executing via Anthropic SDK for task: {task_type}")
+        
+        if not self.anthropic_client:
+            return ClaudeCliResult(
+                success=False,
+                error="Anthropic SDK not available or not configured",
+                exit_code=-1,
+                execution_time=time.time() - start_time,
+                command_used="anthropic_sdk",
+                task_type=task_type
+            )
+        
+        try:
+            # Get system prompt for task type
+            system_prompt = self._get_system_prompt(task_type)
+            
+            # Make API call
+            response = self.anthropic_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4000,
+                temperature=0.1,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            execution_time = time.time() - start_time
+            
+            # Extract response content
+            response_text = ""
+            if response.content and len(response.content) > 0:
+                response_text = response.content[0].text
+            
+            # Calculate cost (approximate)
+            input_tokens = response.usage.input_tokens if response.usage else 0
+            output_tokens = response.usage.output_tokens if response.usage else 0
+            cost_usd = self._calculate_cost(input_tokens, output_tokens)
+            
+            logger.info(f"Anthropic SDK completed successfully in {execution_time:.2f}s")
+            
+            return ClaudeCliResult(
+                success=True,
+                output=response_text,
+                error=None,
+                exit_code=0,
+                execution_time=execution_time,
+                command_used="anthropic_sdk",
+                task_type=task_type,
+                cost_usd=cost_usd,
+                duration_ms=execution_time * 1000,
+                session_id=response.id if hasattr(response, 'id') else None,
+                num_turns=1,
+                sdk_metadata={
+                    "model": "claude-3-5-sonnet-20241022",
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens
+                }
+            )
+            
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.error(f"Error with Anthropic SDK: {e}")
+            
+            return ClaudeCliResult(
+                success=False,
+                error=f"Anthropic SDK error: {str(e)}",
+                exit_code=-1,
+                execution_time=execution_time,
+                command_used="anthropic_sdk",
+                task_type=task_type
+            )
+    
+    def _calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
+        """Calculate approximate cost in USD for Claude 3.5 Sonnet."""
+        # Claude 3.5 Sonnet pricing (as of 2024)
+        input_cost_per_1k = 0.003  # $3 per 1M tokens
+        output_cost_per_1k = 0.015  # $15 per 1M tokens
+        
+        input_cost = (input_tokens / 1000) * input_cost_per_1k
+        output_cost = (output_tokens / 1000) * output_cost_per_1k
+        
+        return round(input_cost + output_cost, 6)
+    
+    def execute_claude_cli_direct(
+        self,
+        prompt: str,
+        task_type: str = "general"
+    ) -> ClaudeCliResult:
+        """
+        Execute Claude CLI directly using claude-code-mcp approach (preferred method).
         
         Args:
             prompt: The prompt to send to Claude CLI
             task_type: Type of task for specialized handling
-            additional_args: Additional CLI arguments
             
         Returns:
-            ClaudeCliResult with execution details and SDK metadata
+            ClaudeCliResult with execution details
         """
         start_time = time.time()
-        
-        # Get system prompt for task type
-        system_prompt = self._get_system_prompt(task_type)
-        
-        # Build command using SDK best practices
-        command = [
-            "timeout", str(self.timeout_seconds + 5),  # Use timeout command as recommended
-            self.claude_cli_path, 
-            "-p", prompt,
-            "--output-format", "json",  # Use JSON format for structured responses
-            "--system-prompt", system_prompt  # Use system prompt for task specialization
-        ]
-        
-        if additional_args:
-            command.extend(additional_args)
-        
-        command_str = " ".join(command)
-        logger.info(f"Executing Claude CLI for task: {task_type}")
-        logger.debug(f"Command: {command_str}")
+        logger.info(f"Executing Claude CLI directly for task: {task_type}")
         
         try:
-            # Create isolated environment
-            env = self._create_isolated_environment()
+            # Build command using claude-code-mcp pattern
+            claude_args = self._get_claude_args(prompt, task_type)
             
-            # Execute in subprocess
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=env
+            logger.debug(f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}')
+            
+            # Create clean environment to avoid MCP recursion detection
+            clean_env = dict(os.environ)
+            # Remove MCP and Claude Code specific environment variables
+            for var in ["MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE", 
+                       "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS"]:
+                clean_env.pop(var, None)
+            
+            # Use regular subprocess (like claude-code-mcp) instead of asyncio
+            command = [self.claude_cli_path] + claude_args
+            logger.debug(f'[Debug] Running command: {" ".join(command)}')
+            
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                cwd=os.getcwd(),
+                env=clean_env
             )
             
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=self.timeout_seconds + 10  # Allow extra time for timeout command
+            execution_time = time.time() - start_time
+            
+            if result.returncode == 0:
+                output = result.stdout
+                logger.info(f"Claude CLI completed successfully in {execution_time:.2f}s")
+                logger.debug(f'[Debug] Claude CLI stdout: {output.strip()}')
+                
+                if result.stderr:
+                    logger.debug(f'[Debug] Claude CLI stderr: {result.stderr.strip()}')
+                
+                return ClaudeCliResult(
+                    success=True,
+                    output=output,
+                    error=None,
+                    exit_code=0,
+                    execution_time=execution_time,
+                    command_used="claude_cli_direct",
+                    task_type=task_type,
+                    sdk_metadata={
+                        "isolation_method": "claude_cli_direct",
+                        "args_used": claude_args
+                    }
                 )
+            else:
+                # Handle error response
+                error_msg = result.stderr.strip() if result.stderr else "Claude CLI failed"
+                output = result.stdout.strip() if result.stdout else ""
                 
-                execution_time = time.time() - start_time
-                
-                # Handle output
-                if process.returncode == 0 and stdout:
-                    try:
-                        # Parse JSON response from Claude CLI
-                        sdk_response = json.loads(stdout.decode('utf-8'))
-                        
-                        logger.info(f"Claude CLI completed in {execution_time:.2f}s")
-                        
-                        return ClaudeCliResult(
-                            success=not sdk_response.get("is_error", False),
-                            output=sdk_response.get("result"),
-                            error=None,
-                            exit_code=process.returncode,
-                            execution_time=execution_time,
-                            command_used=command_str,
-                            task_type=task_type,
-                            cost_usd=sdk_response.get("cost_usd"),
-                            duration_ms=sdk_response.get("duration_ms"),
-                            session_id=sdk_response.get("session_id"),
-                            num_turns=sdk_response.get("num_turns"),
-                            sdk_metadata=sdk_response
-                        )
-                        
-                    except json.JSONDecodeError as e:
-                        # Fallback to text output if JSON parsing fails
-                        logger.warning(f"Failed to parse JSON response: {e}")
-                        return ClaudeCliResult(
-                            success=True,
-                            output=stdout.decode('utf-8').strip(),
-                            error=stderr.decode('utf-8').strip() if stderr else None,
-                            exit_code=process.returncode,
-                            execution_time=execution_time,
-                            command_used=command_str,
-                            task_type=task_type
-                        )
-                else:
-                    # Handle error response
-                    error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
-                    return ClaudeCliResult(
-                        success=False,
-                        error=error_msg.strip(),
-                        exit_code=process.returncode,
-                        execution_time=execution_time,
-                        command_used=command_str,
-                        task_type=task_type
-                    )
-                
-            except asyncio.TimeoutError:
-                # Kill the process if it times out
-                process.kill()
-                await process.wait()
-                
-                execution_time = time.time() - start_time
-                logger.warning(f"Claude CLI timed out after {self.timeout_seconds + 10}s")
+                logger.error(f"Claude CLI failed. Exit code: {result.returncode}. Stderr: {error_msg}")
                 
                 return ClaudeCliResult(
                     success=False,
-                    error=f"Command timed out after {self.timeout_seconds + 10} seconds",
-                    exit_code=-1,
+                    output=output,
+                    error=error_msg,
+                    exit_code=result.returncode,
                     execution_time=execution_time,
-                    command_used=command_str,
+                    command_used="claude_cli_direct",
                     task_type=task_type
                 )
                 
+        except subprocess.TimeoutExpired:
+            execution_time = time.time() - start_time
+            logger.warning(f"Claude CLI timed out after {self.timeout_seconds}s (subprocess timeout)")
+            
+            return ClaudeCliResult(
+                success=False,
+                error=f"Claude CLI timeout after {self.timeout_seconds} seconds",
+                exit_code=124,
+                execution_time=execution_time,
+                command_used="claude_cli_direct",
+                task_type=task_type
+            )
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error(f"Error executing Claude CLI: {e}")
             
             return ClaudeCliResult(
                 success=False,
-                error=f"Execution error: {str(e)}",
+                error=f"Claude CLI execution error: {str(e)}",
                 exit_code=-1,
                 execution_time=execution_time,
-                command_used=command_str,
+                command_used="claude_cli_direct",
                 task_type=task_type
             )
     
@@ -315,65 +437,62 @@ Promote good engineering practices through constructive analysis.""",
         self,
         content: str,
         task_type: str = "general",
-        additional_context: Optional[str] = None
+        additional_context: Optional[str] = None,
+        prefer_claude_cli: bool = True
     ) -> ClaudeCliResult:
         """
-        Analyze content using specialized system prompts for the task type.
+        Analyze content using Claude CLI direct (preferred) or Anthropic SDK (fallback).
         
         Args:
             content: Content to analyze
             task_type: Type of analysis (pr_review, code_analysis, etc.)
             additional_context: Optional additional context
+            prefer_claude_cli: Whether to prefer Claude CLI direct execution (default: True)
             
         Returns:
             ClaudeCliResult with analysis
         """
-        # Build prompt with content and context
+        # Build prompt with context and content
+        prompt_parts = []
+        
         if additional_context:
-            prompt = f"{additional_context}\n\nContent to analyze:\n{content}"
-        else:
-            prompt = f"Analyze the following content:\n\n{content}"
+            prompt_parts.append(f"Context: {additional_context}")
         
-        return await self.execute_claude_cli(
-            prompt=prompt,
-            task_type=task_type
-        )
-    
-    async def analyze_file(
-        self,
-        file_path: str,
-        task_type: str = "code_analysis"
-    ) -> ClaudeCliResult:
-        """
-        Analyze a file using Claude CLI.
+        prompt_parts.append(f"Content to analyze:\n{content}")
         
-        Args:
-            file_path: Path to file to analyze
-            task_type: Type of analysis
-            
-        Returns:
-            ClaudeCliResult with file analysis
-        """
-        try:
-            # Read file content
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # Add file context
-            file_context = f"File: {file_path}\nSize: {len(content)} characters"
-            
-            return await self.analyze_content(
-                content=content,
-                task_type=task_type,
-                additional_context=file_context
+        prompt = "\n\n".join(prompt_parts)
+        
+        # Try Claude CLI direct execution first (preferred, using claude-code-mcp approach)
+        if prefer_claude_cli:
+            logger.info("Using Claude CLI direct execution (claude-code-mcp approach)")
+            result = self.execute_claude_cli_direct(
+                prompt=prompt,
+                task_type=task_type
             )
             
-        except Exception as e:
-            logger.error(f"Error reading file {file_path}: {e}")
+            # If Claude CLI succeeds, return immediately
+            if result.success:
+                return result
+            
+            # If Claude CLI fails, log warning and try fallback
+            logger.warning(f"Claude CLI direct execution failed: {result.error}")
+            logger.info("Attempting fallback to Anthropic SDK...")
+        
+        # Fallback to Anthropic SDK if available
+        if self.anthropic_client:
+            logger.info("Using Anthropic SDK fallback")
+            return await self.execute_anthropic_sdk(
+                prompt=prompt,
+                task_type=task_type
+            )
+        else:
+            # No fallback available
             return ClaudeCliResult(
                 success=False,
-                error=f"File read error: {str(e)}",
+                error="Both Claude CLI direct execution and Anthropic SDK are unavailable",
                 exit_code=-1,
+                execution_time=0.0,
+                command_used="none",
                 task_type=task_type
             )
 
@@ -412,6 +531,18 @@ async def main():
         action="store_true",
         help="Enable verbose logging"
     )
+    parser.add_argument(
+        "--mcp-config",
+        help="Path to MCP configuration file"
+    )
+    parser.add_argument(
+        "--permission-prompt-tool",
+        help="Name of the permission tool for auto-approval"
+    )
+    parser.add_argument(
+        "--allowedTools",
+        help="Comma-separated list of allowed tools (or '*' for all)"
+    )
     
     args = parser.parse_args()
     
@@ -425,11 +556,42 @@ async def main():
     # Initialize executor
     executor = ExternalClaudeCli(timeout_seconds=args.timeout)
     
+    # Build additional arguments for Claude CLI
+    additional_args = []
+    if args.mcp_config:
+        additional_args.extend(["--mcp-config", args.mcp_config])
+    
+    if args.permission_prompt_tool:
+        additional_args.extend(["--permission-prompt-tool", args.permission_prompt_tool])
+
+    if args.allowedTools:
+        additional_args.extend(["--allowedTools", args.allowedTools])
+    
     # Execute based on input type
     if args.input_file:
-        result = await executor.analyze_file(args.input_file, args.task_type)
+        # Read file and analyze
+        try:
+            with open(args.input_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            result = await executor.analyze_content(
+                content=content,
+                task_type=args.task_type,
+                additional_context=f"File: {args.input_file}",
+                prefer_claude_cli=True  # Prefer Claude CLI direct execution
+            )
+        except Exception as e:
+            result = ClaudeCliResult(
+                success=False,
+                error=f"Error reading file {args.input_file}: {str(e)}",
+                exit_code=1,
+                task_type=args.task_type
+            )
     else:
-        result = await executor.execute_claude_cli(args.prompt, args.task_type)
+        result = await executor.analyze_content(
+            content=args.prompt,
+            task_type=args.task_type,
+            prefer_claude_cli=True  # Prefer Claude CLI direct execution
+        )
     
     # Output results
     result_dict = result.to_dict()

@@ -1,7 +1,10 @@
 # Vibe Check MCP Dependencies
 
 # Core MCP Integration
-fastmcp>=0.1.0
+fastmcp>=2.5.2
+
+# Anthropic SDK for direct API calls
+anthropic>=0.40.0
 
 # Pattern Detection & Analysis  
 regex>=2023.12.25

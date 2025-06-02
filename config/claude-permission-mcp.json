@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "claude_permission_server": {
+      "command": "echo",
+      "args": ["MCP server claude_permission_server is pre-configured for HTTP transport"],
+      "transport": {
+        "type": "http",
+        "url": "http://127.0.0.1:39999/mcp"
+      }
+    }
+  }
+} 
