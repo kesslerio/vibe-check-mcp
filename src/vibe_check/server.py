@@ -18,7 +18,6 @@ import os
 import sys
 import argparse
 from typing import Dict, Any, Optional
-from pathlib import Path
 
 try:
     from fastmcp import FastMCP
@@ -26,11 +25,11 @@ except ImportError:
     print("❌ FastMCP not installed. Install with: pip install fastmcp")
     sys.exit(1)
 
-from .tools.analyze_text import analyze_text_demo
+from .tools.demo_tool import demo_analyze_text
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
 from .tools.pr_review import review_pull_request as pr_review_tool
-from .tools.analyze_external import register_external_claude_tools
-from .tools.diagnostics import register_diagnostic_tools
+from .tools.test_claude_cli import register_claude_cli_test_tool
+from .tools.external_claude_integration import register_external_claude_tools
 
 # Configure logging
 logging.basicConfig(
@@ -38,43 +37,19 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(Path(__file__).parent.parent.parent / "logs" / "vibe_check.log")
+        logging.FileHandler('vibe_check.log')
     ]
 )
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp: FastMCP = FastMCP("Vibe Check MCP")
+mcp = FastMCP("Vibe Check MCP")
 
-# Register user diagnostic tools (essential for all users)
-register_diagnostic_tools(mcp)
+# Register Claude CLI test tools
+register_claude_cli_test_tool(mcp)
 
 # Register external Claude CLI integration tools
 register_external_claude_tools(mcp)
-
-# Register development tools only when explicitly enabled
-if os.getenv("VIBE_CHECK_DEV_MODE") == "true":
-    try:
-        # Import development test suite from tests directory
-        import sys
-        from pathlib import Path
-        
-        # Add tests directory to path for importing
-        tests_dir = Path(__file__).parent.parent.parent / "tests"
-        if str(tests_dir) not in sys.path:
-            sys.path.insert(0, str(tests_dir))
-            
-        from integration.claude_cli_tests import register_dev_tools
-        register_dev_tools(mcp)
-        logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
-        logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
-        logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
-    except ImportError as e:
-        logger.warning(f"⚠️ Dev tools not available: {e}")
-        logger.warning("   Set VIBE_CHECK_DEV_MODE=true and ensure tests/integration/claude_cli_tests.py exists")
-else:
-    logger.info("📦 User mode: Essential diagnostic tools only")
-    logger.info("   To enable dev tools: export VIBE_CHECK_DEV_MODE=true")
 
 @mcp.tool()
 def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -100,7 +75,7 @@ def analyze_text_demo(text: str, detail_level: str = "standard") -> Dict[str, An
         Vibe check analysis results with coaching recommendations
     """
     logger.info(f"Demo analysis requested for {len(text)} characters")
-    return analyze_text_demo(text, detail_level)
+    return demo_analyze_text(text, detail_level)
 
 @mcp.tool()
 def analyze_github_issue(
@@ -108,7 +83,7 @@ def analyze_github_issue(
     repository: str = "kesslerio/vibe-check-mcp", 
     analysis_mode: str = "quick",
     detail_level: str = "standard",
-    post_comment: Optional[bool] = None
+    post_comment: bool = None
 ) -> Dict[str, Any]:
     """
     VIBE CHECK ISSUE ANALYSIS - Enhanced GitHub issue vibe check with friendly coaching.
@@ -150,7 +125,7 @@ def analyze_github_issue(
     )
 
 @mcp.tool()
-async def review_pull_request(
+def review_pull_request(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
     force_re_review: bool = False,
@@ -184,7 +159,7 @@ async def review_pull_request(
         Complete vibe check analysis with GitHub integration status
     """
     logger.info(f"Comprehensive PR review requested: #{pr_number} in {repository} (mode: {analysis_mode})")
-    return await pr_review_tool(
+    return pr_review_tool(
         pr_number=pr_number,
         repository=repository,
         force_re_review=force_re_review,
@@ -200,56 +175,10 @@ def server_status() -> Dict[str, Any]:
     Returns:
         Server status, core engine validation results, and available capabilities
     """
-    # Check if dev mode is enabled
-    dev_mode_enabled = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
-    
-    # Core tools always available
-    core_tools = [
-        "analyze_text_demo - Demo anti-pattern analysis",
-        "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
-        "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
-        "claude_cli_status - Essential: Check Claude CLI availability and version",
-        "claude_cli_diagnostics - Essential: Diagnose Claude CLI timeout and recursion issues",
-        "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
-        "external_pr_review - External PR review via isolated Claude CLI",
-        "external_code_analysis - External code analysis for anti-patterns",
-        "external_issue_analysis - External issue analysis with specialized prompts",
-        "external_claude_status - Status check for external Claude CLI integration",
-        "server_status - Server status and capabilities"
-    ]
-    
-    # Development tools (environment-based)
-    dev_tools = [
-        "test_claude_cli_integration - Dev: Test Claude CLI integration via MCP",
-        "test_claude_cli_with_file_input - Dev: Test Claude CLI with file input", 
-        "test_claude_cli_comprehensive - Dev: Comprehensive test suite with multiple scenarios",
-        "test_claude_cli_mcp_permissions - Dev: Test Claude CLI with MCP permissions bypass"
-    ]
-    
-    # Build available tools list
-    available_tools = core_tools[:]
-    
-    if dev_mode_enabled:
-        available_tools.extend(dev_tools)
-        tool_mode = "🔧 Development Mode (VIBE_CHECK_DEV_MODE=true)"
-        tool_count = f"{len(core_tools)} core + {len(dev_tools)} dev tools"
-    else:
-        tool_mode = "📦 User Mode (essential tools only)"
-        tool_count = f"{len(core_tools)} essential tools"
-    
     return {
         "server_name": "Vibe Check MCP",
-        "version": "Phase 2.2 - Testing Tools Architecture (Issue #72 ✅ COMPLETE)",
+        "version": "Phase 2.1 - FastMCP Integration",
         "status": "✅ Operational",
-        "tool_mode": tool_mode,
-        "tool_count": tool_count,
-        "architecture_improvement": {
-            "issue_72_status": "✅ COMPLETE",
-            "essential_diagnostics": "✅ COMPLETE - claude_cli_status, claude_cli_diagnostics",
-            "environment_based_dev_tools": "✅ COMPLETE - VIBE_CHECK_DEV_MODE support", 
-            "legacy_cleanup": "✅ COMPLETE - Clean tool registration architecture",
-            "tool_reduction_achieved": "6 testing tools → 2 essential user diagnostics (67% reduction)"
-        },
         "core_engine_status": {
             "validation_completed": True,
             "detection_accuracy": "87.5%",
@@ -257,12 +186,23 @@ def server_status() -> Dict[str, Any]:
             "patterns_supported": 4,
             "phase_1_complete": True
         },
-        "available_tools": available_tools,
-        "dev_mode_instructions": {
-            "enable_dev_tools": "export VIBE_CHECK_DEV_MODE=true",
-            "dev_tools_location": "tests/integration/claude_cli_tests.py",
-            "user_essential_tools": ["claude_cli_status", "claude_cli_diagnostics"]
-        },
+        "available_tools": [
+            "analyze_text_demo - Demo anti-pattern analysis",
+            "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
+            "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
+            "test_claude_cli_integration - Test Claude CLI integration via MCP",
+            "test_claude_cli_availability - Check Claude CLI availability and version", 
+            "test_claude_cli_with_file_input - Test Claude CLI with file input",
+            "test_claude_cli_comprehensive - Comprehensive test suite with multiple scenarios",
+            "test_claude_cli_mcp_permissions - Test Claude CLI with MCP permissions bypass",
+            "test_claude_cli_recursion_detection - Diagnose recursion issues with Claude CLI",
+            "external_claude_analyze - External Claude CLI analysis (Issue #57 🚧 IN PROGRESS)",
+            "external_pr_review - External PR review via isolated Claude CLI",
+            "external_code_analysis - External code analysis for anti-patterns",
+            "external_issue_analysis - External issue analysis with specialized prompts",
+            "external_claude_status - Status check for external Claude CLI integration",
+            "server_status - Server status and capabilities"
+        ],
         "upcoming_tools": [
             "analyze_code - Code content analysis (Issue #23)", 
             "validate_integration - Integration approach validation (Issue #24)",
@@ -273,27 +213,21 @@ def server_status() -> Dict[str, Any]:
 
 def detect_transport_mode() -> str:
     """Auto-detect the best transport mode based on environment."""
-    logger.info(f"Detecting transport mode. CLAUDE_CODE_MODE: {os.environ.get('CLAUDE_CODE_MODE')}, MCP_CLAUDE_DESKTOP: {os.environ.get('MCP_CLAUDE_DESKTOP')}, TERM: {os.environ.get('TERM')}, /.dockerenv exists: {os.path.exists('/.dockerenv')}, RUNNING_IN_DOCKER: {os.environ.get('RUNNING_IN_DOCKER')}, MCP_TRANSPORT: {os.environ.get('MCP_TRANSPORT')}")
     # Check if running in Docker
     if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
-        logger.info("Detected Docker environment, choosing streamable-http.")
         return "streamable-http"
     
     # Check if Claude Desktop/Code is the client (stdio preferred)
     if os.environ.get("MCP_CLAUDE_DESKTOP") or os.environ.get("CLAUDE_CODE_MODE"):
-        logger.info("Detected Claude client environment, choosing stdio.")
         return "stdio"
     
     # Check for explicit transport override
     transport_override = os.environ.get("MCP_TRANSPORT")
     if transport_override in ["stdio", "streamable-http"]:
-        logger.info(f"Detected MCP_TRANSPORT override: {transport_override}, choosing {transport_override}.")
         return transport_override
     
     # Default to stdio for local development, HTTP for server deployment
-    chosen_default = "stdio" if os.environ.get("TERM") else "streamable-http"
-    logger.info(f"Using default based on TERM: {chosen_default}.")
-    return chosen_default
+    return "stdio" if os.environ.get("TERM") else "streamable-http"
 
 
 def run_server(transport: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = None):
