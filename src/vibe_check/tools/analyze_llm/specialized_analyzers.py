@@ -47,7 +47,7 @@ async def analyze_pr_llm(
     if file_changes:
         context_parts.append(f"Changed files: {', '.join(file_changes)}")
     
-    additional_context = "\\n".join(context_parts) if context_parts else None
+    additional_context = "\n".join(context_parts) if context_parts else None
     
     return await analyze_text_llm(
         content=pr_diff,
@@ -87,7 +87,7 @@ async def analyze_code_llm(
     if language:
         context_parts.append(f"Language: {language}")
     
-    additional_context = "\\n".join(context_parts) if context_parts else None
+    additional_context = "\n".join(context_parts) if context_parts else None
     
     return await analyze_text_llm(
         content=code_content,
@@ -128,7 +128,7 @@ async def analyze_issue_llm(
     if issue_labels:
         context_parts.append(f"Labels: {', '.join(issue_labels)}")
     
-    additional_context = "\\n".join(context_parts) if context_parts else None
+    additional_context = "\n".join(context_parts) if context_parts else None
     
     return await analyze_text_llm(
         content=issue_content,

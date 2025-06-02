@@ -89,8 +89,8 @@ async def main():
                 content = f.read()
             
             # Build prompt with context and content
-            prompt_parts = [f"File: {args.input_file}", f"Content to analyze:\\n{content}"]
-            prompt = "\\n\\n".join(prompt_parts)
+            prompt_parts = [f"File: {args.input_file}", f"Content to analyze:\n{content}"]
+            prompt = "\n\n".join(prompt_parts)
             
             result = await executor.execute_async(
                 prompt=prompt,

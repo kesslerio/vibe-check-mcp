@@ -44,7 +44,7 @@ async def analyze_text_llm(
     try:
         # Prepare the full content
         if additional_context:
-            full_content = f"{additional_context}\\n\\n{content}"
+            full_content = f"{additional_context}\n\n{content}"
         else:
             full_content = content
         
@@ -54,71 +54,24 @@ async def analyze_text_llm(
             temp_file_path = temp_file.name
         
         try:
-            # Use direct Claude CLI approach (like Claude Code's ! bash mode)
-            # This bypasses recursion detection by using the same execution context
-            
-            # Build task-specific system prompt
-            system_prompts = {
-                "code_analysis": "You are an expert code analyst. Review this code for potential issues, anti-patterns, security vulnerabilities, and provide improvement suggestions:",
-                "pr_review": "You are a senior software engineer conducting a code review. Analyze this pull request for code quality, security, and best practices:",
-                "issue_analysis": "You are a technical product manager. Analyze this GitHub issue for quality, clarity, and implementation considerations:",
-                "general": "Please analyze the following:"
-            }
-            
-            prompt = f"{system_prompts.get(task_type, system_prompts['general'])}\\n\\n{full_content}"
-            
-            command = [
-                "claude", "-p", "--dangerously-skip-permissions",
-                prompt
-            ]
-            
-            logger.debug(f"Executing Claude CLI directly: claude -p --dangerously-skip-permissions <prompt>")
-            
-            # Execute Claude CLI directly (like ! bash mode)
-            start_time = time.time()
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
+            # Use the shared Claude CLI executor to properly handle environment isolation
+            result = await analyze_content_async(
+                content=full_content,
+                task_type=task_type,
+                timeout_seconds=timeout_seconds
             )
             
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout_seconds + 10  # Allow extra time for process overhead
+            # Convert ClaudeCliResult to ExternalClaudeResponse
+            return ExternalClaudeResponse(
+                success=result.success,
+                output=result.output,
+                error=result.error,
+                exit_code=result.exit_code or 0,
+                execution_time_seconds=result.execution_time,
+                task_type=result.task_type,
+                timestamp=time.time(),
+                command_used=result.command_used
             )
-            
-            execution_time = time.time() - start_time
-            
-            if process.returncode == 0:
-                # Claude CLI succeeded - return the direct output
-                output_text = stdout.decode('utf-8').strip()
-                logger.info(f"Claude CLI completed successfully in {execution_time:.2f}s")
-                
-                return ExternalClaudeResponse(
-                    success=True,
-                    output=output_text,
-                    error=None,
-                    exit_code=0,
-                    execution_time_seconds=execution_time,
-                    task_type=task_type,
-                    timestamp=time.time(),
-                    command_used="claude -p --dangerously-skip-permissions"
-                )
-            else:
-                # Handle error
-                error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
-                logger.error(f"Claude CLI failed: {error_msg}")
-                
-                return ExternalClaudeResponse(
-                    success=False,
-                    error=f"Claude CLI error: {error_msg}",
-                    exit_code=process.returncode,
-                    execution_time_seconds=execution_time,
-                    task_type=task_type,
-                    timestamp=time.time(),
-                    command_used="claude -p --dangerously-skip-permissions"
-                )
         
         finally:
             # Clean up temporary file
@@ -128,18 +81,6 @@ async def analyze_text_llm(
             except Exception:
                 pass
                 
-    except asyncio.TimeoutError:
-        logger.warning(f"External Claude analysis timed out after {timeout_seconds + 10}s")
-        return ExternalClaudeResponse(
-            success=False,
-            error=f"Analysis timed out after {timeout_seconds + 10} seconds",
-            exit_code=-1,
-            execution_time_seconds=timeout_seconds + 10,
-            task_type=task_type,
-            timestamp=time.time(),
-            command_used="claude -p --dangerously-skip-permissions (timeout)"
-        )
-        
     except Exception as e:
         logger.error(f"Error in external Claude analysis: {e}")
         return ExternalClaudeResponse(
@@ -149,5 +90,5 @@ async def analyze_text_llm(
             execution_time_seconds=0.0,
             task_type=task_type,
             timestamp=time.time(),
-            command_used="claude -p --dangerously-skip-permissions (error)"
+            command_used="claude_cli_executor"
         )
