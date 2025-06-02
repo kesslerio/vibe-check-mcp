@@ -337,7 +337,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 process = await asyncio.create_subprocess_exec(
                     "claude", "--version",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
                 )
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10)
                 claude_available = process.returncode == 0
@@ -351,7 +352,8 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                 process = await asyncio.create_subprocess_exec(
                     "python3", "--version",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=asyncio.subprocess.DEVNULL  # Fix: Isolate stdin like Node.js spawn
                 )
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
                 python_available = process.returncode == 0
