@@ -28,7 +28,7 @@ except ImportError:
 
 from .tools.analyze_text import analyze_text_demo
 from .tools.analyze_issue import analyze_issue as analyze_github_issue_tool
-from .tools.review_pr import review_pull_request as pr_review_tool
+from .tools.pr_review import review_pull_request as pr_review_tool
 from .tools.test_claude_cli import register_claude_cli_test_tool
 from .tools.analyze_external import register_external_claude_tools
 
