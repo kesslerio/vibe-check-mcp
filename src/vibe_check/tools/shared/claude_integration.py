@@ -196,13 +196,13 @@ Promote good engineering practices through constructive analysis.""",
             List of command line arguments
         """
         # Enhanced task configuration with comprehensive tool allowlists
-        # Removed restrictive max turns limits to allow thorough analysis
+        # NO MAX TURNS LIMIT - Let Claude analyze as thoroughly as needed
         if task_type == "general":
-            max_turns = "5"  # Generous limit for iterative analysis
+            max_turns = None  # No limit
             allowed_tools = "Read,Write"
             
         elif task_type == "issue_analysis":
-            max_turns = "10"  # Increased for thorough analysis
+            max_turns = None  # No limit
             allowed_tools = ",".join([
                 # Basic file operations
                 "Read", "Write",
@@ -226,7 +226,7 @@ Promote good engineering practices through constructive analysis.""",
             ])
             
         elif task_type == "pr_review":
-            max_turns = "10"  # Increased for comprehensive review
+            max_turns = None  # No limit
             allowed_tools = ",".join([
                 # Basic file and code operations
                 "Read", "Write", "Grep", "Glob",
@@ -252,7 +252,7 @@ Promote good engineering practices through constructive analysis.""",
             ])
             
         elif task_type == "code_analysis":
-            max_turns = "8"  # Increased for thorough code review
+            max_turns = None  # No limit
             allowed_tools = ",".join([
                 "Read", "Grep", "Glob",
                 # Clear thought tools for code analysis
@@ -267,7 +267,7 @@ Promote good engineering practices through constructive analysis.""",
             ])
             
         elif task_type == "comprehensive_review":  # New task type for thorough analysis
-            max_turns = "15"  # Maximum for deep analysis
+            max_turns = None  # No limit
             allowed_tools = ",".join([
                 # All file operations
                 "Read", "Write", "Grep", "Glob",
@@ -299,16 +299,20 @@ Promote good engineering practices through constructive analysis.""",
                 "mcp__tavily-mcp__tavily-extract"
             ])
         else:
-            max_turns = "5"  # Generous default instead of restrictive
+            max_turns = None  # No limit
             allowed_tools = "Read,Write"  # Basic operations
         
         # Start with base args following SDK best practices
         # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
         args = [
-            '--max-turns', max_turns,  # Context-appropriate turn limit
             # NOTE: Removed --output-format json and --verbose to get clean text output
             # The JSON format was returning session metadata instead of analysis content
         ]
+        
+        # Add max turns only if specified (None = no limit)
+        if max_turns is not None:
+            args.extend(['--max-turns', str(max_turns)])
+        # If max_turns is None, don't add the flag at all - Claude CLI will run unlimited
         
         # CRITICAL: Prevent recursive MCP calls by using empty MCP config
         # This prevents infinite loops and hanging (Issue #94)
