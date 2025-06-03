@@ -181,3 +181,10 @@ CLAUDE*.md
 
 # Cloned repositories
 claude-code-mcp/
+
+# MCP config
+mcp-config.json
+mcp-config-minimal.json
+
+# MCP logs
+mcp-logs/

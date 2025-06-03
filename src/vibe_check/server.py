@@ -216,6 +216,7 @@ def server_status() -> Dict[str, Any]:
         "analyze_code_llm - Claude CLI code analysis for anti-patterns",
         "analyze_issue_llm - Claude CLI issue analysis with specialized prompts",
         "analyze_github_issue_llm - GitHub issue vibe check with Claude CLI reasoning",
+        "analyze_github_pr_llm - GitHub PR vibe check with comprehensive Claude CLI analysis",
         "analyze_llm_status - Status check for Claude CLI integration",
         "server_status - Server status and capabilities"
     ]
