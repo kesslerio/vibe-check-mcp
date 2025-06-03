@@ -32,6 +32,8 @@ docs/review-scripts/
 docs/scripts/
 docs/strategy/
 docs/issues/
+docs/case-studies/
+docs/technical/
 
 # PyInstaller
 *.manifest
