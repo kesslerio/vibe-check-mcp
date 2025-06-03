@@ -12,10 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release automation script (scripts/release.sh)
 - Version utilities in src/vibe_check/utils/version_utils.py
 - Comprehensive versioning guidelines in CLAUDE.md
+- CONTRIBUTING.md with detailed contribution guidelines
+- Clear "Who is it for" section targeting decision makers at all levels
 
 ### Changed
 - Updated LICENSE from MIT to Apache 2.0
 - Refactored version management to use centralized VERSION file
+- **BREAKING**: Renamed docs/Product_Requirements_Document.md → docs/PRD.md
+- **BREAKING**: Renamed docs/Technical_Implementation_Guide.md → docs/TECHNICAL.md
+- Completely revamped README.md with prevention-focused value proposition
+- Updated messaging to emphasize educational coaching and systematic failure prevention
+- Improved tool descriptions with specific use cases and real-world impact data
 
 ## [0.1.0] - 2025-01-06
 
