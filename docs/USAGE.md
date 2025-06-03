@@ -1,6 +1,8 @@
 # Vibe Check MCP Usage Guide
 
-Complete guide for using the Vibe Check MCP framework with crystal clear LLM vs no-LLM tool distinction for comprehensive engineering analysis and friendly coaching guidance.
+**Stop building the wrong thing before you waste months on it.**
+
+Complete guide for using Vibe Check MCP to catch engineering anti-patterns at decision points - with crystal clear LLM vs no-LLM tool distinction for fast feedback or deep educational coaching.
 
 ## Quick Start
 
