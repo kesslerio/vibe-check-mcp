@@ -335,9 +335,25 @@ class PyGitHubImplementation(GitHubOperations):
             repo = client.get_repo(repository)
             pr = repo.get_pull(pr_number)
             
-            # Get the diff URL and fetch it
+            # Get the diff URL and fetch it with authentication
             import requests
-            diff_response = requests.get(pr.diff_url)
+            from .github_helpers import get_github_token
+            
+            token = get_github_token()
+            if not token:
+                return GitHubOperationResult(
+                    success=False,
+                    error="No GitHub token available for diff fetching",
+                    implementation=self.implementation_name,
+                    execution_time=time.time() - start_time
+                )
+            
+            headers = {
+                'Authorization': f'token {token}',
+                'Accept': 'application/vnd.github.v3.diff'
+            }
+            
+            diff_response = requests.get(pr.diff_url, headers=headers)
             if diff_response.status_code == 200:
                 diff_content = diff_response.text
                 
