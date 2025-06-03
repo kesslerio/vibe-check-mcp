@@ -28,6 +28,22 @@ Vibe Check MCP detects **systematic engineering anti-patterns** that lead to tec
 
 **Prerequisites**: You must have [Claude Code](https://claude.ai) installed to use this MCP server.
 
+### 🚀 One-Command Installation (Recommended)
+
+```bash
+# Single command installation with automatic Claude Code integration
+curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
+```
+
+This script will:
+- ✅ Check prerequisites (Python 3.8+, git, pip)
+- ✅ Clone and install vibe-check-mcp
+- ✅ Configure Claude Code integration automatically
+- ✅ Create sample CLAUDE.md for your projects
+- ✅ Verify installation
+
+### 📦 Manual Installation
+
 Get running in 5 minutes:
 
 ```bash
@@ -267,6 +283,83 @@ Despite directory isolation, our tools still follow project engineering guidelin
 - We explicitly read and include CLAUDE.md content in all prompts
 - Project-specific anti-pattern detection rules are embedded in system prompts
 - Engineering guidelines are automatically applied to all analysis
+
+## 🔌 Recommended MCP Tools (Optional)
+
+Vibe Check MCP works great on its own, but integrates beautifully with other MCP tools for enhanced capabilities. All tools listed below are **optional** and have **automatic fallbacks** when not available.
+
+### 🧠 Enhanced Reasoning
+**[Clear Thought Server](https://github.com/cozysuite/clear-thought-server)**
+- **Purpose**: Systematic reasoning, decision frameworks, mental models
+- **Benefits**: Structured analysis, first-principles thinking, collaborative reasoning
+- **Fallback**: Basic analysis without systematic reasoning tools
+- **Installation**: `npm install -g clear-thought-server`
+
+### 🔍 Web Research & Documentation
+**[Brave Search MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search)**
+- **Purpose**: Web search for research, documentation lookup, best practices
+- **Benefits**: Real-time research during analysis, standard API discovery
+- **Fallback**: Manual research recommendations
+- **Installation**: `npm install @modelcontextprotocol/server-brave-search`
+
+**[Tavily MCP](https://github.com/modelcontextprotocol/servers/tree/main/src/tavily)**
+- **Purpose**: Advanced web search and content extraction
+- **Benefits**: Comprehensive research, documentation analysis
+- **Fallback**: Basic web research via fetch/curl commands
+- **Installation**: `npm install @modelcontextprotocol/server-tavily`
+
+### 🐙 GitHub Integration
+**[GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github)**
+- **Purpose**: Native GitHub API operations, issue management, PR automation
+- **Benefits**: Seamless GitHub workflow integration, advanced automation
+- **Fallback**: Direct PyGithub library usage (already integrated)
+- **Installation**: `npm install @modelcontextprotocol/server-github`
+
+### 📚 Documentation & Knowledge Base
+**[Crawl4AI RAG](https://github.com/unclecode/crawl4ai)**
+- **Purpose**: Documentation crawling, knowledge base building, RAG queries
+- **Benefits**: Project-specific documentation research, API reference lookup
+- **Fallback**: Manual documentation lookup and web searches
+- **Installation**: `pip install crawl4ai`
+
+### 🎯 Installation Priority
+
+**Essential (Built-in):**
+- ✅ Vibe Check MCP - Anti-pattern detection and coaching
+- ✅ PyGithub - GitHub integration with automatic fallback
+
+**Highly Recommended:**
+1. **GitHub MCP** - Enhanced GitHub workflow automation
+2. **Clear Thought Server** - Systematic reasoning for complex issues
+
+**Nice to Have:**
+3. **Brave Search MCP** - Real-time research capabilities
+4. **Tavily MCP** - Advanced content analysis and extraction
+5. **Crawl4AI RAG** - Project documentation integration
+
+### 🔧 Automatic Fallback System
+
+Our engineering approach ensures graceful degradation:
+
+```python
+# Example: Web research with fallback
+try:
+    # Try Brave Search MCP
+    research_results = await brave_search("API best practices")
+except:
+    # Fallback to Tavily MCP
+    try:
+        research_results = await tavily_search("API best practices")
+    except:
+        # Fallback to manual recommendation
+        research_results = "💡 Research API best practices manually at docs.example.com"
+```
+
+**Benefits:**
+- ✅ **Always Functional**: Core analysis works without optional tools
+- ✅ **Progressive Enhancement**: Additional tools enhance capabilities
+- ✅ **User Choice**: Install only what you need
+- ✅ **No Lock-in**: Switch between tools seamlessly
 
 ## 🔗 Claude Code Integration (Detailed Setup)
 
@@ -822,13 +915,15 @@ This project demonstrates anti-pattern prevention in its own development:
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
 
-**Why MIT License?**
+**Why Apache 2.0 License?**
 - ✅ **Open Source Friendly**: Encourages community contributions and adoption
-- ✅ **Commercial Use**: Allows integration into commercial projects
-- ✅ **Minimal Restrictions**: Simple, permissive license that's developer-friendly
-- ✅ **MCP Ecosystem**: Aligns with Model Context Protocol community standards
+- ✅ **Commercial Use**: Allows integration into commercial projects and enterprise environments
+- ✅ **Patent Protection**: Provides explicit patent grants and protection for users
+- ✅ **Contributor Protection**: Clear contribution guidelines and liability protection
+- ✅ **Enterprise Ready**: Trusted by enterprise organizations for legal compliance
+- ✅ **MCP Ecosystem**: Professional license suitable for serious engineering tools
 
 ## 📋 Summary
 
