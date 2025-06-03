@@ -294,11 +294,15 @@ class PyGitHubImplementation(GitHubOperations):
         
         try:
             from .github_helpers import post_github_comment
-            success = post_github_comment(issue_number, repository, comment_body)
+            success, comment_url = post_github_comment(issue_number, repository, comment_body)
+            
+            data = {"comment_posted": success}
+            if comment_url:
+                data["comment_url"] = comment_url
             
             return GitHubOperationResult(
                 success=success,
-                data={"comment_posted": success},
+                data=data,
                 implementation=self.implementation_name,
                 execution_time=time.time() - start_time
             )

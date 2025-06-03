@@ -269,6 +269,10 @@ Use friendly, coaching language that helps developers learn rather than intimida
             comment_result = github_ops.post_issue_comment(repository, issue_number, comment_body)
             response["comment_posted"] = comment_result.success
             
+            if comment_result.success and comment_result.data.get("comment_url"):
+                response["comment_url"] = comment_result.data["comment_url"]
+                response["user_message"] = f"✅ Analysis posted to GitHub: {comment_result.data['comment_url']}"
+                
             if not comment_result.success:
                 response["comment_error"] = f"Failed to post comment: {comment_result.error}"
         
@@ -440,8 +444,13 @@ Use friendly, coaching language that helps developers learn rather than intimida
                 if client:
                     repo = client.get_repo(repository)
                     pr_obj = repo.get_pull(pr_number)
-                    pr_obj.create_review(body=review_body, event="COMMENT")
+                    review = pr_obj.create_review(body=review_body, event="COMMENT")
                     response["comment_posted"] = True
+                    
+                    # Build PR review URL
+                    review_url = f"https://github.com/{repository}/pull/{pr_number}#pullrequestreview-{review.id}"
+                    response["comment_url"] = review_url
+                    response["user_message"] = f"✅ Review posted to GitHub: {review_url}"
                 else:
                     response["comment_error"] = "GitHub client not available"
             except Exception as e:
