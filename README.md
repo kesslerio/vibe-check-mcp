@@ -1,8 +1,8 @@
 # 🧭 Vibe Check MCP
 
-**Stop building the wrong thing before you waste months on it.**
+**Your AI coding safety net - because getting 90% done and then stuck for weeks sucks.**
 
-Vibe Check MCP is an engineering anti-pattern detection system that catches systematic failures at decision points - when you're planning integrations, reviewing PRs, or writing technical documents - and explains why they're problematic using real-world case studies.
+Vibe Check MCP stops you from building yourself into a corner with AI-generated code. It's like having a senior developer looking over your shoulder, catching the expensive mistakes before you waste days on unfixable problems.
 
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
@@ -15,14 +15,14 @@ Vibe Check MCP is an engineering anti-pattern detection system that catches syst
 
 **Ever spend weeks building something, only to discover there was a simple API call for that?**
 
-You're not alone. Vibe Check MCP is specifically designed for **vibe coders** - people who love AI coding tools but need a sanity check to avoid the overengineering traps that AI often creates.
+You're not alone. Vibe Check is specifically designed for **vibe coders** - people who love AI coding tools but need a sanity check to avoid the overengineering traps that AI often creates.
 
 ### **If These Sound Familiar:**
 
-🔥 **"I'm 80% done but keep hitting new errors that set me back for days"**  
-🔥 **"After a few weeks, the cracks start to show and I get frustrated"**  
+🔥 **"I spent $417 using Claude to build a word game, only to discover my AI-generated code had no server-side validation - it got DDOS'd with the entire Bee Movie script"**   
 🔥 **"LLM coded an entire iOS app database in a CSV file instead of Core Data - I had no idea!"**  
-🔥 **"Each AI fix creates new problems somewhere else"**
+🔥 **"Just plug the error back into ChatGPT until the code it generates oscillates between two error states forever"** 
+🔥 **"People are already losing touch with what the code they are writing is actually doing. AI can help get code out the door faster, but when it breaks it can be a lot harder to debug and fix"** 
 
 ### **You're Our Target User If You:**
 
@@ -33,10 +33,12 @@ You're not alone. Vibe Check MCP is specifically designed for **vibe coders** - 
 - **⚡ Value Speed Over Perfection** - Prefer working solutions over architecturally perfect ones
 
 ### **Your Real Pain Points:**
-- **AI Overconfidence**: AI creates complex solutions with confidence, but you can't tell if they're overengineered
-- **Knowledge Gaps**: Don't know enough about libraries/frameworks to spot when AI is reinventing wheels
-- **Doom Loop Frustration**: Getting "almost there" then spending days fixing unfixable problems
-- **Hidden Complexity**: AI writes code you don't fully understand, leading to maintenance nightmares
+- **Security Blindspots**: AI confidently generates code missing critical validations (like the $417 game that got hacked)
+- **Doom Loop Oscillation**: Code changes bounce between error states endlessly, wasting hours
+- **Outdated Solutions**: AI suggests deprecated practices instead of current best approaches
+- **Loss of Understanding**: AI writes code you can't debug when it inevitably breaks
+- **Mixed Language Syntax**: AI imports Go libraries in Rust code or other nonsensical combinations
+- **Overconfident Wrong Answers**: AI sounds authoritative about completely incorrect information
 
 **Vibe Check MCP is your AI coding safety net - keeping the fun of vibe coding while avoiding the expensive traps.**
 
