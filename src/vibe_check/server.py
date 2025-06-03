@@ -51,8 +51,10 @@ register_diagnostic_tools(mcp)
 # Register LLM-powered analysis tools
 register_llm_analysis_tools(mcp)
 
-# Register development tools only when explicitly enabled
-if os.getenv("VIBE_CHECK_DEV_MODE") == "true":
+# Temporarily disable dev tools to test if they're causing the crash
+# Register development tools only when explicitly enabled via MCP config
+dev_mode_override = os.getenv("VIBE_CHECK_DEV_MODE_OVERRIDE") == "true"
+if dev_mode_override:
     try:
         # Import development test suite from tests directory
         import sys
@@ -78,7 +80,8 @@ if os.getenv("VIBE_CHECK_DEV_MODE") == "true":
         logger.warning("   Set VIBE_CHECK_DEV_MODE=true and ensure tests/integration/claude_cli_tests.py exists")
 else:
     logger.info("📦 User mode: Essential diagnostic tools only")
-    logger.info("   To enable dev tools: export VIBE_CHECK_DEV_MODE=true")
+    logger.info("   Dev tools disabled to prevent import conflicts in Claude Code")
+    logger.info("   To enable dev tools: set VIBE_CHECK_DEV_MODE_OVERRIDE=true")
 
 @mcp.tool()
 def analyze_text_nollm(text: str, detail_level: str = "standard") -> Dict[str, Any]:
@@ -316,7 +319,7 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         
         if transport_mode == "stdio":
             logger.info("🔗 Using stdio transport for Claude Desktop/Code integration")
-            mcp.run()
+            mcp.run()  # Uses stdio by default
         else:
             # HTTP transport for Docker/server deployment
             server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")

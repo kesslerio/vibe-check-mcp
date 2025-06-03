@@ -337,89 +337,17 @@ async def analyze_github_pr_llm(
         
         pr = pr_result.data
         
-        # Get PR diff for analysis - use GitHub API endpoint directly with auth
-        # This fixes the 404 error for private repositories
-        try:
-            owner, repo_name = repository.split('/')
-            
-            # Use GitHub API with proper authentication
-            import requests
-            import os
-            
-            github_token = os.environ.get('GITHUB_TOKEN')
-            if not github_token:
-                return {
-                    "status": "error",
-                    "error": "GitHub token not available for diff fetching",
-                    "pr_number": pr_number,
-                    "repository": repository
-                }
-            
-            # Use GitHub API v3 diff endpoint with proper headers
-            api_url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}"
-            headers = {
-                'Authorization': f'token {github_token}',
-                'Accept': 'application/vnd.github.v3.diff',
-                'User-Agent': 'vibe-check-mcp'
+        # Get PR diff for analysis using the fixed abstraction layer
+        diff_result = github_ops.get_pull_request_diff(repository, pr_number)
+        if not diff_result.success:
+            return {
+                "status": "error",
+                "error": f"Failed to fetch PR diff: {diff_result.error}",
+                "pr_number": pr_number,
+                "repository": repository
             }
-            
-            diff_response = requests.get(api_url, headers=headers, timeout=30)
-            
-            if diff_response.status_code == 200:
-                pr_diff = diff_response.text
-            else:
-                # Fallback to abstraction layer
-                diff_result = github_ops.get_pull_request_diff(repository, pr_number)
-                if not diff_result.success:
-                    return {
-                        "status": "error",
-                        "error": f"Failed to fetch diff: HTTP {diff_response.status_code} - {diff_response.text[:200]}",
-                        "pr_number": pr_number,
-                        "repository": repository
-                    }
-                pr_diff = diff_result.data
-                
-        except Exception as e:
-            # Try gh CLI as fallback if available
-            logger.warning(f"Direct API diff fetch failed: {e}, trying gh CLI fallback")
-            try:
-                import subprocess
-                
-                # Try using gh CLI which many users have configured
-                gh_result = subprocess.run([
-                    'gh', 'pr', 'diff', str(pr_number), '--repo', repository
-                ], capture_output=True, text=True, timeout=30)
-                
-                if gh_result.returncode == 0 and gh_result.stdout:
-                    pr_diff = gh_result.stdout
-                    logger.info("Successfully fetched PR diff using gh CLI fallback")
-                else:
-                    # Final fallback to original method
-                    logger.warning(f"gh CLI also failed, falling back to abstraction layer")
-                    diff_result = github_ops.get_pull_request_diff(repository, pr_number)
-                    if not diff_result.success:
-                        return {
-                            "status": "error",
-                            "error": f"Failed to fetch PR diff: {diff_result.error}. Tried: Direct API, gh CLI, PyGithub",
-                            "pr_number": pr_number,
-                            "repository": repository,
-                            "troubleshooting": "Check GitHub token permissions or run 'gh auth status'"
-                        }
-                    pr_diff = diff_result.data
-                    
-            except (subprocess.TimeoutExpired, FileNotFoundError) as gh_error:
-                # Final fallback to original method
-                logger.warning(f"gh CLI not available: {gh_error}, falling back to abstraction layer")
-                diff_result = github_ops.get_pull_request_diff(repository, pr_number)
-                if not diff_result.success:
-                    return {
-                        "status": "error",
-                        "error": f"Failed to fetch PR diff: {diff_result.error}",
-                        "pr_number": pr_number,
-                        "repository": repository,
-                        "troubleshooting": "Install gh CLI or set GITHUB_TOKEN environment variable"
-                    }
-                pr_diff = diff_result.data
+        
+        pr_diff = diff_result.data
         
         # Build comprehensive PR context
         pr_context = f"""# GitHub Pull Request Analysis

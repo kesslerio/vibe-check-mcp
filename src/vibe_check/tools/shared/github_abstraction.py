@@ -312,7 +312,7 @@ class PyGitHubImplementation(GitHubOperations):
             )
     
     def get_pull_request_diff(self, repository: str, pr_number: int) -> GitHubOperationResult:
-        """Get PR diff using PyGithub."""
+        """Get PR diff using proper GitHub API v3 endpoint (fixes private repo access)."""
         if not self.available:
             return GitHubOperationResult(
                 success=False,
@@ -324,19 +324,6 @@ class PyGitHubImplementation(GitHubOperations):
         start_time = time.time()
         
         try:
-            client = self.get_client()
-            if not client:
-                return GitHubOperationResult(
-                    success=False,
-                    error="GitHub authentication failed",
-                    implementation=self.implementation_name
-                )
-            
-            repo = client.get_repo(repository)
-            pr = repo.get_pull(pr_number)
-            
-            # Get the diff URL and fetch it with authentication
-            import requests
             from .github_helpers import get_github_token
             
             token = get_github_token()
@@ -348,12 +335,17 @@ class PyGitHubImplementation(GitHubOperations):
                     execution_time=time.time() - start_time
                 )
             
+            # Use GitHub API v3 with proper diff Accept header (works for private repos)
+            import requests
+            api_url = f"https://api.github.com/repos/{repository}/pulls/{pr_number}"
             headers = {
                 'Authorization': f'token {token}',
-                'Accept': 'application/vnd.github.v3.diff'
+                'Accept': 'application/vnd.github.v3.diff',
+                'User-Agent': 'vibe-check-mcp'
             }
             
-            diff_response = requests.get(pr.diff_url, headers=headers)
+            diff_response = requests.get(api_url, headers=headers, timeout=30)
+            
             if diff_response.status_code == 200:
                 diff_content = diff_response.text
                 
@@ -363,10 +355,24 @@ class PyGitHubImplementation(GitHubOperations):
                     implementation=self.implementation_name,
                     execution_time=time.time() - start_time
                 )
+            elif diff_response.status_code == 404:
+                return GitHubOperationResult(
+                    success=False,
+                    error=f"PR #{pr_number} not found in {repository}. Check PR number and repository access.",
+                    implementation=self.implementation_name,
+                    execution_time=time.time() - start_time
+                )
+            elif diff_response.status_code == 401:
+                return GitHubOperationResult(
+                    success=False,
+                    error="GitHub authentication failed. Check GITHUB_TOKEN permissions.",
+                    implementation=self.implementation_name,
+                    execution_time=time.time() - start_time
+                )
             else:
                 return GitHubOperationResult(
                     success=False,
-                    error=f"Failed to fetch diff: HTTP {diff_response.status_code}",
+                    error=f"GitHub API error: HTTP {diff_response.status_code} - {diff_response.text[:200]}",
                     implementation=self.implementation_name,
                     execution_time=time.time() - start_time
                 )
@@ -374,7 +380,7 @@ class PyGitHubImplementation(GitHubOperations):
         except Exception as e:
             return GitHubOperationResult(
                 success=False,
-                error=str(e),
+                error=f"Error fetching PR diff: {str(e)}",
                 implementation=self.implementation_name,
                 execution_time=time.time() - start_time
             )
