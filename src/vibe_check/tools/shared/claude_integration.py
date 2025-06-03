@@ -305,7 +305,7 @@ Promote good engineering practices through constructive analysis.""",
         task_type: str = "general"
     ) -> ClaudeCliResult:
         """
-        Execute Claude CLI synchronously with recursive call prevention.
+        Execute Claude CLI synchronously with directory isolation for recursion prevention.
         
         Args:
             prompt: The prompt to send to Claude CLI
@@ -316,21 +316,8 @@ Promote good engineering practices through constructive analysis.""",
         """
         start_time = time.time()
         
-        # CRITICAL: Check if we're in MCP context to prevent recursion
-        if self._is_running_in_mcp_context():
-            logger.warning("🚫 Preventing recursive Claude CLI call - running in MCP context")
-            return ClaudeCliResult(
-                success=False,
-                error="Recursive Claude CLI call prevented - already running in MCP context",
-                exit_code=-1,
-                execution_time=time.time() - start_time,
-                command_used="recursive_prevention",
-                task_type=task_type,
-                sdk_metadata={
-                    "prevention_reason": "mcp_context_detected",
-                    "recursion_prevention": True
-                }
-            )
+        # NOTE: Recursion prevention now handled by directory isolation
+        # Claude CLI runs from home directory which doesn't have vibe-check MCP config
         
         logger.info(f"Executing Claude CLI directly for task: {task_type}")
         
@@ -359,12 +346,17 @@ Promote good engineering practices through constructive analysis.""",
             command = [self.claude_cli_path] + claude_args
             logger.debug(f'[Debug] Running command: {" ".join(command)}')
             
+            # Use home directory to avoid loading project's MCP config that includes vibe-check
+            # This prevents recursion by ensuring Claude CLI doesn't load the vibe-check MCP server
+            isolation_dir = os.path.expanduser("~")
+            logger.debug(f'[Debug] Running Claude CLI from isolation directory: {isolation_dir}')
+            
             result = subprocess.run(
                 command,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
-                cwd=os.getcwd(),
+                cwd=isolation_dir,
                 env=clean_env,
                 stdin=subprocess.DEVNULL
             )
@@ -440,7 +432,7 @@ Promote good engineering practices through constructive analysis.""",
         task_type: str = "general"
     ) -> ClaudeCliResult:
         """
-        Execute Claude CLI asynchronously.
+        Execute Claude CLI asynchronously with directory isolation for recursion prevention.
         
         Args:
             prompt: The prompt to send to Claude CLI
@@ -451,21 +443,8 @@ Promote good engineering practices through constructive analysis.""",
         """
         start_time = time.time()
         
-        # CRITICAL: Check if we're in MCP context to prevent recursion
-        if self._is_running_in_mcp_context():
-            logger.warning("🚫 Preventing recursive Claude CLI call - running in MCP context")
-            return ClaudeCliResult(
-                success=False,
-                error="Recursive Claude CLI call prevented - already running in MCP context",
-                exit_code=-1,
-                execution_time=time.time() - start_time,
-                command_used="recursive_prevention",
-                task_type=task_type,
-                sdk_metadata={
-                    "prevention_reason": "mcp_context_detected",
-                    "recursion_prevention": True
-                }
-            )
+        # NOTE: Recursion prevention now handled by directory isolation
+        # Claude CLI runs from home directory which doesn't have vibe-check MCP config
         
         logger.info(f"Executing Claude CLI async for task: {task_type}")
         
@@ -476,12 +455,18 @@ Promote good engineering practices through constructive analysis.""",
             
             logger.debug(f"Executing Claude CLI directly: {' '.join(command)}")
             
+            # Use home directory to avoid loading project's MCP config that includes vibe-check
+            # This prevents recursion by ensuring Claude CLI doesn't load the vibe-check MCP server
+            isolation_dir = os.path.expanduser("~")
+            logger.debug(f'[Debug] Running Claude CLI async from isolation directory: {isolation_dir}')
+            
             # Execute Claude CLI directly
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                stdin=asyncio.subprocess.DEVNULL
+                stdin=asyncio.subprocess.DEVNULL,
+                cwd=isolation_dir
             )
             
             stdout, stderr = await asyncio.wait_for(
