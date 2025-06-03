@@ -110,6 +110,38 @@ claude mcp add-json vibe-check '{
 ⚠️ **CRITICAL**: Never use `-s user` flag with MCP servers as it causes infinite recursion and Claude Code timeouts. This project only works in Claude Code SDK (non-interactive) mode. See [Claude Code SDK docs](https://docs.anthropic.com/en/docs/claude-code/sdk) for details.
 ```
 
+### 🔐 GitHub Configuration
+
+**For Private Repository Support:**
+
+GitHub integration works automatically for public repositories. For private repositories, you need proper authentication:
+
+```bash
+# Option 1: GitHub Personal Access Token (Recommended)
+export GITHUB_TOKEN="ghp_your_token_here"
+# Or add to your shell profile (~/.zshrc, ~/.bashrc)
+
+# Option 2: GitHub CLI Authentication (Fallback)
+gh auth login
+# Vibe Check MCP will use gh CLI tokens as fallback if direct token fails
+
+# Option 3: Environment Variable in MCP Config
+claude mcp add-json vibe-check '{
+  "env": {
+    "GITHUB_TOKEN": "ghp_your_token_here"
+  }
+}'
+```
+
+**GitHub Token Permissions Required:**
+- ✅ `repo` (for private repository access)
+- ✅ `read:org` (for organization repositories)
+
+**Troubleshooting Private Repository Issues:**
+- **"HTTP 404" errors on private repos**: Check GitHub token has `repo` scope
+- **"Authentication failed"**: Verify token is valid with `gh auth status`
+- **No token found**: Set `GITHUB_TOKEN` environment variable or use `gh auth login`
+
 ## 🚀 Usage Examples
 
 ### **Natural Language Commands**
