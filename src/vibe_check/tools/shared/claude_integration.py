@@ -218,9 +218,9 @@ Promote good engineering practices through constructive analysis.""",
         # Start with base args following SDK best practices
         # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
         args = [
-            '--output-format', 'json',  # SDK recommended for programmatic usage
             '--max-turns', max_turns,  # Context-appropriate turn limit
-            '--verbose'  # Enable debugging output
+            # NOTE: Removed --output-format json and --verbose to get clean text output
+            # The JSON format was returning session metadata instead of analysis content
         ]
         
         # CRITICAL: Prevent recursive MCP calls by using empty MCP config
