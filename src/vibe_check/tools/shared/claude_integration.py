@@ -163,7 +163,7 @@ Promote good engineering practices through constructive analysis.""",
     
     def _get_claude_args(self, prompt: str, task_type: str) -> List[str]:
         """
-        Build Claude CLI arguments.
+        Build Claude CLI arguments following SDK best practices.
         
         Args:
             prompt: The prompt to send to Claude
@@ -172,15 +172,23 @@ Promote good engineering practices through constructive analysis.""",
         Returns:
             List of command line arguments
         """
-        # Use the same pattern as claude-code-mcp: --dangerously-skip-permissions -p prompt
-        args = ['--dangerously-skip-permissions', '-p', prompt]
+        # Start with base args following SDK best practices
+        args = [
+            '--dangerously-skip-permissions',  # Skip permission prompts
+            '-p',  # Print mode (non-interactive)
+            '--output-format', 'json',  # SDK recommended for programmatic usage
+            '--max-turns', '1',  # Force single-turn to prevent hanging
+            '--verbose'  # Enable debugging output
+        ]
         
         # Add system prompt if we have specialized task types
         system_prompt = self._get_system_prompt(task_type)
         if task_type != "general" and system_prompt != self.SYSTEM_PROMPTS["general"]:
             # Add system prompt as additional context in the prompt itself
             enhanced_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
-            args = ['--dangerously-skip-permissions', '-p', enhanced_prompt]
+            args.append(enhanced_prompt)
+        else:
+            args.append(prompt)
         
         logger.debug(f'[Debug] Claude CLI args: {args}')
         return args
