@@ -127,7 +127,7 @@ class PatternDetector:
       }
     ],
     "educational_content": {
-      "why_problematic": "Building custom infrastructure before validating standard approaches led to 2+ years of technical debt in the Cognee case study.",
+      "why_problematic": "Building custom infrastructure before validating standard approaches led to wasted development time in the Cognee case study.",
       "case_study": "cognee_integration_failure",
       "prevention_checklist": [
         "Research official SDK documentation",
@@ -269,10 +269,10 @@ class CaseStudyManager:
         """Retrieve relevant real-world case study"""
         case_studies = {
             "infrastructure_without_implementation": {
-                "title": "Cognee Integration Failure", 
-                "timeline": "2+ years of technical debt",
+                "title": "Cognee Integration Learning Experience", 
+                "timeline": "Several days of development time",
                 "root_cause": "Built custom HTTP servers instead of using cognee.add() → cognee.cognify() → cognee.search()",
-                "impact": "Zero working functionality despite significant engineering investment",
+                "impact": "Delayed integration due to unnecessary complexity",
                 "lesson": "Always test standard API approaches with minimal POC before building custom infrastructure"
             }
         }

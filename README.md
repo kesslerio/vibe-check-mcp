@@ -39,14 +39,14 @@ Vibe Check MCP provides **two modes of analysis** to catch engineering anti-patt
 ### **🧠 Deep Analysis** (Comprehensive Review)
 - **Claude-powered reasoning** for complex anti-pattern detection
 - **Educational explanations** of why patterns are problematic
-- **Real-world case studies** (like the Cognee 2+ year technical debt failure)
+- **Real-world case studies** (like the Cognee integration learning experience)
 - **Actionable prevention guidance** with specific remediation steps
 
 ### **Core Anti-Patterns Detected**
 
 | Anti-Pattern | What It Catches | Real Impact |
 |--------------|-----------------|-------------|
-| 🏗️ **Infrastructure-Without-Implementation** | Building custom solutions before testing standard APIs | 2+ years technical debt (Cognee case study) |
+| 🏗️ **Infrastructure-Without-Implementation** | Building custom solutions before testing standard APIs | Days/weeks wasted (Cognee case study) |
 | 🩹 **Symptom-Driven Development** | Treating symptoms instead of addressing root causes | 3.2x longer project completion time |
 | 🌀 **Complexity Escalation** | Adding unnecessary complexity without justification | 89% increase in maintenance costs |
 | 📚 **Documentation Neglect** | Building before researching standard approaches | 2.8x higher failure rate |
@@ -129,7 +129,7 @@ claude mcp add-json vibe-check '{
 ## 📊 Why Vibe Check Matters
 
 ### **Prevent Systematic Failures**
-- **Cognee Case Study**: 2+ years of technical debt from building custom HTTP servers instead of using documented APIs
+- **Cognee Case Study**: Days of unnecessary work from building custom solutions instead of using documented APIs
 - **Industry Research**: 43% of failed integrations result from infrastructure-without-implementation patterns
 - **Cost Savings**: Average 40% reduction in integration failures for regular users
 

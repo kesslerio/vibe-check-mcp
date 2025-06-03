@@ -1,14 +1,14 @@
 {
   "case_study": {
     "id": "cognee_integration_failure",
-    "title": "Cognee Integration: 2+ Years of Technical Debt",
-    "pattern_type": "infrastructure_without_implementation",
-    "timeline": "2+ years",
-    "outcome": "Zero working functionality",
+    "title": "Cognee Integration: Learning from Unnecessary Complexity",
+    "pattern_type": "infrastructure_without_implementation", 
+    "timeline": "Several days",
+    "outcome": "Eventually found simpler approach",
     "impact": {
-      "technical_debt": "Massive accumulated debt",
-      "opportunity_cost": "2+ years of engineering time",
-      "functionality": "No working vector search integration"
+      "technical_debt": "Some unnecessary complexity added",
+      "opportunity_cost": "Days of development time",
+      "functionality": "Delayed working vector search integration"
     },
     "root_cause": "Built custom HTTP servers instead of using cognee.add() → cognee.cognify() → cognee.search()",
     "lesson": "Always test standard API approach before building custom infrastructure",
