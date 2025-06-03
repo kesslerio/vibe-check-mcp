@@ -6,6 +6,7 @@ Provides consistent Claude CLI execution, timeout handling, and environment isol
 """
 
 import asyncio
+import json
 import logging
 import os
 import subprocess
@@ -161,6 +162,28 @@ Promote good engineering practices through constructive analysis.""",
         """
         return self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
     
+    def _get_mcp_config_path(self) -> str:
+        """
+        Get path to MCP config file that excludes vibe-check server.
+        
+        This prevents recursive MCP calls that cause infinite loops and hanging.
+        Uses the project's standard MCP config with safe external servers only.
+        Returns path to MCP config file.
+        """
+        # Use project's MCP config file in project root
+        # __file__ is: /path/to/src/vibe_check/tools/shared/claude_integration.py
+        # We need to go up 4 levels to reach project root
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file)))))
+        config_path = os.path.join(project_root, "mcp-config.json")
+        
+        if os.path.exists(config_path):
+            logger.debug(f"Using MCP config at: {config_path}")
+            return config_path
+        else:
+            logger.warning(f"MCP config not found at: {config_path}")
+            return ""
+    
     def _get_claude_args(self, prompt: str, task_type: str) -> List[str]:
         """
         Build Claude CLI arguments following SDK best practices.
@@ -173,30 +196,42 @@ Promote good engineering practices through constructive analysis.""",
             List of command line arguments
         """
         # Determine turn limit and allowed tools based on task complexity
+        # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
         if task_type == "general":
-            max_turns = "1"  # Simple tasks don't need tools
-            allowed_tools = ""  # No tools needed for simple analysis
+            max_turns = "1"  # Simple tasks for text analysis
+            allowed_tools = "Read,Write"  # Basic file operations only
         elif task_type == "issue_analysis":
-            max_turns = "3"  # Moderate limit for issue analysis
-            allowed_tools = "mcp__github__add_issue_comment,mcp__github__get_issue"  # Only GitHub comment posting
+            max_turns = "2"  # Moderate limit for issue analysis
+            # File ops + git commands for context analysis
+            allowed_tools = "Read,Write,Bash(git:*)"
         elif task_type == "pr_review":
-            max_turns = "3"  # Moderate limit for PR review
-            allowed_tools = "mcp__github__get_pull_request,mcp__github__get_pull_request_diff"  # Only PR fetching
+            max_turns = "2"  # Moderate limit for PR review
+            # Code analysis tools for comprehensive review
+            allowed_tools = "Read,Write,Bash(git:*),Grep,Glob"
+        elif task_type == "code_analysis":
+            max_turns = "1"  # Single turn for code analysis
+            allowed_tools = "Read,Grep,Glob"  # Read-only code examination
         else:
-            max_turns = "2"  # Conservative default
-            allowed_tools = ""  # No tools by default
+            max_turns = "1"  # Conservative default
+            allowed_tools = "Read"  # Read-only by default
         
         # Start with base args following SDK best practices
+        # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
         args = [
-            '--dangerously-skip-permissions',  # Skip permission prompts
             '--output-format', 'json',  # SDK recommended for programmatic usage
             '--max-turns', max_turns,  # Context-appropriate turn limit
             '--verbose'  # Enable debugging output
         ]
         
-        # Add tool restrictions for security (Issue #90 compliance)
-        if allowed_tools:
-            args.extend(['--allowedTools', allowed_tools])
+        # CRITICAL: Prevent recursive MCP calls by using empty MCP config
+        # This prevents infinite loops and hanging (Issue #94)
+        mcp_config_path = self._get_mcp_config_path()
+        if mcp_config_path:  # Only add if config file exists
+            args.extend(['--mcp-config', mcp_config_path])
+        
+        # Add explicit tool permissions for security (Issue #90 compliance)
+        # This is much safer than --dangerously-skip-permissions
+        args.extend(['--allowedTools', allowed_tools])
         
         # Add print flag and prompt (prompt must be last)
         args.append('-p')
@@ -213,13 +248,85 @@ Promote good engineering practices through constructive analysis.""",
         logger.debug(f'[Debug] Claude CLI args: {args}')
         return args
     
+    def _is_running_in_mcp_context(self) -> bool:
+        """
+        Detect if we're currently running within an MCP server context.
+        
+        This prevents recursive Claude CLI calls when vibe-check is invoked
+        via MCP from Claude CLI itself.
+        
+        Returns:
+            True if running in MCP context, False otherwise
+        """
+        # Enhanced MCP context detection
+        mcp_indicators = []
+        
+        # Check for standard MCP environment variables
+        mcp_env_vars = [
+            "MCP_SERVER_NAME", "MCP_TRANSPORT", "MCP_CLIENT", 
+            "CLAUDE_CLI_SESSION", "CLAUDE_CLI_MCP_MODE"
+        ]
+        for var in mcp_env_vars:
+            if os.environ.get(var):
+                mcp_indicators.append(f"env:{var}={os.environ.get(var)}")
+        
+        # Check if we're being called via stdio (MCP servers use stdio)
+        # When running as MCP server, stdin/stdout are connected to Claude CLI
+        if not os.isatty(0) or not os.isatty(1):  # stdin or stdout not a terminal
+            mcp_indicators.append("stdio:non_tty_detected")
+        
+        # Check parent process name
+        try:
+            import psutil
+            current_process = psutil.Process()
+            parent = current_process.parent()
+            if parent:
+                parent_name = parent.name().lower()
+                if "claude" in parent_name:
+                    mcp_indicators.append(f"parent:claude_process={parent_name}")
+                # Also check grandparent (Claude CLI might spawn intermediate process)
+                grandparent = parent.parent()
+                if grandparent and "claude" in grandparent.name().lower():
+                    mcp_indicators.append(f"grandparent:claude_process={grandparent.name()}")
+        except:
+            pass
+        
+        # Check if our process was started with MCP server arguments
+        try:
+            import sys
+            if len(sys.argv) > 1 and "vibe_check.server" in " ".join(sys.argv):
+                mcp_indicators.append("args:mcp_server_module")
+        except:
+            pass
+        
+        # Additional heuristic: Check if we're in a Python process that was 
+        # started with -m vibe_check.server (common MCP server pattern)
+        try:
+            import __main__
+            if hasattr(__main__, "__spec__") and __main__.__spec__:
+                spec_name = __main__.__spec__.name
+                if "vibe_check.server" in spec_name:
+                    mcp_indicators.append(f"module:mcp_server_spec={spec_name}")
+        except:
+            pass
+        
+        is_mcp_context = len(mcp_indicators) > 0
+        
+        if is_mcp_context:
+            logger.info(f"🔍 MCP context detected: {mcp_indicators}")
+            logger.info("🚫 Preventing recursive Claude CLI calls")
+        else:
+            logger.debug("✅ No MCP context detected - Claude CLI calls allowed")
+        
+        return is_mcp_context
+    
     def execute_sync(
         self,
         prompt: str,
         task_type: str = "general"
     ) -> ClaudeCliResult:
         """
-        Execute Claude CLI synchronously.
+        Execute Claude CLI synchronously with recursive call prevention.
         
         Args:
             prompt: The prompt to send to Claude CLI
@@ -229,6 +336,23 @@ Promote good engineering practices through constructive analysis.""",
             ClaudeCliResult with execution details
         """
         start_time = time.time()
+        
+        # CRITICAL: Check if we're in MCP context to prevent recursion
+        if self._is_running_in_mcp_context():
+            logger.warning("🚫 Preventing recursive Claude CLI call - running in MCP context")
+            return ClaudeCliResult(
+                success=False,
+                error="Recursive Claude CLI call prevented - already running in MCP context",
+                exit_code=-1,
+                execution_time=time.time() - start_time,
+                command_used="recursive_prevention",
+                task_type=task_type,
+                sdk_metadata={
+                    "prevention_reason": "mcp_context_detected",
+                    "recursion_prevention": True
+                }
+            )
+        
         logger.info(f"Executing Claude CLI directly for task: {task_type}")
         
         try:
@@ -237,11 +361,19 @@ Promote good engineering practices through constructive analysis.""",
             
             logger.debug(f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}')
             
-            # Create clean environment to avoid MCP recursion detection
+            # Create clean environment for internal Claude CLI calls
             clean_env = dict(os.environ)
-            # Remove MCP and Claude Code specific environment variables
-            for var in ["MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE", 
-                       "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS"]:
+            
+            # Set a marker to indicate this is an internal vibe-check call
+            clean_env["VIBE_CHECK_INTERNAL_CALL"] = "true"
+            
+            # Remove MCP-related variables that could cause recursion
+            mcp_vars_to_remove = [
+                "MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE",
+                "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS", "MCP_CONFIG_PATH",
+                "CLAUDE_MCP_CONFIG"
+            ]
+            for var in mcp_vars_to_remove:
                 clean_env.pop(var, None)
             
             # Use regular subprocess
@@ -339,6 +471,23 @@ Promote good engineering practices through constructive analysis.""",
             ClaudeCliResult with execution details
         """
         start_time = time.time()
+        
+        # CRITICAL: Check if we're in MCP context to prevent recursion
+        if self._is_running_in_mcp_context():
+            logger.warning("🚫 Preventing recursive Claude CLI call - running in MCP context")
+            return ClaudeCliResult(
+                success=False,
+                error="Recursive Claude CLI call prevented - already running in MCP context",
+                exit_code=-1,
+                execution_time=time.time() - start_time,
+                command_used="recursive_prevention",
+                task_type=task_type,
+                sdk_metadata={
+                    "prevention_reason": "mcp_context_detected",
+                    "recursion_prevention": True
+                }
+            )
+        
         logger.info(f"Executing Claude CLI async for task: {task_type}")
         
         try:
