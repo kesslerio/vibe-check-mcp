@@ -1,0 +1,117 @@
+# Project Engineering Guidelines (CLAUDE.md Sample)
+
+This is a sample CLAUDE.md file for your project. Copy this to `CLAUDE.md` in your project root and customize it for your specific engineering standards and workflows.
+
+## Core Engineering Principles
+
+DOCUMENTATION-FIRST RULE:
+Before ANY custom implementation:
+1. Check official documentation for standard approach
+2. Research existing solutions online
+3. Test documented standard approach first
+4. Build custom only if standard demonstrably fails
+5. Document WHY standard is insufficient
+
+RESEARCH HIERARCHY:
+1. Official documentation
+2. Online solutions (GitHub, Stack Overflow)
+3. Third-party alternatives
+4. Build custom (last resort)
+
+COMPLEXITY AUDIT CHECKLIST:
+When encountering existing complex code:
+- QUESTION if complexity is necessary
+- VERIFY if official documentation suggests simpler approach
+- TEST if standard APIs achieve same result
+
+ENGINEERING RED FLAGS (Stop and reassess):
+- Building workarounds for third-party bugs instead of using different APIs
+- Spending >2 hours without checking official docs
+- Assuming complex code is necessary without testing alternatives
+- Continuing investment due to sunk cost fallacy
+
+## Code Standards
+
+CODE PRINCIPLES:
+- Strict typing, prefer functions over classes
+- Environment variables, no hardcoded secrets, .env support
+- Specific try/catch with detailed messages
+- ALWAYS use /tmp/ for temporary files, NEVER in project directories
+
+CODE STYLE:
+- Functions <40 lines (Single Responsibility Principle)
+- Files <700 lines
+- Type hints mandatory, docstrings for public functions
+- Standard -> Third-party -> Local imports
+
+## Testing Standards
+
+TESTING:
+- ALL tests in /tests directory
+- Use appropriate testing framework for your language
+- Integration tests clearly marked
+- Clean up resources, skip if dependencies unavailable
+
+## Anti-Pattern Prevention
+
+FORBIDDEN PATTERNS:
+- Custom HTTP clients when SDKs exist
+- Infrastructure-first without API validation
+- Symptom fixes without root cause analysis
+- Complex workarounds for API misunderstanding
+
+CORE ANTI-PATTERNS TO DETECT:
+1. Infrastructure Without Implementation: Custom solutions when standard APIs exist
+2. Symptom-Driven Development: Treating symptoms vs root causes
+3. Complexity Escalation: Adding complexity vs questioning necessity
+4. Documentation Neglect: Building custom before checking official approaches
+
+## Project-Specific Guidelines
+
+# TODO: Add your project-specific engineering guidelines here
+# Examples:
+# - API design standards
+# - Database interaction patterns
+# - Security requirements
+# - Performance standards
+# - Deployment procedures
+# - Code review checklist
+
+## Workflow Standards
+
+BRANCH STRATEGY:
+- NEVER work on main directly
+- Create feature branches: feature/description
+- Commit format: "Type: Description"
+
+## Build/Test Commands
+
+# TODO: Add your project-specific commands
+# Examples:
+# - Install: npm install / pip install -r requirements.txt
+# - Test: npm test / pytest
+# - Lint: eslint . / pylint src/
+# - Build: npm run build / python setup.py build
+
+BUILD/TEST COMMANDS:
+- Install: [your install command]
+- Test: [your test command]
+- Lint: [your lint command]
+- Format: [your format command]
+
+## Additional Guidelines
+
+# TODO: Add any additional project-specific guidelines
+# - Architecture decisions
+# - Third-party service integrations
+# - Monitoring and logging standards
+# - Error handling patterns
+# - Documentation standards
+
+---
+
+**Note**: This CLAUDE.md file will be automatically read and included in vibe-check analysis to ensure your project's engineering standards are consistently applied during anti-pattern detection and code review.
+
+For more information about CLAUDE.md and how it integrates with development tools, see:
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [Vibe Check MCP Documentation](https://github.com/kesslerio/vibe-check-mcp)
