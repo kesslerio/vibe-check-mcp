@@ -250,75 +250,54 @@ Promote good engineering practices through constructive analysis.""",
     
     def _is_running_in_mcp_context(self) -> bool:
         """
-        Detect if we're currently running within an MCP server context.
+        Detect if we're currently running within a Claude CLI MCP context that would cause recursion.
         
-        This prevents recursive Claude CLI calls when vibe-check is invoked
-        via MCP from Claude CLI itself.
+        This specifically prevents recursive Claude CLI calls when Claude CLI has already loaded
+        vibe-check as an MCP server and is calling it again.
         
         Returns:
-            True if running in MCP context, False otherwise
+            True if running in recursive Claude CLI context, False for normal MCP usage
         """
-        # Enhanced MCP context detection
-        mcp_indicators = []
+        # Check for internal vibe-check call marker (most reliable indicator)
+        if os.environ.get("VIBE_CHECK_INTERNAL_CALL") == "true":
+            return True
         
-        # Check for standard MCP environment variables
-        mcp_env_vars = [
-            "MCP_SERVER_NAME", "MCP_TRANSPORT", "MCP_CLIENT", 
-            "CLAUDE_CLI_SESSION", "CLAUDE_CLI_MCP_MODE"
+        recursion_indicators = []
+        
+        # Check for Claude CLI specific environment variables that indicate we're inside Claude CLI
+        claude_cli_vars = [
+            "CLAUDE_CLI_SESSION", "CLAUDE_CLI_MCP_MODE", "ANTHROPIC_CLI_SESSION"
         ]
-        for var in mcp_env_vars:
+        for var in claude_cli_vars:
             if os.environ.get(var):
-                mcp_indicators.append(f"env:{var}={os.environ.get(var)}")
+                recursion_indicators.append(f"env:{var}={os.environ.get(var)}")
         
-        # Check if we're being called via stdio (MCP servers use stdio)
-        # When running as MCP server, stdin/stdout are connected to Claude CLI
-        if not os.isatty(0) or not os.isatty(1):  # stdin or stdout not a terminal
-            mcp_indicators.append("stdio:non_tty_detected")
+        # REMOVED: stdio check - this is normal for MCP servers and was blocking legitimate usage
         
-        # Check parent process name
-        try:
-            import psutil
-            current_process = psutil.Process()
-            parent = current_process.parent()
-            if parent:
-                parent_name = parent.name().lower()
-                if "claude" in parent_name:
-                    mcp_indicators.append(f"parent:claude_process={parent_name}")
-                # Also check grandparent (Claude CLI might spawn intermediate process)
-                grandparent = parent.parent()
-                if grandparent and "claude" in grandparent.name().lower():
-                    mcp_indicators.append(f"grandparent:claude_process={grandparent.name()}")
-        except:
-            pass
+        # Check for recursive Claude CLI calls specifically
+        # Only check parent processes if we have other indicators of Claude CLI recursion
+        if recursion_indicators:
+            try:
+                import psutil
+                current_process = psutil.Process()
+                parent = current_process.parent()
+                if parent:
+                    parent_name = parent.name().lower()
+                    # Only flag if parent is specifically claude CLI (not Claude Code/Desktop)
+                    if parent_name in ["claude", "claude-cli"]:
+                        recursion_indicators.append(f"parent:claude_cli={parent_name}")
+            except:
+                pass
         
-        # Check if our process was started with MCP server arguments
-        try:
-            import sys
-            if len(sys.argv) > 1 and "vibe_check.server" in " ".join(sys.argv):
-                mcp_indicators.append("args:mcp_server_module")
-        except:
-            pass
+        is_recursive_context = len(recursion_indicators) > 0
         
-        # Additional heuristic: Check if we're in a Python process that was 
-        # started with -m vibe_check.server (common MCP server pattern)
-        try:
-            import __main__
-            if hasattr(__main__, "__spec__") and __main__.__spec__:
-                spec_name = __main__.__spec__.name
-                if "vibe_check.server" in spec_name:
-                    mcp_indicators.append(f"module:mcp_server_spec={spec_name}")
-        except:
-            pass
-        
-        is_mcp_context = len(mcp_indicators) > 0
-        
-        if is_mcp_context:
-            logger.info(f"🔍 MCP context detected: {mcp_indicators}")
+        if is_recursive_context:
+            logger.info(f"🔍 Recursive Claude CLI context detected: {recursion_indicators}")
             logger.info("🚫 Preventing recursive Claude CLI calls")
         else:
-            logger.debug("✅ No MCP context detected - Claude CLI calls allowed")
+            logger.debug("✅ No recursive context detected - Claude CLI calls allowed")
         
-        return is_mcp_context
+        return is_recursive_context
     
     def execute_sync(
         self,
