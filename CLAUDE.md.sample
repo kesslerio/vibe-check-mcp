@@ -1,11 +1,13 @@
-# Project Engineering Guidelines (CLAUDE.md Sample)
+Vibe Check MCP ENGINEERING GUIDELINES
 
-This is a sample CLAUDE.md file for your project. Copy this to `CLAUDE.md` in your project root and customize it for your specific engineering standards and workflows.
-
-## Core Engineering Principles
+CORE DOCUMENTS:
+- Technical Implementation Guide: docs/TECHNICAL.md (architecture, validation results, roadmap)
+- Product Requirements Document: docs/PRD.md (vision, requirements, success metrics)
+- Claude Code CLI Usage: docs/api/CLAUDE_CODE_CLI_USAGE.md (standard CLI patterns, MCP integration)
+- Claude Code SDK: docs/api/CLAUDE_CODE_SDK.md (programmatic integration, output formats)
 
 DOCUMENTATION-FIRST RULE:
-Before ANY custom implementation:
+Before ANY custom third-party integration:
 1. Check official documentation for standard approach
 2. Research existing solutions online
 3. Test documented standard approach first
@@ -23,6 +25,7 @@ When encountering existing complex code:
 - QUESTION if complexity is necessary
 - VERIFY if official documentation suggests simpler approach
 - TEST if standard APIs achieve same result
+- Use mcp__clear-thought-server__mentalmodel(First Principles) for analysis
 
 ENGINEERING RED FLAGS (Stop and reassess):
 - Building workarounds for third-party bugs instead of using different APIs
@@ -30,29 +33,15 @@ ENGINEERING RED FLAGS (Stop and reassess):
 - Assuming complex code is necessary without testing alternatives
 - Continuing investment due to sunk cost fallacy
 
-## Code Standards
-
-CODE PRINCIPLES:
-- Strict typing, prefer functions over classes
-- Environment variables, no hardcoded secrets, .env support
-- Specific try/catch with detailed messages
-- ALWAYS use /tmp/ for temporary files, NEVER in project directories
-
-CODE STYLE:
-- Functions <40 lines (Single Responsibility Principle)
-- Files <700 lines
-- Type hints mandatory, docstrings for public functions
-- Standard -> Third-party -> Local imports
-
-## Testing Standards
-
-TESTING:
-- ALL tests in /tests directory
-- Use appropriate testing framework for your language
-- Integration tests clearly marked
-- Clean up resources, skip if dependencies unavailable
-
-## Anti-Pattern Prevention
+THIRD-PARTY INTEGRATION PROTOCOL:
+Phase 1: Research & Validation
+- Review standard docs for simplest API patterns
+- Create minimal POC with real data
+- Use mcp__clear-thought-server__mentalmodel(First Principles) if complex
+Phase 2: Implementation (only if POC proves standard insufficient)
+- Use mcp__clear-thought-server__decisionframework(Standard vs Custom Integration)
+- Handle bugs by avoiding buggy code paths (DEFAULT behavior)
+- Document rationale in ADR
 
 FORBIDDEN PATTERNS:
 - Custom HTTP clients when SDKs exist
@@ -60,58 +49,378 @@ FORBIDDEN PATTERNS:
 - Symptom fixes without root cause analysis
 - Complex workarounds for API misunderstanding
 
-CORE ANTI-PATTERNS TO DETECT:
+ENGINEERING CHECKLIST:
+- Verify problem understanding (First Principles if complex)
+- Confirm official docs checked
+- Research existing solutions
+- Audit complexity of existing code
+- Plan for modularity (files <700 lines, functions <50 lines)
+- Consider scalability/maintainability impact
+
+ANTI-PATTERN COACH DEVELOPMENT:
+
+CLAUDE CODE INTEGRATION:
+- CLI-first architecture with Claude Code compatibility (docs/api/CLAUDE_CODE_CLI_USAGE.md)
+- SDK patterns for programmatic integration (docs/api/CLAUDE_CODE_SDK.md)
+- Educational anti-pattern prevention focus
+- Export patterns in Claude Code compatible format
+
+CLI PRINCIPLES:
+- Click framework for enterprise patterns
+- Single responsibility per command
+- Early input validation with clear errors
+- Structured educational output
+- Type hints for all parameters
+- Clear tool descriptions
+
+DETECTION ARCHITECTURE:
+- AST parsing for sophisticated analysis
+- Regex for quick pattern matching
+- Leverage existing tools (pylint, mypy, bandit)
+- JSON/YAML knowledge base
+- Extensible pattern system
+
+BUILD/TEST COMMANDS:
+- Install: pip install -r requirements.txt
+- Run server: PYTHONPATH=src python -m vibe_check server
+- Test: pytest
+- Coverage: pytest --cov=src --cov-report=html
+- Type check: mypy src/
+- Lint: pylint src/
+- Security: bandit -r src/
+- Format: black src/ tests/
+- Imports: isort src/ tests/
+
+VERSIONING SYSTEM:
+- Semantic Versioning (MAJOR.MINOR.PATCH): https://semver.org/
+- Version source of truth: VERSION file in project root
+- Centralized version utilities: src/vibe_check/utils/version_utils.py
+- Release script: scripts/release.sh (automated version management)
+
+VERSION POLICIES:
+- MAJOR: Breaking changes, API incompatibilities (1.0.0 -> 2.0.0)
+- MINOR: New features, backward compatible (0.1.0 -> 0.2.0)
+- PATCH: Bug fixes, no new features (0.1.0 -> 0.1.1)
+- Pre-release: Alpha/Beta versions (0.1.0-alpha.1, 0.1.0-beta.1)
+
+RELEASE PROCESS:
+1. Ensure main branch is clean and up-to-date
+2. Run full test suite: pytest
+3. Run release script: ./scripts/release.sh
+4. Select release type (major/minor/patch)
+5. Update CHANGELOG.md with release notes
+6. Script handles version bump, tagging, and GitHub release
+
+VERSION COMMANDS:
+- Check current: python -c "from vibe_check import __version__; print(__version__)"
+- Validate version: python -c "from vibe_check.utils.version_utils import parse_semantic_version; parse_semantic_version('1.2.3')"
+- Compare versions: python -c "from vibe_check.utils.version_utils import compare_versions; print(compare_versions('1.2.3', '1.2.4'))"
+
+CHANGELOG REQUIREMENTS:
+- Follow Keep a Changelog format: https://keepachangelog.com/
+- Categorize changes: Added, Changed, Deprecated, Removed, Fixed, Security
+- Link versions to GitHub releases
+- Include migration notes for breaking changes
+
+CODE PRINCIPLES:
+- Python: Strict typing, prefer functions over classes
+- FastMCP: Use decorators, structured error responses
+- Config: Environment variables, no hardcoded secrets, .env support
+- Errors: Specific try/catch with detailed messages
+- Logging: Python logging with correlation IDs
+- Temporary Files: ALWAYS use /tmp/, NEVER in project directories
+
+CODE STYLE:
+- PEP 8 with Black (88 char lines)
+- Functions <40 lines (SRP)
+- PascalCase (classes), snake_case (functions/vars), UPPER_CASE (constants)
+- Type hints mandatory, docstrings for public functions
+- Standard -> Third-party -> Local imports
+
+TESTING:
+- ALL tests in /tests directory
+- pytest with test_*.py naming
+- Use pytest fixtures and @pytest.mark.asyncio
+- Integration tests: @pytest.mark.integration
+- Clean up resources, skip if dependencies unavailable
+
+MCP TOOL SCHEMAS:
+- NEVER use oneOf/allOf/anyOf at root level
+- Handle either/or validation in runtime code
+- Clear parameter names and descriptions
+- Include examples in descriptions
+
+MCP TOOL RESPONSE HANDLING:
+- When MCP tools return "comment_url" or "user_message" fields, ALWAYS include the full GitHub URL in your response to help users access posted comments/reviews directly
+- Don't summarize GitHub URLs - show them explicitly so users can click through
+
+GITHUB WORKFLOW:
+
+CRITICAL: Create PRs to your own repository unless told otherwise
+
+NAMING CONVENTION:
+Tools follow `action_what.py` pattern:
+- analyze_issue.py, analyze_text.py
+- review_pr.py, review_issue.py, review_code.py
+
+Makes tool discovery intuitive.
+
+PREFERRED MCP APPROACH:
+Use GitHub MCP server for comprehensive GitHub operations with natural language commands for PR creation, issue management
+
+FALLBACK COMMANDS (if MCP unavailable):
+git checkout -b feature/<name> && git add . && git commit -m "Feature: <desc>" && git push -u origin HEAD && gh pr create -t "Feature: <desc>" -b "<details>"
+
+PR REVIEW PROCESS:
+
+When asked to "check PR review" or similar:
+1. FETCH PR COMMENTS: Use GitHub MCP server natural language queries like "show comments on PR <NUMBER> by kesslerio"
+2. CHECK EXISTING ISSUES: Search for existing issues that might already address recommendations to avoid duplicates
+3. SYSTEMATIC ANALYSIS: Use mcp__clear-thought-server__decisionframework for each review item:
+   - "PR Review Item Evaluation"
+   - Options: ["Fix in current PR", "Create follow-up issue", "Nice-to-have (ignore)", "Overengineering concern"]
+   - Analysis Type: "Engineering Decision"
+4. CATEGORIZE FEEDBACK WITH CLEAR RECOMMENDATIONS:
+   - CRITICAL (blocking): ⚠️ Must fix in current PR before merging
+   - IMPORTANT (actionable): 📋 Could create follow-up issue (if not already exists)
+   - NICE-TO-HAVE (optional): 💡 Consider but likely YAGNI
+   - OVERENGINEERING (reject): ❌ Adds unnecessary complexity
+5. COMMUNICATE CLEARLY: Include specific action recommendation in review response
+6. ADDRESS ISSUES: Fix only critical blocking issues in current PR
+7. CREATE FOLLOW-UP ISSUES: Only if genuinely valuable and not already tracked
+8. UPDATE PR: Commit and push critical fixes only
+9. FINAL UPDATE: If PR was changed due to review feedback, add comment summarizing what was addressed
+10. MERGE PR: Use GitHub MCP server merge functionality
+11. CLEAN UP: Delete feature branch after merge
+
+DECISION FRAMEWORK FOR PR FEEDBACK:
+Use Clear-Thought decision framework to evaluate each review item:
+
+CRITERIA FOR "FIX IN CURRENT PR":
+- Blocks merge (missing issue linkage, breaking functionality)
+- Security vulnerabilities or critical bugs
+- Simple fixes that don't change scope
+
+CRITERIA FOR "CREATE FOLLOW-UP ISSUE":
+- Good ideas that expand scope beyond current PR
+- Performance improvements that require analysis
+- Documentation enhancements not critical to current functionality
+- Refactoring suggestions that don't affect core functionality
+
+CRITERIA FOR "NICE-TO-HAVE (IGNORE)":
+- Subjective style preferences already covered by linting
+- Minor optimizations with unclear value
+- Features that may never be needed (YAGNI principle)
+
+CRITERIA FOR "OVERENGINEERING CONCERN":
+- Adds complexity without clear business value
+- Premature optimization
+- Over-abstraction for current use case
+- Violates KISS principle
+
+ALWAYS APPLY: Question if each suggestion truly improves the solution or adds unnecessary complexity
+
+PR REVIEW COMMENT FORMATTING:
+Each review comment should clearly indicate the recommended action:
+
+CRITICAL ISSUES (Fix before merge):
+```
+⚠️ **BLOCKING**: Missing issue linkage
+**Action Required**: Add "Fixes #XX" to PR description before merging
+**Rationale**: Required for traceability
+```
+
+FOLLOW-UP SUGGESTIONS (Optional future work):
+```
+📋 **FOLLOW-UP**: Consider adding input validation
+**Suggestion**: Could create follow-up issue for enhanced error handling
+**Check**: Issue #XX already covers this - see [link]
+**Value**: Medium - improves user experience but not blocking
+```
+
+NICE-TO-HAVE (Likely ignore):
+```
+💡 **CONSIDER**: Extract helper function
+**Assessment**: Minor optimization, YAGNI applies
+**Action**: No action needed unless part of larger refactor
+```
+
+OVERENGINEERING CONCERNS (Reject):
+```
+❌ **COMPLEXITY**: Abstract factory pattern suggested
+**Concern**: Adds unnecessary complexity for current use case
+**Recommendation**: Keep simple implementation, revisit if requirements change
+```
+
+FOLLOW-UP ISSUE CREATION POLICY:
+- Limit to 1-2 genuinely valuable suggestions per PR
+- Always check if issue already exists first
+- Include clear business value justification
+- Avoid creating issues for subjective style preferences
+
+FINAL PR UPDATE POLICY:
+If PR changed due to review feedback, add comment before merge:
+✅ Fixed: [list changes made]
+📋 Follow-ups: [link issues created] 
+💡 Skipped: [what ignored and why]
+
+COMMON PR REVIEW ISSUES:
+- Missing issue linkage: Add "Fixes #XX" to PR description
+- Missing tests: Add appropriate test coverage
+- Documentation updates: Update relevant docs
+- Type errors: Fix mypy/typing issues
+- Lint issues: Run formatters and fix style
+
+PR REVIEW COMMANDS (MCP PREFERRED):
+- Check comments: Use GitHub MCP server with natural language "show comments on PR 42"
+- Update description: Use GitHub MCP server "update PR 42 description to <new content>"
+- Merge PR: Use GitHub MCP server "merge PR 42 with squash strategy"
+- View status: Use GitHub MCP server "show status of my PRs"
+
+FALLBACK CLI COMMANDS (if MCP unavailable):
+- Check comments: gh pr view 42 --json comments
+- Update description: gh pr edit 42 --body "new description"
+- Merge PR: gh pr merge 42 --squash --delete-branch
+- View status: gh pr status
+
+ISSUE MANAGEMENT (GITHUB MCP SERVER):
+
+Use GitHub MCP server for comprehensive repository operations through natural language
+
+MANDATORY LABELS:
+Priority (every issue): P0 (critical), P1 (high), P2 (medium), P3 (low), P4 (trivial)
+Type (every issue): bug, feature, enhancement, documentation, test, refactor, security, performance, maintenance
+Area (at least one): area:pattern-detection, area:educational-content, area:case-studies, area:validation, area:cli, area:mcp-integration, area:data-management
+
+STATUS LABELS: status:untriaged, status:needs-info, status:blocked, status:in-progress, status:review, status:testing, status:ready
+
+VALIDATED ISSUE CREATION PATTERN:
+1. VALIDATE required components: TITLE="[Type]: Description", PRIORITY, TYPE, AREA
+2. VALIDATE label requirements exist
+3. CREATE: Use GitHub MCP server "create issue in kesslerio/vibe-check-mcp with title '<title>' body '<body>' labels '<labels>'"
+
+MANDATORY ISSUE BODY TEMPLATE:
+## Problem Description
+[Clear description]
+## Solution Approach  
+[Proposed solution]
+## Acceptance Criteria
+- [ ] Criterion 1
+- [ ] Anti-pattern prevention validated
+## Labels Applied
+- Priority: [P0-P4]
+- Type: [bug/feature/etc]
+- Area: [area:*]
+
+SYSTEMATIC ISSUE LIFECYCLE:
+1. Research: Use GitHub MCP server "search issues in kesslerio/vibe-check-mcp for keywords"
+2. Analyze: Use mcp__clear-thought-server__mentalmodel(First Principles) for complex issues
+3. Create: Use GitHub MCP server with validated pattern above
+4. Track: Update status through GitHub MCP server operations
+5. Comment: Use GitHub MCP server for issue updates
+6. Close: Include verification comment via GitHub MCP server
+
+LABEL VALIDATION ENFORCEMENT:
+Before closing ANY issue verify:
+- Has Priority label (P0-P4)
+- Has Type label (bug, feature, etc.)
+- Has Area label (area:*)
+- Has appropriate Status progression
+
+BRANCH STRATEGY:
+- NEVER work on main directly
+- ALWAYS check branch: git branch --show-current
+- Create feature branch: git checkout -b feature/issue-{number}-{description}
+- Commit format: "Type: Description #issue-number"
+
+DOCUMENTATION SEARCH PRIORITY:
+1. PRIMARY: mcp__crawl4ai-rag__perform_rag_query(query, source?, match_count=5)
+2. Check sources: mcp__crawl4ai-rag__get_available_sources()
+3. SECONDARY: mcp__crawl4ai-rag__crawl_single_page(url) or smart_crawl_url(url)
+4. TERTIARY: Web search as last resort
+
+Key sources: modelcontextprotocol.io, github.com/jlowin/fastmcp, Python docs
+
+GITHUB MCP INTEGRATION:
+
+NATURAL LANGUAGE OPERATIONS:
+- "Create an issue in my repo about X"
+- "Show me PR #42 comments" 
+- "Search for issues with label 'bug'"
+- "Merge PR #42 with squash"
+- "Update issue #15 description"
+
+GITHUB MCP SERVER CAPABILITIES:
+- Add comments to issues with natural language commands
+- Comprehensive repository management and automation
+
+USAGE PRIORITY:
+1. Use GitHub MCP server for all GitHub operations through natural language
+2. Fall back to CLI only when MCP unavailable
+3. Always prefer GitHub MCP server's comprehensive functionality
+
+CLEAR THOUGHT INTEGRATION:
+
+MCP TOOL NAMESPACES:
+- mcp__clear-thought-server__mentalmodel(modelName, problem)
+- mcp__clear-thought-server__designpattern(patternName, context)
+- mcp__clear-thought-server__programmingparadigm(paradigmName, problem)
+- mcp__clear-thought-server__debuggingapproach(approachName, issue)
+- mcp__clear-thought-server__sequentialthinking(thought, thoughtNumber, totalThoughts, nextThoughtNeeded)
+- mcp__clear-thought-server__decisionframework(decisionStatement, options, analysisType)
+
+CONTEXTUAL TOOL APPLICATION:
+- Pattern Detection Logic: programmingparadigm + designpattern
+- New Anti-Pattern Integration: mentalmodel + designpattern  
+- Detection Accuracy Issues: debuggingapproach + sequentialthinking
+- Performance Optimization: mentalmodel(Opportunity Cost) + programmingparadigm
+- Complex Problem Analysis: mentalmodel(First Principles)
+- Architectural Decisions: decisionframework
+
+ANTI-PATTERN DETECTION:
+
+CORE PATTERNS:
 1. Infrastructure Without Implementation: Custom solutions when standard APIs exist
 2. Symptom-Driven Development: Treating symptoms vs root causes
 3. Complexity Escalation: Adding complexity vs questioning necessity
 4. Documentation Neglect: Building custom before checking official approaches
 
-## Project-Specific Guidelines
+DETECTION METHODS:
+- AST analysis for code patterns
+- Regex for quick scanning
+- Static analysis integration (pylint, mypy, bandit)
+- Knowledge base matching with confidence scoring
+- Actionable remediation suggestions
 
-# TODO: Add your project-specific engineering guidelines here
-# Examples:
-# - API design standards
-# - Database interaction patterns
-# - Security requirements
-# - Performance standards
-# - Deployment procedures
-# - Code review checklist
+EXTERNAL MCP SERVERS:
+- mcp__crawl4ai-rag__: Web crawling and documentation research
+- mcp__clear-thought-server__: Systematic problem-solving and analysis
+- mcp__vibe-check__: Anti-pattern detection with dual-mode analysis
+- @modelcontextprotocol/server-github: Comprehensive GitHub API operations
 
-## Workflow Standards
+Vibe Check MCP TOOLS:
+- mcp__vibe-check__analyze_github_issue(issue_number, repository?, analysis_mode?, post_comment?, detail_level?)
+  * QUICK MODE: Fast pattern detection for development workflow
+    - analysis_mode: "quick" (default)
+    - Returns: Concise anti-pattern detection results
+  * COMPREHENSIVE MODE: Detailed analysis with GitHub integration
+    - analysis_mode: "comprehensive" 
+    - post_comment: true/false (posts analysis to GitHub issue)
+    - detail_level: "brief"/"standard"/"comprehensive"
+    - Returns: Full analysis with educational content and risk assessment
+- mcp__vibe-check__analyze_text_demo(text, detail_level?)
+- mcp__vibe-check__server_status()
 
-BRANCH STRATEGY:
-- NEVER work on main directly
-- Create feature branches: feature/description
-- Commit format: "Type: Description"
+DEVELOPMENT WORKFLOW:
+Phase 1: Issue definition with First Principles analysis + documentation search
+Phase 2: Development following modularity principles + Clear Thought design patterns
+Phase 3: Testing with debugging approaches + systematic validation
+Phase 4: Integration, deployment, and learning extraction
 
-## Build/Test Commands
+POST-MORTEM PROCEDURES:
+- Conduct using mcp__clear-thought-server__sequentialthinking for anti-pattern detection failures
+- Document pattern evolution and new discoveries
+- Build knowledge base from prevention successes
+- Review detection accuracy continuously
 
-# TODO: Add your project-specific commands
-# Examples:
-# - Install: npm install / pip install -r requirements.txt
-# - Test: npm test / pytest
-# - Lint: eslint . / pylint src/
-# - Build: npm run build / python setup.py build
-
-BUILD/TEST COMMANDS:
-- Install: [your install command]
-- Test: [your test command]
-- Lint: [your lint command]
-- Format: [your format command]
-
-## Additional Guidelines
-
-# TODO: Add any additional project-specific guidelines
-# - Architecture decisions
-# - Third-party service integrations
-# - Monitoring and logging standards
-# - Error handling patterns
-# - Documentation standards
-
----
-
-**Note**: This CLAUDE.md file will be automatically read and included in vibe-check analysis to ensure your project's engineering standards are consistently applied during anti-pattern detection and code review.
-
-For more information about CLAUDE.md and how it integrates with development tools, see:
-- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
-- [Vibe Check MCP Documentation](https://github.com/kesslerio/vibe-check-mcp)
+Temporary files in /tmp/ only. Functions <40 lines. Files <700 lines. Type hints mandatory. Document anti-pattern prevention. Test systematically. Follow FastMCP patterns.
