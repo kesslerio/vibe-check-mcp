@@ -48,7 +48,7 @@ def get_github_token() -> Optional[str]:
     return None
 
 
-def post_github_comment(issue_number: int, repository: str, comment_body: str) -> bool:
+def post_github_comment(issue_number: int, repository: str, comment_body: str) -> tuple[bool, Optional[str]]:
     """
     Post comment to GitHub issue using proper authentication.
     
@@ -58,27 +58,31 @@ def post_github_comment(issue_number: int, repository: str, comment_body: str) -
         comment_body: Content of the comment to post
         
     Returns:
-        True if comment was posted successfully, False otherwise
+        Tuple of (success: bool, comment_url: Optional[str])
     """
     if not GITHUB_AVAILABLE:
         logger.error("GitHub library not available for posting comments")
-        return False
+        return False, None
     
     token = get_github_token()
     if not token:
         logger.error("No GitHub token available for posting comments")
-        return False
+        return False, None
     
     try:
         github_client = Github(token)
         repo = github_client.get_repo(repository)
         issue = repo.get_issue(issue_number)
-        issue.create_comment(comment_body)
-        logger.info(f"Successfully posted comment to {repository}#{issue_number}")
-        return True
+        comment = issue.create_comment(comment_body)
+        
+        # Build comment URL
+        comment_url = f"https://github.com/{repository}/issues/{issue_number}#issuecomment-{comment.id}"
+        
+        logger.info(f"Successfully posted comment to {repository}#{issue_number}: {comment_url}")
+        return True, comment_url
     except Exception as e:
         logger.error(f"Failed to post GitHub comment: {e}")
-        return False
+        return False, None
 
 
 def get_github_client() -> Optional[Github]:
