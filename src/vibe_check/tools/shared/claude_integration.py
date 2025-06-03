@@ -172,13 +172,19 @@ Promote good engineering practices through constructive analysis.""",
         Returns:
             List of command line arguments
         """
-        # Determine turn limit based on task complexity
+        # Determine turn limit and allowed tools based on task complexity
         if task_type == "general":
             max_turns = "1"  # Simple tasks don't need tools
-        elif task_type in ["issue_analysis", "pr_review"]:
-            max_turns = "5"  # Complex analysis may need GitHub tools
+            allowed_tools = ""  # No tools needed for simple analysis
+        elif task_type == "issue_analysis":
+            max_turns = "3"  # Moderate limit for issue analysis
+            allowed_tools = "mcp__github__add_issue_comment,mcp__github__get_issue"  # Only GitHub comment posting
+        elif task_type == "pr_review":
+            max_turns = "3"  # Moderate limit for PR review
+            allowed_tools = "mcp__github__get_pull_request,mcp__github__get_pull_request_diff"  # Only PR fetching
         else:
-            max_turns = "3"  # Default moderate limit
+            max_turns = "2"  # Conservative default
+            allowed_tools = ""  # No tools by default
         
         # Start with base args following SDK best practices
         args = [
@@ -188,6 +194,10 @@ Promote good engineering practices through constructive analysis.""",
             '--max-turns', max_turns,  # Context-appropriate turn limit
             '--verbose'  # Enable debugging output
         ]
+        
+        # Add tool restrictions for security (Issue #90 compliance)
+        if allowed_tools:
+            args.extend(['--allowedTools', allowed_tools])
         
         # Add system prompt if we have specialized task types
         system_prompt = self._get_system_prompt(task_type)
