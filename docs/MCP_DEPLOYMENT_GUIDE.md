@@ -1,32 +1,40 @@
 # MCP Server Deployment Guide
 
-This guide covers deployment options for the Vibe Check MCP server, addressing Issue #46: MCP Server Docker vs Host Deployment Strategy for Claude Code Integration.
+**Stop building the wrong thing before you waste months on it.**
+
+This guide covers deployment options for the Vibe Check MCP anti-pattern detection server, providing comprehensive setup instructions for different deployment scenarios with Claude Code integration.
 
 ## Overview
 
 The Vibe Check MCP server supports multiple deployment modes to accommodate different use cases:
 
-1. **Native Host Deployment** (Recommended for Claude Code)
-2. **Docker HTTP Deployment** (For web/API clients)
-3. **Docker with Socat Bridge** (Hybrid approach)
+1. **🥇 Native Host Deployment** (Recommended - Fast startup, minimal memory)
+2. **🐳 Docker HTTP Deployment** (Containerized isolation)
+3. **🌉 Docker with Socat Bridge** (Hybrid stdio + Docker)
 
 ## Native Host Deployment (Recommended)
 
 ### For Claude Desktop/Code Integration
 
-This is the optimal approach for Claude Desktop and Claude Code integration, providing direct stdio transport compatibility.
+This is the optimal approach for Claude Desktop and Claude Code integration, providing direct stdio transport compatibility with fast startup (~2s) and minimal memory usage (~50MB).
 
-#### Installation
+#### Quick Installation
 
-1. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+**Option 1: One-Command Setup (Recommended)**
+```bash
+curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
+```
 
-2. **Verify installation:**
-   ```bash
-   PYTHONPATH=src python -m vibe_check server --help
-   ```
+**Option 2: Manual Installation**
+```bash
+# Clone and install
+git clone https://github.com/kesslerio/vibe-check-mcp.git
+cd vibe-check-mcp
+pip install -r requirements.txt
+
+# Verify installation
+PYTHONPATH=src python -m vibe_check server --help
+```
 
 #### Configuration
 
@@ -78,12 +86,15 @@ Or manually edit `~/.cursor/mcp.json`:
 
 #### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PYTHONPATH` | Path to vibe_check source | Required |
-| `GITHUB_TOKEN` | GitHub API token for issue analysis | Optional |
-| `MCP_TRANSPORT` | Force transport mode | Auto-detected |
-| `LOG_LEVEL` | Logging level | INFO |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `PYTHONPATH` | Path to vibe_check source | - | ✅ Yes |
+| `GITHUB_TOKEN` | GitHub API token for issue analysis | - | ⚠️ Optional* |
+| `VIBE_CHECK_DEV_MODE` | Enable development tools | false | ❌ No |
+| `MCP_TRANSPORT` | Force transport mode | Auto-detected | ❌ No |
+| `LOG_LEVEL` | Logging level | INFO | ❌ No |
+
+*Required for GitHub issue/PR analysis tools
 
 #### Startup Commands
 
@@ -108,6 +119,12 @@ PYTHONPATH=src python -m vibe_check server --help
 
 # Test startup (Ctrl+C to exit)
 PYTHONPATH=src python -m vibe_check server --stdio
+
+# Test MCP tools are available
+PYTHONPATH=src python -c "from vibe_check.server import app; print('✅ MCP server loads successfully')"
+
+# Check version
+PYTHONPATH=src python -c "from vibe_check import __version__; print(f'Version: {__version__}')"
 ```
 
 ## Docker HTTP Deployment
@@ -290,4 +307,33 @@ echo '{"jsonrpc":"2.0","method":"ping","id":1}' | python -m vibe_check server --
 4. Monitor logs for issues
 5. Update configuration as needed
 
-For additional support, see [Technical Implementation Guide](Technical_Implementation_Guide.md) or create an issue on GitHub.
+## 🚀 Available MCP Tools
+
+Once deployed, you can use these tools in Claude Code:
+
+| Tool | Purpose | Example Usage |
+|------|---------|---------------|
+| `analyze_github_issue` | Analyze issues for anti-patterns | "Quick vibe check issue 42" |
+| `analyze_text` | Text analysis for documents | "Analyze this technical document" |
+| `analyze_code` | Code review with coaching | "Review this code for anti-patterns" |
+| `server_status` | Check server health | "Show vibe check server status" |
+
+### Quick Test Commands
+
+```bash
+# In Claude Code, try these:
+"Quick vibe check this text: I'm planning to build a custom HTTP client for the Stripe API"
+
+"Show me the vibe check server status"
+
+"Analyze this code for complexity patterns: [paste code]"
+```
+
+## 📖 Additional Resources
+
+- **[README.md](../README.md)** - Project overview and quick start
+- **[Usage Guide](USAGE.md)** - Comprehensive examples and commands  
+- **[Technical Architecture](TECHNICAL.md)** - Implementation details
+- **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute
+
+For additional support, create an issue at [GitHub Issues](https://github.com/kesslerio/vibe-check-mcp/issues).
