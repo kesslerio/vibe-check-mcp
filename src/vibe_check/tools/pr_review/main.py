@@ -12,6 +12,7 @@ from .data_collector import PRDataCollector
 from .size_classifier import PRSizeClassifier  
 from .context_analyzer import ReviewContextAnalyzer
 from .claude_integration import ClaudeIntegration
+from .feedback_categorizer import FeedbackCategorizer
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +118,8 @@ async def _generate_claude_analysis(
     pr_number: int
 ) -> Dict[str, Any]:
     """Generate analysis using Claude integration."""
-    # Simplified prompt for now - can be enhanced with full prompt generator
-    prompt_content = f"""Analyze this pull request comprehensively.
+    # Enhanced prompt following CLAUDE.md PR review guidelines
+    prompt_content = f"""Analyze this pull request following structured feedback categorization.
 
 PR Details:
 - Title: {pr_data['metadata']['title']}
@@ -127,12 +128,44 @@ PR Details:
 - Files: {size_analysis['size_reasons']}
 - Re-review: {review_context['is_re_review']}
 
-Please provide a structured analysis with:
-1. Overview
-2. Strengths
-3. Critical Issues
-4. Suggestions
-5. Recommendation (APPROVE/REQUEST_CHANGES/REJECT)
+Please provide analysis with categorized feedback:
+
+## Overview
+Brief summary of changes and overall assessment.
+
+## Strengths  
+Positive aspects of the implementation.
+
+## Categorized Feedback
+
+### ⚠️ CRITICAL Issues (Fix before merge)
+Issues that MUST be addressed before merging:
+- Security vulnerabilities or critical bugs
+- Missing issue linkage (Fixes #XX)
+- Breaking functionality
+- Simple fixes that don't change scope
+
+### 📋 IMPORTANT Suggestions (Consider follow-up)
+Good ideas that could be follow-up issues:
+- Performance improvements requiring analysis
+- Documentation enhancements not critical to current functionality
+- Refactoring suggestions that don't affect core functionality
+Note: Check if issues already exist before creating new ones.
+
+### 💡 NICE-TO-HAVE (Consider but likely ignore)
+Minor improvements with unclear value:
+- Subjective style preferences already covered by linting
+- Minor optimizations with unclear value
+- Features that may never be needed (YAGNI principle)
+
+### ❌ OVERENGINEERING Concerns (Reject)
+Recommendations that add unnecessary complexity:
+- Premature optimization
+- Over-abstraction for current use case
+- Violates KISS principle
+
+## Final Recommendation
+APPROVE/REQUEST_CHANGES/REJECT with clear rationale.
 """
     
     # Simplified data content

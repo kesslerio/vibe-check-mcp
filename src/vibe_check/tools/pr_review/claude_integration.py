@@ -283,25 +283,37 @@ class ClaudeIntegration:
     
     def _parse_claude_output(self, claude_output: str, pr_number: Optional[int] = None) -> Dict[str, Any]:
         """
-        Parse Claude output into structured analysis format.
+        Parse Claude output into structured analysis format with categorized feedback.
         
         Args:
             claude_output: Raw output from Claude CLI
             pr_number: PR number for context
             
         Returns:
-            Structured analysis data
+            Structured analysis data following CLAUDE.md categorization
         """
-        # Basic parsing - can be enhanced based on Claude output format
+        # Enhanced parsing for categorized feedback
         return {
             "raw_analysis": claude_output,
             "overview": self._extract_section(claude_output, "overview"),
             "strengths": self._extract_section(claude_output, "strengths"),
-            "critical_issues": self._extract_section(claude_output, "critical issues"),
-            "suggestions": self._extract_section(claude_output, "suggestions"),
+            
+            # Categorized feedback sections
+            "categorized_feedback": {
+                "critical_issues": self._extract_categorized_section(claude_output, "CRITICAL Issues"),
+                "important_suggestions": self._extract_categorized_section(claude_output, "IMPORTANT Suggestions"),
+                "nice_to_have": self._extract_categorized_section(claude_output, "NICE-TO-HAVE"),
+                "overengineering_concerns": self._extract_categorized_section(claude_output, "OVERENGINEERING Concerns")
+            },
+            
+            # Legacy fields for backward compatibility
+            "critical_issues": self._extract_categorized_section(claude_output, "CRITICAL Issues"),
+            "suggestions": self._extract_categorized_section(claude_output, "IMPORTANT Suggestions"),
+            
             "recommendation": self._extract_recommendation(claude_output),
             "pr_number": pr_number,
-            "analysis_timestamp": datetime.now().isoformat()
+            "analysis_timestamp": datetime.now().isoformat(),
+            "categorization_format": "CLAUDE.md_v1"
         }
     
     def _extract_section(self, text: str, section_name: str) -> str:
@@ -316,6 +328,37 @@ class ClaudeIntegration:
         ]
         
         for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                return match.group(1).strip()
+        
+        return ""
+    
+    def _extract_categorized_section(self, text: str, category_name: str) -> str:
+        """Extract categorized feedback sections with emoji indicators."""
+        # Patterns for categorized sections with emojis
+        emoji_patterns = {
+            "CRITICAL Issues": r"### ⚠️.*?CRITICAL.*?\n(.*?)(?=\n###|\n##|\Z)",
+            "IMPORTANT Suggestions": r"### 📋.*?IMPORTANT.*?\n(.*?)(?=\n###|\n##|\Z)",
+            "NICE-TO-HAVE": r"### 💡.*?NICE-TO-HAVE.*?\n(.*?)(?=\n###|\n##|\Z)",
+            "OVERENGINEERING Concerns": r"### ❌.*?OVERENGINEERING.*?\n(.*?)(?=\n###|\n##|\Z)"
+        }
+        
+        # Try emoji pattern first
+        if category_name in emoji_patterns:
+            pattern = emoji_patterns[category_name]
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                return match.group(1).strip()
+        
+        # Fallback to simple text pattern
+        fallback_patterns = [
+            fr"### .*{category_name}.*\n(.*?)(?=\n###|\n##|\Z)",
+            fr"## .*{category_name}.*\n(.*?)(?=\n##|\Z)",
+            fr"\*\*{category_name}.*?\*\*\n(.*?)(?=\n\*\*|\Z)"
+        ]
+        
+        for pattern in fallback_patterns:
             match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
             if match:
                 return match.group(1).strip()
