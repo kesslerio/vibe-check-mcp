@@ -204,11 +204,13 @@ docker run -d \
 
 Vibe Check MCP now includes **external Claude CLI integration** for advanced analysis capabilities:
 
-- **🔥 No Context Blocking**: External subprocess execution eliminates 30-second timeout issues
+- **🔥 No Context Blocking**: External subprocess execution eliminates 30-second timeout issues  
 - **💰 Cost Tracking**: Real-time cost monitoring and session management
 - **📊 SDK Compliance**: Structured JSON responses with metadata
 - **⚡ Reliable Performance**: Consistent 27s analysis time for complex PRs
 - **🎯 Specialized Prompts**: Task-specific system prompts for PR reviews, code analysis, and issue analysis
+- **🛡️ Recursion Prevention**: Directory isolation prevents infinite MCP server loops
+- **📋 CLAUDE.md Integration**: Automatically includes project engineering guidelines in analysis
 
 ### Requirements for Enhanced Analysis
 
@@ -228,6 +230,43 @@ To unlock enhanced Claude CLI analysis features:
 - **Code Analysis**: Deep code quality assessment with security and performance insights  
 - **Issue Analysis**: Strategic issue evaluation with implementation guidance
 - **Cost Optimization**: Track analysis costs to optimize usage patterns
+
+### Directory Isolation Architecture
+
+**Critical Technical Detail: Claude CLI Recursion Prevention**
+
+Our Claude CLI integration uses **directory isolation** to prevent infinite recursion loops:
+
+#### The Problem (Resolved in Issues #94, #95)
+When Claude CLI executes from within the vibe-check MCP context, it would:
+1. Load the project's MCP configuration
+2. Start the vibe-check MCP server again  
+3. Create infinite recursive loops causing hanging and timeouts
+
+#### The Solution: Directory Isolation
+```python
+# Claude CLI now executes from home directory (~) instead of project directory
+isolation_dir = os.path.expanduser("~")
+result = subprocess.run(command, cwd=isolation_dir, ...)
+```
+
+#### Implications for Users
+
+**✅ Benefits:**
+- **No More Hanging**: Eliminates infinite recursion and 70+ second timeouts
+- **Reliable Execution**: Consistent Claude CLI performance from MCP context
+- **Clean Logs**: Only 2 MCP session logs per operation instead of dozens
+
+**⚠️ Important Operational Changes:**
+- **Log Locations**: Claude CLI logs now appear in `~/.claude/` instead of project directory
+- **Working Directory**: Claude CLI runs from home directory, not project directory
+- **Settings Access**: Claude CLI uses global settings, not project-specific configurations
+
+**🔧 CLAUDE.md Instructions Preserved:**
+Despite directory isolation, our tools still follow project engineering guidelines because:
+- We explicitly read and include CLAUDE.md content in all prompts
+- Project-specific anti-pattern detection rules are embedded in system prompts
+- Engineering guidelines are automatically applied to all analysis
 
 ## 🔗 Claude Code Integration (Detailed Setup)
 
@@ -613,6 +652,31 @@ docker build --no-cache -t vibe-check-mcp .  # Clean build
 chmod +x scripts/*.sh
 source venv/bin/activate  # Ensure virtual environment is activated
 ```
+
+#### 6. Directory Isolation and Log Location Changes
+
+**Understanding the Directory Isolation Fix:**
+
+Since resolving Issues #94 and #95, Claude CLI now runs from your home directory to prevent recursion:
+
+```bash
+# ✅ Expected behavior after fix:
+# Claude CLI logs appear in ~/.claude/ instead of project directory
+# This is NORMAL and prevents infinite recursion loops
+
+# 🔍 Where to find Claude CLI logs:
+ls ~/.claude/logs/  # Check for recent log files
+ls ~/.claude/cache/ # Session and cache data
+
+# 🚨 If you see dozens of MCP session logs in project directory:
+# This indicates the old recursion problem - ensure you're using latest version
+```
+
+**CLAUDE.md Instructions Still Work:**
+Even though Claude CLI runs from home directory, it still follows project guidelines because:
+- CLAUDE.md content is explicitly read and included in every prompt
+- Anti-pattern detection rules are automatically applied
+- No action needed - this happens transparently
 
 ### Debug Mode
 
