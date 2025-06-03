@@ -172,12 +172,20 @@ Promote good engineering practices through constructive analysis.""",
         Returns:
             List of command line arguments
         """
+        # Determine turn limit based on task complexity
+        if task_type == "general":
+            max_turns = "1"  # Simple tasks don't need tools
+        elif task_type in ["issue_analysis", "pr_review"]:
+            max_turns = "5"  # Complex analysis may need GitHub tools
+        else:
+            max_turns = "3"  # Default moderate limit
+        
         # Start with base args following SDK best practices
         args = [
             '--dangerously-skip-permissions',  # Skip permission prompts
             '-p',  # Print mode (non-interactive)
             '--output-format', 'json',  # SDK recommended for programmatic usage
-            '--max-turns', '1',  # Force single-turn to prevent hanging
+            '--max-turns', max_turns,  # Context-appropriate turn limit
             '--verbose'  # Enable debugging output
         ]
         
