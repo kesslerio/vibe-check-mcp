@@ -212,9 +212,25 @@ Promote good engineering practices through constructive analysis.""",
             # Create clean environment to avoid MCP recursion detection
             clean_env = dict(os.environ)
             # Remove MCP and Claude Code specific environment variables
-            for var in ["MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE", 
-                       "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS"]:
-                clean_env.pop(var, None)
+            claude_vars_to_remove = [
+                # Original MCP variables
+                "MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE", 
+                "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS",
+                # Additional Claude Code variables that may interfere
+                "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT", "CLAUDE_CODE_SESSION_ID",
+                "CLAUDE_CODE_MCP_SERVER", "CLAUDE_CODE_CONTEXT", "CLAUDE_CLI_MCP_MODE",
+                # Additional MCP detection variables
+                "MCP_CLIENT_MODE", "MCP_TRANSPORT", "MCP_SESSION_ID"
+            ]
+            
+            removed_vars = []
+            for var in claude_vars_to_remove:
+                if var in clean_env:
+                    removed_vars.append(f"{var}={clean_env[var]}")
+                    clean_env.pop(var, None)
+            
+            if removed_vars:
+                logger.debug(f'[Debug] Removed environment variables: {", ".join(removed_vars)}')
             
             # Use regular subprocess
             command = [self.claude_cli_path] + claude_args
@@ -318,14 +334,37 @@ Promote good engineering practices through constructive analysis.""",
             claude_args = self._get_claude_args(prompt, task_type)
             command = [self.claude_cli_path] + claude_args
             
+            # Create clean environment to avoid MCP recursion detection  
+            clean_env = dict(os.environ)
+            claude_vars_to_remove = [
+                # Original MCP variables
+                "MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE", 
+                "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS",
+                # Additional Claude Code variables that may interfere
+                "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT", "CLAUDE_CODE_SESSION_ID",
+                "CLAUDE_CODE_MCP_SERVER", "CLAUDE_CODE_CONTEXT", "CLAUDE_CLI_MCP_MODE",
+                # Additional MCP detection variables
+                "MCP_CLIENT_MODE", "MCP_TRANSPORT", "MCP_SESSION_ID"
+            ]
+            
+            removed_vars = []
+            for var in claude_vars_to_remove:
+                if var in clean_env:
+                    removed_vars.append(f"{var}={clean_env[var]}")
+                    clean_env.pop(var, None)
+            
+            if removed_vars:
+                logger.debug(f'[Debug] Async removed environment variables: {", ".join(removed_vars)}')
+            
             logger.debug(f"Executing Claude CLI directly: {' '.join(command)}")
             
-            # Execute Claude CLI directly
+            # Execute Claude CLI directly with clean environment
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                stdin=asyncio.subprocess.DEVNULL
+                stdin=asyncio.subprocess.DEVNULL,
+                env=clean_env
             )
             
             stdout, stderr = await asyncio.wait_for(
