@@ -13,18 +13,32 @@ Vibe Check MCP is an engineering anti-pattern detection system that catches syst
 
 ## 🎯 Who Is This For?
 
-### **Technical Decision Makers**
-- **🎯 Technical Leads & Senior Developers** - Making architectural decisions and want to avoid repeating costly mistakes
-- **📋 Product Managers & Technical PMs** - Reviewing technical documents, PRDs, and need to spot engineering risks
-- **👤 Individual Contributors** - Want to level up technical judgment and avoid common pitfalls
-- **🤝 Non-technical Stakeholders** - Need to understand technical risks without deep engineering knowledge
+**Ever spend weeks building something, only to discover there was a simple API call for that?**
 
-### **Common Scenarios**
-- 🏗️ **Planning integrations** and want to avoid building custom solutions when standard APIs exist
-- 📝 **Reviewing technical documents** and PRDs for over-engineering risks
-- 🔍 **Analyzing GitHub issues** for systematic planning anti-patterns
-- 📊 **Reviewing pull requests** for complexity escalation and technical debt
-- 🎓 **Learning from failures** through real-world case studies and educational coaching
+You're not alone. Vibe Check MCP is specifically designed for **vibe coders** - people who love AI coding tools but need a sanity check to avoid the overengineering traps that AI often creates.
+
+### **If These Sound Familiar:**
+
+🔥 **"I'm 80% done but keep hitting new errors that set me back for days"**  
+🔥 **"After a few weeks, the cracks start to show and I get frustrated"**  
+🔥 **"LLM coded an entire iOS app database in a CSV file instead of Core Data - I had no idea!"**  
+🔥 **"Each AI fix creates new problems somewhere else"**
+
+### **You're Our Target User If You:**
+
+- **🎮 Love AI Coding Tools** - Use Claude, Cursor, Copilot but sometimes wonder if the suggestions are overengineered
+- **🤔 Trust But Want To Verify** - Get excited about AI solutions but lack deep library knowledge to validate them
+- **🔄 Stuck in Doom Loops** - Experience cycles where each AI fix creates new problems  
+- **📚 Don't Review Code Like Pros** - Accept AI suggestions without deep technical review (that's totally normal!)
+- **⚡ Value Speed Over Perfection** - Prefer working solutions over architecturally perfect ones
+
+### **Your Real Pain Points:**
+- **AI Overconfidence**: AI creates complex solutions with confidence, but you can't tell if they're overengineered
+- **Knowledge Gaps**: Don't know enough about libraries/frameworks to spot when AI is reinventing wheels
+- **Doom Loop Frustration**: Getting "almost there" then spending days fixing unfixable problems
+- **Hidden Complexity**: AI writes code you don't fully understand, leading to maintenance nightmares
+
+**Vibe Check MCP is your AI coding safety net - keeping the fun of vibe coding while avoiding the expensive traps.**
 
 ## 🎯 What It Does
 
@@ -80,7 +94,7 @@ git clone https://github.com/kesslerio/vibe-check-mcp.git
 cd vibe-check-mcp
 pip install -r requirements.txt
 
-# 2. Add to Claude Code
+# 2. Add to Claude Code (IMPORTANT: Do NOT use -s user flag - causes recursion!)
 claude mcp add-json vibe-check '{
   "type": "stdio",
   "command": "python", 
@@ -89,9 +103,11 @@ claude mcp add-json vibe-check '{
     "PYTHONPATH": "'"$(pwd)"'/src",
     "GITHUB_TOKEN": "your_github_token_here"
   }
-}' -s user
+}'
 
 # 3. Restart Claude Code and start using!
+
+⚠️ **CRITICAL**: Never use `-s user` flag with MCP servers as it causes infinite recursion and Claude Code timeouts. This project only works in Claude Code SDK (non-interactive) mode. See [Claude Code SDK docs](https://docs.anthropic.com/en/docs/claude-code/sdk) for details.
 ```
 
 ## 🚀 Usage Examples

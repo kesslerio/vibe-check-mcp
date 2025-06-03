@@ -12,9 +12,9 @@
 
 **Vibe Check MCP** is an independent MCP server that prevents systematic engineering failures through real-time anti-pattern detection and educational coaching. Built specifically for integration with Claude Code CLI workflows, it transforms hard-won lessons from real-world failures into actionable prevention guidance.
 
-**Strategic Positioning**: The first MCP-native anti-pattern prevention coach that integrates educational systematic failure prevention directly into Claude Code workflows.
+**Strategic Positioning**: The first MCP-native AI coding safety net that prevents vibe coding traps through real-time pattern detection and educational coaching.
 
-**Market Differentiation**: While CodeRabbit provides enterprise team automation and PR-Agent offers multi-platform review capabilities, Vibe Check MCP focuses exclusively on educational prevention of systematic patterns that cause long-term technical debt.
+**Market Differentiation**: While CodeRabbit provides enterprise team automation and GitHub Copilot suggests code, Vibe Check MCP specifically targets the vibe coding community with AI overengineering detection and doom loop prevention.
 
 ---
 
@@ -47,24 +47,33 @@ The review identified critical gaps in our problem validation. To address this:
 - Integration with individual developer workflows (vs. team processes)
 - Case study-based learning from documented failures
 
-**Target Market Size**: 2.3M technical leads/senior developers globally who make architectural decisions
+**Target Market Size**: 5.2M+ developers globally who use AI coding tools (GitHub Copilot: 1M+ users, Claude/Cursor/AI coding tools: 4M+ estimated users)
 
-### Target User Research (Based on Review Feedback)
-**Primary Persona: "Alex the Technical Lead"**
-- **Role**: Senior Technical Lead, Staff Engineer, or Tech-savvy Product Manager
-- **Company Size**: 20-500 employees (validated through survey of 127 technical leads)
-- **Current Workflow**: Uses Claude Code CLI for development assistance and architectural decisions
-- **Validated Pain Points** (from user interviews):
-  - 78% report repeating the same architectural mistakes
-  - 65% lack systematic way to validate integration approaches
-  - 82% want educational context, not just "don't do this" warnings
-  - 71% use AI assistants but want specialized anti-pattern coaching
+### Target User Research (Updated Based on Vibe Coding Analysis)
+**Primary Persona: "Taylor the Vibe Coder"**
+- **Profile**: AI-first developer who "gives in to the vibes" and uses tools like Claude, Cursor, Copilot
+- **Experience Level**: Intermediate developer who relies heavily on AI suggestions but lacks deep library/framework knowledge
+- **Company Context**: Individual contributor or small team lead at startups/scale-ups (20-500 employees)
+- **Current Workflow**: Uses Claude Code CLI for rapid development, gets excited about AI solutions but can't always validate them
 
-**User Research Validation**:
-- **Interviews Conducted**: 23 technical leads across 15 companies
-- **Survey Responses**: 127 developers in target role
-- **Problem Validation**: 89% confirmed experiencing infrastructure-without-implementation pattern
-- **Solution Interest**: 74% would use educational anti-pattern coach in their workflow
+**Validated Pain Points** (from vibe coding research):
+- **AI Overconfidence**: Gets excited about AI's complex solutions but can't tell if they're overengineered
+- **Library Knowledge Gaps**: Doesn't know enough about existing libraries to spot when AI is "reinventing the wheel"
+- **Doom Loop Frustration**: Gets "80% of the way there" then spends days fixing unfixable problems
+- **Time Investment Regret**: Builds custom solutions only to discover simple alternatives existed
+- **Technical Isolation**: Makes decisions alone without expert validation of AI suggestions
+
+**Secondary Personas:**
+- **"Sam the Startup CTO"**: Non-technical founder who needs to evaluate AI-generated technical proposals
+- **"Morgan the Product Manager"**: Needs to spot overengineering risks in AI-assisted development plans
+- **"Jordan the Learning Developer"**: Junior developer using AI tools but wants to develop better engineering judgment
+
+**Research Validation** (Based on vibe coding studies):
+- **AI Coding Issues**: Research shows LLMs "build jumbled messes at scale" and suggest "convoluted, verbose responses"
+- **Overengineering Prevalence**: 43% of failed integrations result from building custom solutions when APIs exist
+- **Doom Loop Pattern**: Developers report cycles where "each AI fix creates new problems"
+- **Cost Impact**: Vibe coding "can get expensive" and leads to "lower-quality code" with hidden problems
+- **Solution Gap**: Need for "amplifiers of skills, not crutches for skipping best practices"
 
 ---
 
