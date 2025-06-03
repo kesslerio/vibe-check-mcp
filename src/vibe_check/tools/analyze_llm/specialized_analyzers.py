@@ -153,6 +153,10 @@ async def analyze_github_issue_llm(
     guidance using Claude CLI, and optionally posts a friendly coaching comment.
     For fast direct issue analysis, use analyze_issue_nollm instead.
     
+    IMPORTANT: When this tool returns a "comment_url" or "user_message" field, 
+    ALWAYS include the full GitHub URL in your response to help users access 
+    the posted comment directly.
+    
     Args:
         issue_number: GitHub issue number to analyze
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
@@ -304,6 +308,10 @@ async def analyze_github_pr_llm(
     This tool fetches the GitHub PR, analyzes it for anti-patterns and engineering
     guidance using Claude CLI, and optionally posts a friendly coaching review.
     For fast direct PR analysis, use analyze_pr_nollm instead.
+    
+    IMPORTANT: When this tool returns a "comment_url" or "user_message" field, 
+    ALWAYS include the full GitHub URL in your response to help users access 
+    the posted review directly.
     
     Args:
         pr_number: GitHub PR number to analyze
