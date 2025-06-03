@@ -195,25 +195,112 @@ Promote good engineering practices through constructive analysis.""",
         Returns:
             List of command line arguments
         """
-        # Determine turn limit and allowed tools based on task complexity
-        # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
+        # Enhanced task configuration with comprehensive tool allowlists
+        # Removed restrictive max turns limits to allow thorough analysis
         if task_type == "general":
-            max_turns = "1"  # Simple tasks for text analysis
-            allowed_tools = "Read,Write"  # Basic file operations only
+            max_turns = "5"  # Generous limit for iterative analysis
+            allowed_tools = "Read,Write"
+            
         elif task_type == "issue_analysis":
-            max_turns = "2"  # Moderate limit for issue analysis
-            # File ops + git commands for context analysis
-            allowed_tools = "Read,Write,Bash(git:*)"
+            max_turns = "10"  # Increased for thorough analysis
+            allowed_tools = ",".join([
+                # Basic file operations
+                "Read", "Write",
+                # Git operations
+                "Bash(git:*)",
+                # GitHub issue tools
+                "mcp__github__get_issue",
+                "mcp__github__get_issue_comments", 
+                "mcp__github__add_issue_comment",
+                "mcp__github__list_issues",
+                "mcp__github__search_issues",
+                "mcp__github__update_issue",
+                # Clear thought analysis tools
+                "mcp__clear-thought-server__sequentialthinking",
+                "mcp__clear-thought-server__mentalmodel",
+                "mcp__clear-thought-server__designpattern",
+                "mcp__clear-thought-server__debuggingapproach",
+                # Research tools
+                "mcp__brave-search__brave_web_search",
+                "mcp__tavily-mcp__tavily-search"
+            ])
+            
         elif task_type == "pr_review":
-            max_turns = "2"  # Moderate limit for PR review
-            # Code analysis tools for comprehensive review
-            allowed_tools = "Read,Write,Bash(git:*),Grep,Glob"
+            max_turns = "10"  # Increased for comprehensive review
+            allowed_tools = ",".join([
+                # Basic file and code operations
+                "Read", "Write", "Grep", "Glob",
+                # Git operations  
+                "Bash(git:*)",
+                # GitHub PR tools
+                "mcp__github__get_pull_request",
+                "mcp__github__get_pull_request_diff",
+                "mcp__github__get_pull_request_files",
+                "mcp__github__get_pull_request_comments",
+                "mcp__github__add_pull_request_review_comment_to_pending_review",
+                "mcp__github__create_and_submit_pull_request_review",
+                "mcp__github__list_pull_requests",
+                # Clear thought analysis tools
+                "mcp__clear-thought-server__sequentialthinking",
+                "mcp__clear-thought-server__mentalmodel",
+                "mcp__clear-thought-server__designpattern",
+                "mcp__clear-thought-server__programmingparadigm",
+                "mcp__clear-thought-server__debuggingapproach",
+                # Research and documentation tools
+                "mcp__brave-search__brave_web_search",
+                "mcp__tavily-mcp__tavily-search"
+            ])
+            
         elif task_type == "code_analysis":
-            max_turns = "1"  # Single turn for code analysis
-            allowed_tools = "Read,Grep,Glob"  # Read-only code examination
+            max_turns = "8"  # Increased for thorough code review
+            allowed_tools = ",".join([
+                "Read", "Grep", "Glob",
+                # Clear thought tools for code analysis
+                "mcp__clear-thought-server__sequentialthinking",
+                "mcp__clear-thought-server__mentalmodel", 
+                "mcp__clear-thought-server__designpattern",
+                "mcp__clear-thought-server__programmingparadigm",
+                "mcp__clear-thought-server__debuggingapproach",
+                # Research for best practices
+                "mcp__brave-search__brave_web_search",
+                "mcp__tavily-mcp__tavily-search"
+            ])
+            
+        elif task_type == "comprehensive_review":  # New task type for thorough analysis
+            max_turns = "15"  # Maximum for deep analysis
+            allowed_tools = ",".join([
+                # All file operations
+                "Read", "Write", "Grep", "Glob",
+                # Git operations
+                "Bash(git:*)",
+                # Complete GitHub toolset
+                "mcp__github__get_issue",
+                "mcp__github__get_issue_comments",
+                "mcp__github__add_issue_comment",
+                "mcp__github__get_pull_request",
+                "mcp__github__get_pull_request_diff", 
+                "mcp__github__get_pull_request_files",
+                "mcp__github__create_and_submit_pull_request_review",
+                "mcp__github__search_code",
+                "mcp__github__search_issues",
+                # Full clear thought toolkit
+                "mcp__clear-thought-server__sequentialthinking",
+                "mcp__clear-thought-server__mentalmodel",
+                "mcp__clear-thought-server__designpattern",
+                "mcp__clear-thought-server__programmingparadigm",
+                "mcp__clear-thought-server__debuggingapproach",
+                "mcp__clear-thought-server__collaborativereasoning",
+                "mcp__clear-thought-server__decisionframework",
+                "mcp__clear-thought-server__scientificmethod",
+                "mcp__clear-thought-server__structuredargumentation",
+                # Research capabilities
+                "mcp__brave-search__brave_web_search",
+                "mcp__tavily-mcp__tavily-search",
+                "mcp__tavily-mcp__tavily-extract"
+            ])
         else:
-            max_turns = "1"  # Conservative default
-            allowed_tools = "Read"  # Read-only by default
+            max_turns = "5"  # Generous default instead of restrictive
+            allowed_tools = "Read,Write"  # Basic operations
         
         # Start with base args following SDK best practices
         # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
