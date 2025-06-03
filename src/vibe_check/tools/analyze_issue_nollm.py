@@ -405,7 +405,7 @@ def analyze_issue(
         from datetime import datetime
         timestamp = datetime.utcnow().isoformat() + "Z"
         
-        return {
+        result = {
             "status": "vibe_check_complete",
             "analysis_timestamp": timestamp,
             
@@ -446,6 +446,10 @@ def analyze_issue(
                 "language_style": "friendly_coaching"
             }
         }
+        
+        # Sanitize any GitHub API URLs to frontend URLs
+        from .shared.github_helpers import sanitize_github_urls_in_response
+        return sanitize_github_urls_in_response(result)
         
     except Exception as e:
         error_msg = f"Vibe check failed: {str(e)}"
