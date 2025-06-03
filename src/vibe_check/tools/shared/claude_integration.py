@@ -189,7 +189,6 @@ Promote good engineering practices through constructive analysis.""",
         # Start with base args following SDK best practices
         args = [
             '--dangerously-skip-permissions',  # Skip permission prompts
-            '-p',  # Print mode (non-interactive)
             '--output-format', 'json',  # SDK recommended for programmatic usage
             '--max-turns', max_turns,  # Context-appropriate turn limit
             '--verbose'  # Enable debugging output
@@ -198,6 +197,9 @@ Promote good engineering practices through constructive analysis.""",
         # Add tool restrictions for security (Issue #90 compliance)
         if allowed_tools:
             args.extend(['--allowedTools', allowed_tools])
+        
+        # Add print flag and prompt (prompt must be last)
+        args.append('-p')
         
         # Add system prompt if we have specialized task types
         system_prompt = self._get_system_prompt(task_type)
