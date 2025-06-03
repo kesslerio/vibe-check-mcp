@@ -222,13 +222,58 @@ class PyGitHubImplementation(GitHubOperations):
     
     def get_pull_request(self, repository: str, pr_number: int) -> GitHubOperationResult:
         """Fetch PR using PyGithub."""
-        # Implementation similar to get_issue but for PRs
-        # For brevity, showing structure - would implement full functionality
-        return GitHubOperationResult(
-            success=False,
-            error="Not implemented yet",
-            implementation=self.implementation_name
-        )
+        if not self.available:
+            return GitHubOperationResult(
+                success=False,
+                error="PyGithub not available",
+                implementation=self.implementation_name
+            )
+        
+        import time
+        start_time = time.time()
+        
+        try:
+            client = self.get_client()
+            if not client:
+                return GitHubOperationResult(
+                    success=False,
+                    error="GitHub authentication failed",
+                    implementation=self.implementation_name
+                )
+            
+            repo = client.get_repo(repository)
+            pr = repo.get_pull(pr_number)
+            
+            github_pr = GitHubPullRequest(
+                number=pr.number,
+                title=pr.title,
+                body=pr.body,
+                state=pr.state,
+                user_login=pr.user.login,
+                labels=[label.name for label in pr.labels],
+                repository=repository,
+                html_url=pr.html_url,
+                head_ref=pr.head.ref,
+                base_ref=pr.base.ref,
+                diff_url=pr.diff_url,
+                created_at=pr.created_at.isoformat(),
+                updated_at=pr.updated_at.isoformat()
+            )
+            
+            return GitHubOperationResult(
+                success=True,
+                data=github_pr,
+                implementation=self.implementation_name,
+                execution_time=time.time() - start_time
+            )
+            
+        except Exception as e:
+            return GitHubOperationResult(
+                success=False,
+                error=str(e),
+                implementation=self.implementation_name,
+                execution_time=time.time() - start_time
+            )
     
     def post_issue_comment(
         self, 
@@ -268,11 +313,55 @@ class PyGitHubImplementation(GitHubOperations):
     
     def get_pull_request_diff(self, repository: str, pr_number: int) -> GitHubOperationResult:
         """Get PR diff using PyGithub."""
-        return GitHubOperationResult(
-            success=False,
-            error="Not implemented yet",
-            implementation=self.implementation_name
-        )
+        if not self.available:
+            return GitHubOperationResult(
+                success=False,
+                error="PyGithub not available",
+                implementation=self.implementation_name
+            )
+        
+        import time
+        start_time = time.time()
+        
+        try:
+            client = self.get_client()
+            if not client:
+                return GitHubOperationResult(
+                    success=False,
+                    error="GitHub authentication failed",
+                    implementation=self.implementation_name
+                )
+            
+            repo = client.get_repo(repository)
+            pr = repo.get_pull(pr_number)
+            
+            # Get the diff URL and fetch it
+            import requests
+            diff_response = requests.get(pr.diff_url)
+            if diff_response.status_code == 200:
+                diff_content = diff_response.text
+                
+                return GitHubOperationResult(
+                    success=True,
+                    data=diff_content,
+                    implementation=self.implementation_name,
+                    execution_time=time.time() - start_time
+                )
+            else:
+                return GitHubOperationResult(
+                    success=False,
+                    error=f"Failed to fetch diff: HTTP {diff_response.status_code}",
+                    implementation=self.implementation_name,
+                    execution_time=time.time() - start_time
+                )
+            
+        except Exception as e:
+            return GitHubOperationResult(
+                success=False,
+                error=str(e),
+                implementation=self.implementation_name,
+                execution_time=time.time() - start_time
+            )
     
     def get_pull_request_files(self, repository: str, pr_number: int) -> GitHubOperationResult:
         """Get PR files using PyGithub."""

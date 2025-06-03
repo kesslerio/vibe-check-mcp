@@ -17,7 +17,8 @@ from .specialized_analyzers import (
     analyze_pr_llm,
     analyze_code_llm, 
     analyze_issue_llm,
-    analyze_github_issue_llm
+    analyze_github_issue_llm,
+    analyze_github_pr_llm
 )
 from .llm_models import ExternalClaudeResponse
 
@@ -35,6 +36,7 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
     mcp.tool()(analyze_code_llm)
     mcp.tool()(analyze_issue_llm)
     mcp.tool()(analyze_github_issue_llm)
+    mcp.tool()(analyze_github_pr_llm)
     
     # Register status tool
     @mcp.tool()
