@@ -23,8 +23,9 @@ Usage:
 from .core.pattern_detector import PatternDetector
 from .core.educational_content import EducationalContentGenerator
 from .server import run_server
+from .utils.version_utils import get_version
 
-__version__ = "3.0.0"
+__version__ = get_version()
 __author__ = "Vibe Check MCP Development Team"
 
 __all__ = [

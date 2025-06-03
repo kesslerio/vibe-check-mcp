@@ -1,11 +1,30 @@
 #!/usr/bin/env python3
 """
-Version utilities for pattern versioning support
+Version utilities for Vibe Check MCP.
+
+Provides centralized version management, validation, and release utilities.
 """
 
 import re
+import os
+from pathlib import Path
 from typing import Tuple, Optional
-from packaging import version
+
+
+def get_version() -> str:
+    """
+    Get the current version from VERSION file.
+    
+    Returns:
+        Version string in semantic versioning format (major.minor.patch)
+    """
+    try:
+        version_file = Path(__file__).parent.parent.parent.parent / "VERSION"
+        with open(version_file, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        # Fallback version
+        return "0.1.0"
 
 
 def parse_semantic_version(version_str: str) -> Tuple[int, int, int]:
@@ -28,6 +47,32 @@ def parse_semantic_version(version_str: str) -> Tuple[int, int, int]:
     return (int(parts[0]), int(parts[1]), int(parts[2]))
 
 
+def increment_version(version: str, release_type: str) -> str:
+    """
+    Increment version based on release type.
+    
+    Args:
+        version: Current version string
+        release_type: One of 'major', 'minor', 'patch'
+        
+    Returns:
+        New version string
+        
+    Raises:
+        ValueError: If release_type is invalid
+    """
+    major, minor, patch = parse_semantic_version(version)
+    
+    if release_type == 'major':
+        return f"{major + 1}.0.0"
+    elif release_type == 'minor':
+        return f"{major}.{minor + 1}.0"
+    elif release_type == 'patch':
+        return f"{major}.{minor}.{patch + 1}"
+    else:
+        raise ValueError(f"Invalid release type: {release_type}")
+
+
 def compare_versions(version1: str, version2: str) -> int:
     """
     Compare two semantic version strings
@@ -41,12 +86,12 @@ def compare_versions(version1: str, version2: str) -> int:
          0 if version1 == version2
          1 if version1 > version2
     """
-    v1 = version.parse(version1)
-    v2 = version.parse(version2)
+    v1_parts = parse_semantic_version(version1)
+    v2_parts = parse_semantic_version(version2)
     
-    if v1 < v2:
+    if v1_parts < v2_parts:
         return -1
-    elif v1 > v2:
+    elif v1_parts > v2_parts:
         return 1
     else:
         return 0
@@ -113,3 +158,7 @@ def get_migration_path(
         return f"Patch version upgrade: {from_version} -> {to_version}. Bug fixes included."
     else:
         return f"Version downgrade: {from_version} -> {to_version}. Compatibility check recommended."
+
+
+# Export the current version
+__version__ = get_version()
