@@ -276,7 +276,9 @@ Use friendly, coaching language that helps developers learn rather than intimida
             if not comment_result.success:
                 response["comment_error"] = f"Failed to post comment: {comment_result.error}"
         
-        return response
+        # Sanitize any GitHub API URLs to frontend URLs
+        from ..shared.github_helpers import sanitize_github_urls_in_response
+        return sanitize_github_urls_in_response(response)
         
     except Exception as e:
         logger.error(f"Error in GitHub issue vibe check: {e}")
@@ -456,7 +458,9 @@ Use friendly, coaching language that helps developers learn rather than intimida
             except Exception as e:
                 response["comment_error"] = f"Failed to post review: {str(e)}"
         
-        return response
+        # Sanitize any GitHub API URLs to frontend URLs
+        from ..shared.github_helpers import sanitize_github_urls_in_response
+        return sanitize_github_urls_in_response(response)
         
     except Exception as e:
         logger.error(f"Error in GitHub PR vibe check: {e}")

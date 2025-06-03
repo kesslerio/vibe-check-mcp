@@ -8,7 +8,7 @@ Provides authentication, API access, and comment posting functionality.
 import logging
 import os
 import subprocess
-from typing import Optional
+from typing import Optional, Any
 
 logger = logging.getLogger(__name__)
 
@@ -144,3 +144,67 @@ def check_github_authentication() -> dict:
             "error": f"GitHub authentication failed: {str(e)}",
             "solution": "Check token validity or run 'gh auth refresh'"
         }
+
+
+def convert_api_url_to_frontend(url: str) -> str:
+    """
+    Convert GitHub API URLs to user-facing frontend URLs.
+    
+    Args:
+        url: GitHub URL (API or frontend)
+        
+    Returns:
+        Frontend GitHub URL
+    """
+    if not url:
+        return url
+        
+    # Convert API URLs to frontend URLs
+    if "api.github.com" in url:
+        # Convert issue API URLs: https://api.github.com/repos/owner/repo/issues/123
+        # To frontend URLs: https://github.com/owner/repo/issues/123
+        if "/repos/" in url and "/issues/" in url:
+            # Extract parts: https://api.github.com/repos/owner/repo/issues/123
+            parts = url.replace("https://api.github.com/repos/", "").split("/")
+            if len(parts) >= 4 and parts[2] == "issues":
+                owner, repo, _, issue_num = parts[:4]
+                return f"https://github.com/{owner}/{repo}/issues/{issue_num}"
+        
+        # Convert PR API URLs: https://api.github.com/repos/owner/repo/pulls/123  
+        # To frontend URLs: https://github.com/owner/repo/pull/123
+        elif "/repos/" in url and "/pulls/" in url:
+            parts = url.replace("https://api.github.com/repos/", "").split("/")
+            if len(parts) >= 4 and parts[2] == "pulls":
+                owner, repo, _, pr_num = parts[:4]
+                return f"https://github.com/{owner}/{repo}/pull/{pr_num}"
+    
+    # Return as-is if already a frontend URL or unrecognized format
+    return url
+
+
+def sanitize_github_urls_in_response(data: Any) -> Any:
+    """
+    Recursively convert any GitHub API URLs to frontend URLs in response data.
+    
+    Args:
+        data: Response data (dict, list, or primitive)
+        
+    Returns:
+        Data with API URLs converted to frontend URLs
+    """
+    if isinstance(data, dict):
+        result = {}
+        for key, value in data.items():
+            # Convert URL fields
+            if key.endswith('_url') or key == 'url':
+                if isinstance(value, str):
+                    result[key] = convert_api_url_to_frontend(value)
+                else:
+                    result[key] = value
+            else:
+                result[key] = sanitize_github_urls_in_response(value)
+        return result
+    elif isinstance(data, list):
+        return [sanitize_github_urls_in_response(item) for item in data]
+    else:
+        return data
