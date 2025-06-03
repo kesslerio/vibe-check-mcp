@@ -237,12 +237,20 @@ Please provide a vibe check analysis in this format:
 
 Use friendly, coaching language that helps developers learn rather than intimidate."""
         
+        # Log prompt size for debugging
+        prompt_size = len(vibe_prompt)
+        logger.debug(f"[Debug] GitHub issue analysis prompt size: {prompt_size} characters")
+        
+        # Use longer timeout for complex GitHub issue analysis
+        analysis_timeout = max(timeout_seconds, 90)  # Minimum 90s for complex prompts
+        logger.debug(f"[Debug] Using timeout: {analysis_timeout}s for GitHub issue analysis")
+        
         # Run external Claude analysis
         result = await analyze_text_llm(
             content=vibe_prompt,
             task_type="issue_analysis",
             additional_context=f"Vibe check for GitHub issue {repository}#{issue_number}",
-            timeout_seconds=timeout_seconds
+            timeout_seconds=analysis_timeout
         )
         
         # Build response
