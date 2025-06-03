@@ -150,17 +150,62 @@ Promote good engineering practices through constructive analysis.""",
         logger.warning(f'[Warning] Claude CLI not found at ~/.claude/local/claude. Falling back to "{cli_name}" in PATH')
         return cli_name
     
+    def _get_claude_md_content(self) -> str:
+        """
+        Read CLAUDE.md content from the project directory.
+        
+        Since Claude CLI runs from home directory to avoid recursion,
+        we must explicitly read and include CLAUDE.md instructions.
+        
+        Returns:
+            CLAUDE.md content or empty string if not found
+        """
+        try:
+            # Find project root by walking up from current file location
+            current_file = os.path.abspath(__file__)
+            # Navigate up: shared -> tools -> vibe_check -> src -> project_root
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file)))))
+            claude_md_path = os.path.join(project_root, "CLAUDE.md")
+            
+            if os.path.exists(claude_md_path):
+                with open(claude_md_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                logger.debug(f"Successfully read CLAUDE.md from {claude_md_path}")
+                return content
+            else:
+                logger.warning(f"CLAUDE.md not found at {claude_md_path}")
+                return ""
+        except Exception as e:
+            logger.error(f"Error reading CLAUDE.md: {e}")
+            return ""
+    
     def _get_system_prompt(self, task_type: str) -> str:
         """
-        Get specialized system prompt for task type.
+        Get specialized system prompt for task type, enhanced with CLAUDE.md instructions.
         
         Args:
             task_type: Type of analysis task
             
         Returns:
-            System prompt for the specific task
+            System prompt for the specific task, including CLAUDE.md content
         """
-        return self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
+        base_prompt = self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
+        
+        # Add CLAUDE.md instructions for comprehensive guidance
+        claude_md_content = self._get_claude_md_content()
+        if claude_md_content:
+            enhanced_prompt = f"""{base_prompt}
+
+## Project Engineering Guidelines (CLAUDE.md)
+
+You must follow these project-specific engineering guidelines:
+
+{claude_md_content}
+
+Please apply these guidelines throughout your analysis and recommendations."""
+            return enhanced_prompt
+        else:
+            return base_prompt
     
     def _get_mcp_config_path(self) -> str:
         """
