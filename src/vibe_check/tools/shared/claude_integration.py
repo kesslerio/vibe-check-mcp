@@ -665,25 +665,60 @@ Please apply these guidelines throughout your analysis and recommendations."""
             )
 
 
-# Convenience functions for common use cases
-async def analyze_content_async(
+# Circuit breaker integration (Phase 2 - Issue #102)
+from .circuit_breaker import ClaudeCliCircuitBreaker, CircuitBreakerOpenError, ClaudeCliError
+from .retry_logic import get_global_circuit_breaker, claude_cli_with_retry
+from .health_monitor import ClaudeCliHealthMonitor
+
+# Global health monitor instance
+_global_health_monitor: Optional[ClaudeCliHealthMonitor] = None
+
+
+def get_global_health_monitor() -> ClaudeCliHealthMonitor:
+    """Get or create the global health monitor instance."""
+    global _global_health_monitor
+    
+    if _global_health_monitor is None:
+        circuit_breaker = get_global_circuit_breaker()
+        _global_health_monitor = ClaudeCliHealthMonitor(circuit_breaker)
+        logger.info("Global health monitor created")
+    
+    return _global_health_monitor
+
+
+async def analyze_content_async_with_circuit_breaker(
     content: str,
     task_type: str = "general",
     additional_context: Optional[str] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    max_retries: int = 2
 ) -> ClaudeCliResult:
     """
-    Analyze content using Claude CLI asynchronously.
+    Analyze content using Claude CLI with circuit breaker and retry logic.
+    
+    This is the enhanced version that implements Phase 2 (Issue #102) with:
+    - Circuit breaker pattern for reliability
+    - Retry logic with exponential backoff
+    - Health monitoring and diagnostics
+    - Graceful degradation on failures
     
     Args:
         content: Content to analyze
         task_type: Type of analysis (pr_review, code_analysis, etc.)
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
+        max_retries: Maximum number of retry attempts
         
     Returns:
         ClaudeCliResult with analysis
+        
+    Raises:
+        ClaudeCliError: When analysis fails after all retries
+        CircuitBreakerOpenError: When circuit breaker is open
     """
+    circuit_breaker = get_global_circuit_breaker()
+    health_monitor = get_global_health_monitor()
+    
     # Build prompt with context and content
     prompt_parts = []
     
@@ -694,8 +729,143 @@ async def analyze_content_async(
     
     prompt = "\n\n".join(prompt_parts)
     
-    executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
-    return await executor.execute_async(prompt=prompt, task_type=task_type)
+    async def _execute_analysis():
+        """Inner function to execute the analysis."""
+        executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
+        return await executor.execute_async(prompt=prompt, task_type=task_type)
+    
+    # Record the start time
+    start_time = time.time()
+    
+    try:
+        # Execute through circuit breaker with retry logic
+        result = await claude_cli_with_retry(
+            _execute_analysis,
+            circuit_breaker,
+            max_retries=max_retries,
+            timeout=timeout_seconds
+        )
+        
+        # Record successful call
+        duration = time.time() - start_time
+        health_monitor.record_call(
+            success=result.success,
+            duration=duration,
+            timeout=False
+        )
+        
+        return result
+        
+    except CircuitBreakerOpenError as e:
+        # Circuit breaker is open - record as rejected call
+        duration = time.time() - start_time
+        health_monitor.record_call(
+            success=False,
+            duration=duration,
+            error_type="CircuitBreakerOpen",
+            error_message=str(e)
+        )
+        
+        # Return a graceful degradation result instead of raising
+        return ClaudeCliResult(
+            success=False,
+            error=str(e),
+            exit_code=-2,
+            execution_time=duration,
+            command_used="circuit_breaker_blocked",
+            task_type=task_type,
+            sdk_metadata={
+                "circuit_breaker_status": "OPEN",
+                "graceful_degradation": True,
+                "health_status": health_monitor.get_health_status().level
+            }
+        )
+        
+    except ClaudeCliError as e:
+        # Analysis failed after retries
+        duration = time.time() - start_time
+        health_monitor.record_call(
+            success=False,
+            duration=duration,
+            error_type="ClaudeCliError",
+            error_message=str(e),
+            timeout="timeout" in str(e).lower()
+        )
+        
+        # Return error result instead of raising
+        return ClaudeCliResult(
+            success=False,
+            error=str(e),
+            exit_code=-1,
+            execution_time=duration,
+            command_used="circuit_breaker_failed",
+            task_type=task_type,
+            sdk_metadata={
+                "circuit_breaker_status": circuit_breaker.state.value,
+                "health_status": health_monitor.get_health_status().level,
+                "retries_exhausted": True
+            }
+        )
+        
+    except Exception as e:
+        # Unexpected error
+        duration = time.time() - start_time
+        health_monitor.record_call(
+            success=False,
+            duration=duration,
+            error_type=type(e).__name__,
+            error_message=str(e)
+        )
+        
+        logger.error(f"Unexpected error in circuit breaker analysis: {e}")
+        
+        return ClaudeCliResult(
+            success=False,
+            error=f"Unexpected error: {str(e)}",
+            exit_code=-1,
+            execution_time=duration,
+            command_used="circuit_breaker_error",
+            task_type=task_type,
+            sdk_metadata={
+                "circuit_breaker_status": circuit_breaker.state.value,
+                "health_status": health_monitor.get_health_status().level,
+                "unexpected_error": True
+            }
+        )
+
+
+# Convenience functions for common use cases
+async def analyze_content_async(
+    content: str,
+    task_type: str = "general",
+    additional_context: Optional[str] = None,
+    timeout_seconds: int = 60
+) -> ClaudeCliResult:
+    """
+    Analyze content using Claude CLI asynchronously.
+    
+    This is the legacy function maintained for backward compatibility.
+    For new code, consider using analyze_content_async_with_circuit_breaker()
+    which provides better reliability through circuit breaker patterns.
+    
+    Args:
+        content: Content to analyze
+        task_type: Type of analysis (pr_review, code_analysis, etc.)
+        additional_context: Optional additional context
+        timeout_seconds: Maximum time to wait for response
+        
+    Returns:
+        ClaudeCliResult with analysis
+    """
+    # Check if circuit breaker should be used by default
+    # For now, use the enhanced version for better reliability
+    return await analyze_content_async_with_circuit_breaker(
+        content=content,
+        task_type=task_type,
+        additional_context=additional_context,
+        timeout_seconds=timeout_seconds,
+        max_retries=2  # Default retry behavior
+    )
 
 
 def analyze_content_sync(
