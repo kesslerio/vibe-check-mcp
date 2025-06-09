@@ -313,35 +313,92 @@ def _generate_basic_recommendations(
     """Generate basic recommendations based on analysis."""
     recommendations = []
     
-    # Size-based recommendations
+    # Enhanced size-based recommendations for Issue #101
     if size_metrics["size"] in ["L", "XL"]:
-        recommendations.append({
-            "type": "size",
-            "priority": "medium",
-            "message": f"Large PR ({size_metrics['size']}). Consider splitting into smaller, focused changes."
-        })
+        total_changes = size_metrics.get("total_changes", 0)
+        changed_files = size_metrics.get("changed_files", 0)
+        
+        # Import the filtering configuration for consistent thresholds
+        from ...core.pr_filtering import FilteringConfig
+        
+        # More specific guidance based on size characteristics
+        if total_changes > FilteringConfig.MAX_LINES_FOR_LLM:
+            recommendations.append({
+                "type": "size",
+                "priority": "high",
+                "message": f"Very large PR ({total_changes} lines changed). This exceeds LLM analysis thresholds and may indicate need for splitting.",
+                "details": [
+                    "Consider breaking into logical, independently reviewable chunks",
+                    "Use feature flags for incremental rollout if needed",
+                    "Focus review on architectural and security implications first"
+                ]
+            })
+        elif changed_files > FilteringConfig.MAX_FILES_FOR_LLM:
+            recommendations.append({
+                "type": "size", 
+                "priority": "high",
+                "message": f"Wide-reaching PR ({changed_files} files). This exceeds LLM analysis thresholds.",
+                "details": [
+                    "Group related file changes into separate PRs by functional area",
+                    "Separate refactoring from feature changes",
+                    "Consider if this represents a mass refactoring that could be automated"
+                ]
+            })
+        else:
+            recommendations.append({
+                "type": "size",
+                "priority": "medium",
+                "message": f"Large PR ({size_metrics['size']}). Consider splitting into smaller, focused changes.",
+                "details": [
+                    "Smaller PRs are easier to review and less likely to introduce bugs",
+                    "Consider splitting by feature boundaries or component areas"
+                ]
+            })
     
     # Issue linkage recommendations
     if not issue_linkage["has_issue_links"]:
         recommendations.append({
             "type": "process",
             "priority": "medium", 
-            "message": "PR should reference related issues using 'Fixes #123' format."
+            "message": "PR should reference related issues using 'Fixes #123' format.",
+            "details": [
+                "Helps track work against requirements",
+                "Enables automatic issue closure when PR merges",
+                "Provides context for future maintenance"
+            ]
         })
     
-    # Pattern-based recommendations
+    # Pattern-based recommendations with enhanced context
     if patterns["highest_severity"] == "high":
         recommendations.append({
             "type": "risk",
             "priority": "high",
-            "message": "High-risk patterns detected. Review carefully before merging."
+            "message": "High-risk patterns detected. Review carefully before merging.",
+            "details": [
+                "Focus on security implications of file changes",
+                "Verify configuration changes don't expose sensitive data",
+                "Consider additional testing for sensitive areas"
+            ]
         })
     
-    if not recommendations:
+    # Add positive feedback when appropriate
+    if size_metrics["size"] in ["XS", "S"] and issue_linkage["has_issue_links"] and patterns["highest_severity"] in ["none", "low"]:
         recommendations.append({
             "type": "positive",
             "priority": "info",
-            "message": "PR looks good from basic analysis perspective!"
+            "message": "Well-sized PR with good practices! 🎉",
+            "details": [
+                "Appropriate size for thorough review",
+                "Properly linked to issues",
+                "No major anti-patterns detected"
+            ]
+        })
+    elif not recommendations:
+        recommendations.append({
+            "type": "positive",
+            "priority": "info",
+            "message": "PR looks good from basic analysis perspective!",
+            "details": ["No major issues detected in pattern analysis"]
         })
     
     return recommendations
