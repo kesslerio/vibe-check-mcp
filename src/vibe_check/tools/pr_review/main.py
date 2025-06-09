@@ -13,6 +13,8 @@ from .size_classifier import PRSizeClassifier
 from .context_analyzer import ReviewContextAnalyzer
 from .claude_integration import ClaudeIntegration
 from .feedback_categorizer import FeedbackCategorizer
+from .chunked_analyzer import ChunkedAnalyzer, analyze_pr_with_chunking
+from ..shared.pr_classifier import classify_pr_size, PrSizeCategory, should_use_chunked_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -62,17 +64,32 @@ async def review_pull_request(
         logger.info("🔄 Phase 3: Analyzing review context...")
         review_context = context_analyzer.detect_re_review(pr_data, force_re_review)
         
-        # Phase 4: Analysis Generation
-        logger.info(f"🔍 Phase 4: Generating analysis (Mode: {analysis_mode}, Size: {size_analysis.get('overall_size', 'Unknown')})")
+        # Phase 4: Intelligent Analysis Strategy Selection
+        logger.info(f"🔍 Phase 4: Selecting analysis strategy (Mode: {analysis_mode}, Size: {size_analysis.get('overall_size', 'Unknown')})")
+        
+        # Enhanced PR classification for chunked analysis
+        enhanced_pr_metrics = classify_pr_size(pr_data.get('metadata', {}))
         
         # Check Claude availability
         claude_available = claude_integration.check_claude_availability()
         
         if claude_available and analysis_mode == "comprehensive":
-            # Use Claude for comprehensive analysis
-            analysis_result = await _generate_claude_analysis(
-                claude_integration, pr_data, size_analysis, review_context, detail_level, pr_number
-            )
+            # Determine analysis strategy based on PR size
+            if enhanced_pr_metrics.size_category == PrSizeCategory.MEDIUM:
+                logger.info("📊 Using chunked analysis for medium-sized PR")
+                analysis_result = await _generate_chunked_analysis(
+                    pr_data, enhanced_pr_metrics, review_context, detail_level, pr_number
+                )
+            elif enhanced_pr_metrics.size_category == PrSizeCategory.SMALL:
+                logger.info("🎯 Using full LLM analysis for small PR")
+                analysis_result = await _generate_claude_analysis(
+                    claude_integration, pr_data, size_analysis, review_context, detail_level, pr_number
+                )
+            else:  # LARGE
+                logger.info("⚡ Using pattern detection for large PR")
+                analysis_result = _generate_large_pr_analysis(
+                    pr_data, enhanced_pr_metrics, review_context, detail_level
+                )
         else:
             # Use fallback analysis
             analysis_result = _generate_fallback_analysis(
@@ -88,11 +105,20 @@ async def review_pull_request(
             "size_analysis": size_analysis,
             "review_context": review_context,
             "analysis_result": analysis_result,
+            "enhanced_pr_metrics": {
+                "size_category": enhanced_pr_metrics.size_category.value,
+                "analysis_strategy": enhanced_pr_metrics.analysis_strategy,
+                "total_changes": enhanced_pr_metrics.total_changes,
+                "changed_files": enhanced_pr_metrics.changed_files,
+                "estimated_chunks": enhanced_pr_metrics.estimated_chunks
+            },
             "modular_architecture": {
                 "data_collector": "✅ Extracted",
                 "size_classifier": "✅ Extracted", 
                 "context_analyzer": "✅ Extracted",
                 "claude_integration": "✅ Extracted",
+                "chunked_analyzer": "✅ Phase 3 - Issue #103",
+                "pr_classifier": "✅ Phase 3 - Issue #103",
                 "original_file_size": "1565 lines → modular components"
             }
         }
@@ -212,3 +238,156 @@ def _generate_fallback_analysis(
         "recommendation": "MANUAL_REVIEW",
         "note": "Full analysis requires Claude CLI integration. Install Claude CLI for enhanced analysis."
     }
+
+
+async def _generate_chunked_analysis(
+    pr_data: Dict[str, Any],
+    pr_metrics,  # PrSizeMetrics
+    review_context: Dict[str, Any],
+    detail_level: str,
+    pr_number: int
+) -> Dict[str, Any]:
+    """Generate analysis using chunked approach for medium-sized PRs."""
+    
+    try:
+        # Extract file data for chunking
+        pr_files = pr_data.get('files', [])
+        
+        if not pr_files:
+            return {
+                "analysis_method": "chunked_analysis_failed",
+                "error": "No file data available for chunked analysis",
+                "recommendation": "MANUAL_REVIEW",
+                "fallback_reason": "Missing file data"
+            }
+        
+        # Perform chunked analysis
+        chunked_result = await analyze_pr_with_chunking(
+            pr_data=pr_data.get('metadata', {}),
+            pr_files=pr_files
+        )
+        
+        # Convert chunked result to standard analysis format
+        return {
+            "analysis_method": "chunked_llm_analysis",
+            "overview": chunked_result.overall_assessment,
+            "patterns_detected": chunked_result.patterns_detected,
+            "recommendations": chunked_result.recommendations,
+            "chunk_analysis": {
+                "total_chunks": chunked_result.total_chunks,
+                "successful_chunks": chunked_result.successful_chunks,
+                "failed_chunks": chunked_result.failed_chunks,
+                "success_rate": chunked_result.successful_chunks / max(chunked_result.total_chunks, 1),
+                "chunk_summaries": chunked_result.chunk_summaries
+            },
+            "size_metrics": {
+                "category": pr_metrics.size_category.value,
+                "total_changes": pr_metrics.total_changes,
+                "changed_files": pr_metrics.changed_files,
+                "estimated_chunks": pr_metrics.estimated_chunks
+            },
+            "performance": {
+                "total_duration": chunked_result.total_duration,
+                "avg_chunk_duration": chunked_result.total_duration / max(chunked_result.total_chunks, 1)
+            },
+            "recommendation": _determine_chunked_recommendation(chunked_result),
+            "status": chunked_result.status
+        }
+        
+    except Exception as e:
+        logger.error(f"Chunked analysis failed: {e}")
+        return {
+            "analysis_method": "chunked_analysis_failed",
+            "error": f"Chunked analysis error: {str(e)}",
+            "recommendation": "MANUAL_REVIEW",
+            "fallback_reason": "Chunked analysis failure"
+        }
+
+
+def _generate_large_pr_analysis(
+    pr_data: Dict[str, Any],
+    pr_metrics,  # PrSizeMetrics
+    review_context: Dict[str, Any],
+    detail_level: str
+) -> Dict[str, Any]:
+    """Generate basic pattern detection analysis for large PRs."""
+    
+    # Basic analysis for large PRs that are too big for LLM analysis
+    files_count = pr_metrics.changed_files
+    total_changes = pr_metrics.total_changes
+    
+    # Simple pattern detection based on file changes
+    patterns = []
+    recommendations = []
+    
+    # Check for common patterns
+    if files_count > 50:
+        patterns.append("Large-scale refactoring detected")
+        recommendations.append("Consider breaking into smaller, focused PRs")
+    
+    if total_changes > 2000:
+        patterns.append("Major code changes detected")
+        recommendations.append("Ensure comprehensive testing and staged deployment")
+    
+    if pr_metrics.has_large_files:
+        patterns.append(f"Large files detected (max {pr_metrics.largest_file_changes} lines)")
+        recommendations.append("Review large file changes carefully for maintainability")
+    
+    # File diversity analysis
+    if pr_metrics.file_diversity_score > 0.8:
+        patterns.append("High file diversity - changes span multiple components")
+        recommendations.append("Verify changes are cohesive and properly coordinated")
+    
+    return {
+        "analysis_method": "pattern_detection_only",
+        "overview": f"Large PR analysis: {total_changes} lines across {files_count} files. "
+                   f"Too large for detailed LLM analysis - using pattern detection only.",
+        "patterns_detected": [{"pattern": p, "category": "size_analysis", "confidence": "high"} for p in patterns],
+        "recommendations": recommendations,
+        "size_metrics": {
+            "category": pr_metrics.size_category.value,
+            "total_changes": total_changes,
+            "changed_files": files_count,
+            "lines_per_file_avg": pr_metrics.lines_per_file_avg,
+            "file_diversity_score": pr_metrics.file_diversity_score
+        },
+        "limitation_notice": (
+            "This PR is too large for detailed LLM analysis. "
+            "Consider using chunked analysis by breaking into smaller PRs, "
+            "or use manual review for comprehensive assessment."
+        ),
+        "recommendation": "MANUAL_REVIEW" if total_changes > 3000 else "APPROVE_WITH_CAUTION",
+        "status": "pattern_analysis_complete"
+    }
+
+
+def _determine_chunked_recommendation(chunked_result) -> str:
+    """Determine recommendation based on chunked analysis results."""
+    
+    success_rate = chunked_result.successful_chunks / max(chunked_result.total_chunks, 1)
+    
+    # If most chunks failed, recommend manual review
+    if success_rate < 0.5:
+        return "MANUAL_REVIEW"
+    
+    # Count critical issues from patterns
+    critical_patterns = [
+        p for p in chunked_result.patterns_detected 
+        if isinstance(p, dict) and p.get('category') in ['security', 'bug_risk']
+    ]
+    
+    # If critical issues found, request changes
+    if critical_patterns:
+        return "REQUEST_CHANGES"
+    
+    # Check for significant issues in recommendations
+    critical_recommendations = [
+        r for r in chunked_result.recommendations
+        if any(word in r.lower() for word in ['security', 'bug', 'error', 'critical', 'fix'])
+    ]
+    
+    if critical_recommendations:
+        return "REQUEST_CHANGES"
+    
+    # Default to approval for successful chunked analysis
+    return "APPROVE"

@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from ..analyze_external import ExternalClaudeCli
+from ..shared.claude_integration import analyze_content_async
 
 logger = logging.getLogger(__name__)
 
