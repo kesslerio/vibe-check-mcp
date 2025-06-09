@@ -309,6 +309,11 @@ async def analyze_github_pr_llm(
     guidance using Claude CLI, and optionally posts a friendly coaching review.
     For fast direct PR analysis, use analyze_pr_nollm instead.
     
+    IMPLEMENTS ISSUE #101: Intelligent pre-filtering and graceful degradation
+    - Skips LLM analysis for PRs >1000 lines or >20 files
+    - Falls back to fast analysis when LLM fails
+    - Always returns useful response (never fails completely)
+    
     IMPORTANT: When this tool returns a "comment_url" or "user_message" field, 
     ALWAYS include the full GitHub URL in your response to help users access 
     the posted review directly.
@@ -351,21 +356,31 @@ async def analyze_github_pr_llm(
         
         pr = pr_result.data
         
-        # Get PR diff for analysis using the fixed abstraction layer
-        diff_result = github_ops.get_pull_request_diff(repository, pr_number)
-        if not diff_result.success:
-            return {
-                "status": "error",
-                "error": f"Failed to fetch PR diff: {diff_result.error}",
-                "pr_number": pr_number,
-                "repository": repository
-            }
+        # PHASE 1 IMPLEMENTATION: Extract PR size data for intelligent filtering
+        pr_size_data = {
+            'number': pr.number,
+            'title': pr.title,
+            'additions': getattr(pr, 'additions', 0),
+            'deletions': getattr(pr, 'deletions', 0), 
+            'changed_files': getattr(pr, 'changed_files', 0)
+        }
         
-        pr_diff = diff_result.data
+        # PHASE 1 IMPLEMENTATION: Use intelligent filtering with graceful degradation
+        from ...core.pr_filtering import analyze_with_fallback
+        from ..analyze_pr_nollm import analyze_pr_nollm
         
-        # Build comprehensive PR context
-        pr_context = f"""# GitHub Pull Request Analysis
-        
+        async def llm_analysis():
+            """Perform LLM analysis for smaller PRs."""
+            # Get PR diff for analysis using the fixed abstraction layer
+            diff_result = github_ops.get_pull_request_diff(repository, pr_number)
+            if not diff_result.success:
+                raise Exception(f"Failed to fetch PR diff: {diff_result.error}")
+            
+            pr_diff = diff_result.data
+            
+            # Build comprehensive PR context
+            pr_context = f"""# GitHub Pull Request Analysis
+            
 **PR:** {pr.title}
 **Repository:** {repository}
 **Author:** {pr.user_login}
@@ -379,17 +394,17 @@ async def analyze_github_pr_llm(
 **Code Changes:**
 {pr_diff}
 """
-        
-        # Create vibe check prompt based on detail level
-        detail_instructions = {
-            "brief": "Provide a concise 3-section analysis with key points only.",
-            "standard": "Provide a balanced analysis with practical guidance and clear recommendations.",
-            "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities."
-        }
-        
-        detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
-        
-        vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub pull request. Focus on preventing common engineering anti-patterns while encouraging good practices.
+            
+            # Create vibe check prompt based on detail level
+            detail_instructions = {
+                "brief": "Provide a concise 3-section analysis with key points only.",
+                "standard": "Provide a balanced analysis with practical guidance and clear recommendations.",
+                "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities."
+            }
+            
+            detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
+            
+            vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub pull request. Focus on preventing common engineering anti-patterns while encouraging good practices.
 
 {detail_instruction}
 
@@ -416,32 +431,54 @@ Please provide a vibe check analysis in this format:
 [Final recommendation: approve, request changes, or needs discussion]
 
 Use friendly, coaching language that helps developers learn rather than intimidate."""
+            
+            # Run external Claude analysis
+            result = await analyze_text_llm(
+                content=vibe_prompt,
+                task_type="pr_review",
+                additional_context=f"Vibe check for GitHub PR {repository}#{pr_number}",
+                timeout_seconds=timeout_seconds
+            )
+            
+            if result.success:
+                return {
+                    "status": "vibe_check_complete",
+                    "pr_number": pr_number,
+                    "repository": repository,
+                    "analysis_mode": analysis_mode,
+                    "claude_analysis": result.output,
+                    "github_implementation": pr_result.implementation
+                }
+            else:
+                raise Exception(f"Claude analysis failed: {result.error}")
         
-        # Run external Claude analysis
-        result = await analyze_text_llm(
-            content=vibe_prompt,
-            task_type="pr_review",
-            additional_context=f"Vibe check for GitHub PR {repository}#{pr_number}",
-            timeout_seconds=timeout_seconds
+        def fast_analysis():
+            """Perform fast analysis fallback."""
+            return analyze_pr_nollm(
+                pr_number=pr_number,
+                repository=repository,
+                analysis_mode="quick",
+                detail_level=detail_level
+            )
+        
+        # PHASE 1 IMPLEMENTATION: Use intelligent analysis with fallback
+        analysis_result = await analyze_with_fallback(
+            pr_data=pr_size_data,
+            llm_analyzer_func=llm_analysis,
+            fast_analyzer_func=fast_analysis
         )
         
-        # Build response
-        response = {
-            "status": "vibe_check_complete",
-            "pr_number": pr_number,
-            "repository": repository,
-            "analysis_mode": analysis_mode,
-            "claude_analysis": result.output if result.success else None,
-            "analysis_error": result.error if not result.success else None,
-            "comment_posted": False,
-            "github_implementation": pr_result.implementation
-        }
+        # Ensure we have the required fields for posting
+        if 'pr_number' not in analysis_result:
+            analysis_result['pr_number'] = pr_number
+        if 'repository' not in analysis_result:
+            analysis_result['repository'] = repository
         
         # Post review if requested and analysis succeeded
-        if post_comment and result.success and result.output:
+        if post_comment and analysis_result.get('claude_analysis'):
             review_body = f"""## 🎯 Comprehensive PR Vibe Check
 
-{result.output}
+{analysis_result['claude_analysis']}
 
 ---
 *🤖 This vibe check was lovingly crafted by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) using the Claude Code SDK. Because your code deserves better than just "looks good to me" 🚀*"""
@@ -455,26 +492,61 @@ Use friendly, coaching language that helps developers learn rather than intimida
                     repo = client.get_repo(repository)
                     pr_obj = repo.get_pull(pr_number)
                     review = pr_obj.create_review(body=review_body, event="COMMENT")
-                    response["comment_posted"] = True
+                    analysis_result["comment_posted"] = True
                     
                     # Build PR review URL
                     review_url = f"https://github.com/{repository}/pull/{pr_number}#pullrequestreview-{review.id}"
-                    response["comment_url"] = review_url
-                    response["user_message"] = f"✅ Review posted to GitHub: {review_url}"
+                    analysis_result["comment_url"] = review_url
+                    analysis_result["user_message"] = f"✅ Review posted to GitHub: {review_url}"
                 else:
-                    response["comment_error"] = "GitHub client not available"
+                    analysis_result["comment_error"] = "GitHub client not available"
             except Exception as e:
-                response["comment_error"] = f"Failed to post review: {str(e)}"
+                analysis_result["comment_error"] = f"Failed to post review: {str(e)}"
+        elif post_comment and not analysis_result.get('claude_analysis'):
+            # Post a simpler comment for fast analysis mode
+            if analysis_result.get('status') == 'large_pr_detected':
+                review_body = f"""## 🎯 Large PR Analysis
+
+{analysis_result.get('message', 'Large PR detected - providing fast analysis')}
+
+### 📊 Size Metrics
+- Files changed: {analysis_result.get('size_metrics', {}).get('changed_files', 'unknown')}
+- Total changes: {analysis_result.get('size_metrics', {}).get('total_changes', 'unknown')} lines
+
+### 💡 Recommendations
+{analysis_result.get('recommendation', 'Consider splitting into smaller PRs for detailed review')}
+
+---
+*🤖 Fast analysis by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) - Large PRs get pattern detection to ensure reliable response 🚀*"""
+                
+                try:
+                    from ..shared.github_helpers import get_github_client
+                    client = get_github_client()
+                    if client:
+                        repo = client.get_repo(repository)
+                        pr_obj = repo.get_pull(pr_number)
+                        review = pr_obj.create_review(body=review_body, event="COMMENT")
+                        analysis_result["comment_posted"] = True
+                        
+                        # Build PR review URL
+                        review_url = f"https://github.com/{repository}/pull/{pr_number}#pullrequestreview-{review.id}"
+                        analysis_result["comment_url"] = review_url
+                        analysis_result["user_message"] = f"✅ Fast analysis posted to GitHub: {review_url}"
+                except Exception as e:
+                    analysis_result["comment_error"] = f"Failed to post review: {str(e)}"
         
         # Sanitize any GitHub API URLs to frontend URLs
         from ..shared.github_helpers import sanitize_github_urls_in_response
-        return sanitize_github_urls_in_response(response)
+        return sanitize_github_urls_in_response(analysis_result)
         
     except Exception as e:
+        # PHASE 1 IMPLEMENTATION: Ultimate graceful degradation
         logger.error(f"Error in GitHub PR vibe check: {e}")
         return {
-            "status": "error",
+            "status": "error_fallback",
             "error": str(e),
             "pr_number": pr_number,
-            "repository": repository
+            "repository": repository,
+            "message": "Analysis encountered errors but system ensured response",
+            "note": "This implements graceful degradation from Issue #101 - system never fails completely"
         }
