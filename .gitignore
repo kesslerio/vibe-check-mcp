@@ -177,6 +177,7 @@ Desktop.ini
 # Project specific
 CLAUDE.md
 CLAUDE*.md
+CLAUDE.md.bak
 .claude/
 .qodo/
 .cursor/
