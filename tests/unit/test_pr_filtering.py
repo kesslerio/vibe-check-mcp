@@ -27,7 +27,7 @@ class TestShouldUseLLMAnalysis:
             'changed_files': 3
         }
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         
         assert result.should_use_llm is True
         assert "Suitable for LLM" in result.reason
@@ -36,16 +36,18 @@ class TestShouldUseLLMAnalysis:
     
     def test_large_pr_lines_skips_llm(self):
         """PRs with >1000 lines should skip LLM analysis."""
+        from src.vibe_check.core.pr_filtering import FilteringConfig
+        
         pr_data = {
             'additions': 800,
             'deletions': 300,  # Total: 1100
             'changed_files': 15
         }
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         
         assert result.should_use_llm is False
-        assert "Large PR: 1100 lines changed (threshold: 1000)" in result.reason
+        assert f"Large PR: 1100 lines changed (threshold: {FilteringConfig.MAX_LINES_FOR_LLM})" in result.reason
         assert result.fallback_strategy == "fast_analysis_with_guidance"
     
     def test_many_files_skips_llm(self):
@@ -56,7 +58,7 @@ class TestShouldUseLLMAnalysis:
             'changed_files': 25
         }
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         
         assert result.should_use_llm is False
         assert "Many files changed: 25 files (threshold: 20)" in result.reason
@@ -70,7 +72,7 @@ class TestShouldUseLLMAnalysis:
             'changed_files': 18  # 18 files > 15 threshold
         }
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         
         assert result.should_use_llm is False
         assert "Wide changes" in result.reason
@@ -86,19 +88,19 @@ class TestShouldUseLLMAnalysis:
             'changed_files': 10
         }
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         assert result.should_use_llm is True  # Should use LLM at threshold
         
         # Just over line threshold
         pr_data['additions'] = 501  # Now 1001 total
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         assert result.should_use_llm is False  # Should skip LLM
     
     def test_missing_data_defaults(self):
         """Test handling of missing PR data."""
         pr_data = {}  # Empty data
         
-        result = should_use_llm_analysis(pr_data)
+        result = should_use_llm_analysis(pr_data, track_metrics=False)
         
         assert result.should_use_llm is True  # Defaults should allow LLM
         assert result.size_metrics['total_changes'] == 0

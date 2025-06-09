@@ -318,8 +318,11 @@ def _generate_basic_recommendations(
         total_changes = size_metrics.get("total_changes", 0)
         changed_files = size_metrics.get("changed_files", 0)
         
+        # Import the filtering configuration for consistent thresholds
+        from ...core.pr_filtering import FilteringConfig
+        
         # More specific guidance based on size characteristics
-        if total_changes > 1000:
+        if total_changes > FilteringConfig.MAX_LINES_FOR_LLM:
             recommendations.append({
                 "type": "size",
                 "priority": "high",
@@ -330,7 +333,7 @@ def _generate_basic_recommendations(
                     "Focus review on architectural and security implications first"
                 ]
             })
-        elif changed_files > 20:
+        elif changed_files > FilteringConfig.MAX_FILES_FOR_LLM:
             recommendations.append({
                 "type": "size", 
                 "priority": "high",

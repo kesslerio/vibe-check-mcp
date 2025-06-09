@@ -13,6 +13,73 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
+class MetricsHooks:
+    """
+    Monitoring hooks for tracking fallback usage patterns.
+    
+    These hooks can be implemented to send metrics to monitoring systems
+    like Prometheus, DataDog, or CloudWatch for production tracking.
+    """
+    
+    @staticmethod
+    def track_filtering_decision(pr_data: Dict[str, Any], filter_result: 'PRFilterResult'):
+        """Track PR filtering decisions for monitoring."""
+        # Example: logger.info(f"metrics.pr_filtering.decision", extra={...})
+        logger.info(
+            "PR filtering decision tracked",
+            extra={
+                "pr_size": filter_result.size_metrics.get('total_changes', 0),
+                "pr_files": filter_result.size_metrics.get('changed_files', 0),
+                "used_llm": filter_result.should_use_llm,
+                "reason": filter_result.reason,
+                "fallback_strategy": filter_result.fallback_strategy
+            }
+        )
+    
+    @staticmethod
+    def track_fallback_usage(fallback_type: str, pr_data: Dict[str, Any], error_context: str = None):
+        """Track when fallback analysis is used."""
+        logger.info(
+            "Fallback analysis used",
+            extra={
+                "fallback_type": fallback_type,  # "size_filtered", "llm_failed", "complete_failure"
+                "pr_number": pr_data.get('number', 'unknown'),
+                "error_context": error_context
+            }
+        )
+    
+    @staticmethod 
+    def track_analysis_success(analysis_type: str, pr_data: Dict[str, Any]):
+        """Track successful analysis completions."""
+        logger.info(
+            "Analysis completed successfully", 
+            extra={
+                "analysis_type": analysis_type,  # "llm", "fast", "fallback"
+                "pr_number": pr_data.get('number', 'unknown')
+            }
+        )
+
+
+# Configuration constants for filtering thresholds
+# These can be adjusted based on production metrics and performance data
+class FilteringConfig:
+    """Configuration constants for PR filtering thresholds."""
+    
+    # Maximum lines changed before skipping LLM analysis  
+    MAX_LINES_FOR_LLM = 1000
+    
+    # Maximum files changed before skipping LLM analysis
+    MAX_FILES_FOR_LLM = 20
+    
+    # Threshold for detecting wide refactoring patterns
+    # (many files with moderate changes that often timeout)
+    REFACTORING_FILE_THRESHOLD = 15
+    REFACTORING_LINES_THRESHOLD = 500
+    
+    # Ratio threshold for detecting mass changes (many files, few lines each)
+    MASS_CHANGE_RATIO_THRESHOLD = 0.1
+
+
 @dataclass
 class PRFilterResult:
     """Result of PR filtering analysis."""
@@ -22,7 +89,7 @@ class PRFilterResult:
     size_metrics: Dict[str, Any]
 
 
-def should_use_llm_analysis(pr_data: Dict[str, Any]) -> PRFilterResult:
+def should_use_llm_analysis(pr_data: Dict[str, Any], track_metrics: bool = True) -> PRFilterResult:
     """
     Determine if PR should use LLM analysis or fallback to fast analysis.
     
@@ -52,41 +119,57 @@ def should_use_llm_analysis(pr_data: Dict[str, Any]) -> PRFilterResult:
     
     # Decision logic based on issue #101 requirements
     
-    # Skip LLM if too many lines changed (threshold: 1000)
-    if total_changes > 1000:
-        return PRFilterResult(
+    # Skip LLM if too many lines changed
+    if total_changes > FilteringConfig.MAX_LINES_FOR_LLM:
+        result = PRFilterResult(
             should_use_llm=False,
-            reason=f"Large PR: {total_changes} lines changed (threshold: 1000)",
+            reason=f"Large PR: {total_changes} lines changed (threshold: {FilteringConfig.MAX_LINES_FOR_LLM})",
             fallback_strategy="fast_analysis_with_guidance",
             size_metrics=size_metrics
         )
+        if track_metrics:
+            MetricsHooks.track_filtering_decision(pr_data, result)
+        return result
     
-    # Skip LLM if too many files changed (threshold: 20)
-    if changed_files > 20:
-        return PRFilterResult(
+    # Skip LLM if too many files changed
+    if changed_files > FilteringConfig.MAX_FILES_FOR_LLM:
+        result = PRFilterResult(
             should_use_llm=False,
-            reason=f"Many files changed: {changed_files} files (threshold: 20)",
+            reason=f"Many files changed: {changed_files} files (threshold: {FilteringConfig.MAX_FILES_FOR_LLM})",
             fallback_strategy="fast_analysis_with_guidance",
             size_metrics=size_metrics
         )
+        if track_metrics:
+            MetricsHooks.track_filtering_decision(pr_data, result)
+        return result
     
     # Additional heuristic: Skip if very wide changes (many files, few lines each)
     # This often indicates refactoring or mass changes that timeout LLM analysis
-    if changed_files > 15 and total_changes > 500:
-        return PRFilterResult(
+    if (changed_files > FilteringConfig.REFACTORING_FILE_THRESHOLD and 
+        total_changes > FilteringConfig.REFACTORING_LINES_THRESHOLD):
+        result = PRFilterResult(
             should_use_llm=False,
             reason=f"Wide changes: {changed_files} files with {total_changes} lines (refactoring pattern)",
             fallback_strategy="fast_analysis_with_guidance", 
             size_metrics=size_metrics
         )
+        if track_metrics:
+            MetricsHooks.track_filtering_decision(pr_data, result)
+        return result
     
     # Use LLM analysis for smaller PRs
-    return PRFilterResult(
+    result = PRFilterResult(
         should_use_llm=True,
         reason=f"Suitable for LLM: {total_changes} lines, {changed_files} files",
         fallback_strategy="not_needed",
         size_metrics=size_metrics
     )
+    
+    # Track metrics if enabled
+    if track_metrics:
+        MetricsHooks.track_filtering_decision(pr_data, result)
+    
+    return result
 
 
 def create_large_pr_response(pr_data: Dict[str, Any], filter_result: PRFilterResult) -> Dict[str, Any]:
@@ -134,15 +217,15 @@ def _generate_splitting_guidance(size_metrics: Dict[str, Any]) -> list:
     total_changes = size_metrics['total_changes']
     changed_files = size_metrics['changed_files']
     
-    if changed_files > 20:
+    if changed_files > FilteringConfig.MAX_FILES_FOR_LLM:
         guidance.append("Split by functional area - group related files together")
         guidance.append("Separate refactoring changes from feature changes")
     
-    if total_changes > 1000:
+    if total_changes > FilteringConfig.MAX_LINES_FOR_LLM:
         guidance.append("Break into logical commits that can stand alone")
         guidance.append("Consider feature flags for incremental rollout")
     
-    if size_metrics.get('files_per_change_ratio', 0) > 0.1:  # Many files, few changes each
+    if size_metrics.get('files_per_change_ratio', 0) > FilteringConfig.MASS_CHANGE_RATIO_THRESHOLD:
         guidance.append("This appears to be a mass refactoring - consider automation tools")
         guidance.append("Split into preparation PRs and the main change")
     
@@ -180,6 +263,9 @@ async def analyze_with_fallback(
             try:
                 result = await llm_analyzer_func(**analyzer_kwargs)
                 
+                # Track successful LLM analysis
+                MetricsHooks.track_analysis_success("llm", pr_data)
+                
                 # Add filtering context to successful LLM result
                 if isinstance(result, dict):
                     result.update({
@@ -195,8 +281,13 @@ async def analyze_with_fallback(
             except Exception as llm_error:
                 logger.warning(f"LLM analysis failed, falling back to fast analysis: {llm_error}")
                 
+                # Track LLM failure fallback
+                MetricsHooks.track_fallback_usage("llm_failed", pr_data, str(llm_error))
+                
                 # Fall back to fast analysis with error context
                 fast_result = fast_analyzer_func(**analyzer_kwargs)
+                MetricsHooks.track_analysis_success("fast", pr_data)
+                
                 if isinstance(fast_result, dict):
                     fast_result.update({
                         "status": "partial_analysis",
@@ -209,8 +300,13 @@ async def analyze_with_fallback(
             # Skip LLM analysis for large PRs
             logger.info(f"Skipping LLM analysis: {filter_result.reason}")
             
+            # Track size-based filtering
+            MetricsHooks.track_fallback_usage("size_filtered", pr_data, filter_result.reason)
+            
             # Use fast analysis with large PR guidance
             fast_result = fast_analyzer_func(**analyzer_kwargs)
+            MetricsHooks.track_analysis_success("fast", pr_data)
+            
             if isinstance(fast_result, dict):
                 # Enhance fast result with large PR context
                 large_pr_context = create_large_pr_response(pr_data, filter_result)
@@ -221,6 +317,9 @@ async def analyze_with_fallback(
     except Exception as e:
         # Ultimate fallback - always return something useful
         logger.error(f"Complete analysis failure, using minimal fallback: {e}")
+        
+        # Track complete failure
+        MetricsHooks.track_fallback_usage("complete_failure", pr_data, str(e))
         
         return {
             "status": "error_fallback",
