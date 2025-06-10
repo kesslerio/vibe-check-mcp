@@ -365,9 +365,33 @@ async def analyze_github_pr_llm(
             'changed_files': getattr(pr, 'changed_files', 0)
         }
         
-        # PHASE 1 IMPLEMENTATION: Use intelligent filtering with graceful degradation
-        from ...core.pr_filtering import analyze_with_fallback
+        # PHASE 1-4 IMPLEMENTATION: Complete analysis strategy with async processing
+        from ...core.pr_filtering import analyze_with_fallback, should_use_llm_analysis
         from ..analyze_pr_nollm import analyze_pr_nollm
+        from ..async_analysis.integration import start_async_analysis
+        from ..async_analysis.config import DEFAULT_ASYNC_CONFIG
+        
+        # PHASE 4 CHECK: Determine if PR should use async processing
+        async_config = DEFAULT_ASYNC_CONFIG
+        if async_config.should_use_async_processing(pr_size_data):
+            logger.info(
+                f"PR {repository}#{pr_number} is massive - using async processing",
+                extra={
+                    "total_changes": pr_size_data.get("additions", 0) + pr_size_data.get("deletions", 0),
+                    "changed_files": pr_size_data.get("changed_files", 0)
+                }
+            )
+            
+            # Start async analysis
+            async_result = await start_async_analysis(
+                pr_number=pr_number,
+                repository=repository,
+                pr_data=pr_size_data
+            )
+            
+            # Sanitize GitHub URLs and return
+            from ..shared.github_helpers import sanitize_github_urls_in_response
+            return sanitize_github_urls_in_response(async_result)
         
         async def llm_analysis():
             """Perform LLM analysis for smaller PRs."""
