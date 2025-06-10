@@ -38,6 +38,10 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
     mcp.tool()(analyze_github_issue_llm)
     mcp.tool()(analyze_github_pr_llm)
     
+    # Register async analysis tools
+    mcp.tool()(check_async_analysis_status)
+    mcp.tool()(get_async_system_status)
+    
     # Register status tool
     @mcp.tool()
     async def analyze_llm_status() -> Dict[str, Any]:
@@ -179,3 +183,68 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
                 "environment_isolation": False,
                 "timestamp": time.time()
             }
+
+
+# Async Analysis Tools
+async def check_async_analysis_status(analysis_id: str) -> Dict[str, Any]:
+    """
+    Check the status of a queued async analysis.
+    
+    This tool allows users to monitor the progress of massive PRs that are
+    being processed in the background queue system.
+    
+    Args:
+        analysis_id: The job ID returned from starting an async analysis
+        
+    Returns:
+        Comprehensive status information including progress, timing, and results
+    """
+    logger.info(f"Checking async analysis status for job {analysis_id}")
+    
+    try:
+        from ..async_analysis.integration import check_analysis_status
+        
+        result = await check_analysis_status(analysis_id)
+        
+        return {
+            "status": "success",
+            "data": result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking async analysis status: {e}")
+        return {
+            "status": "error",
+            "error": f"Failed to check analysis status: {str(e)}",
+            "analysis_id": analysis_id
+        }
+
+
+async def get_async_system_status() -> Dict[str, Any]:
+    """
+    Get the overall status of the async analysis system.
+    
+    This tool provides system-wide information about the background processing
+    queue, active workers, and performance metrics.
+    
+    Returns:
+        System status including queue metrics, worker status, and performance data
+    """
+    logger.info("Getting async analysis system status")
+    
+    try:
+        from ..async_analysis.integration import get_system_status
+        
+        result = await get_system_status()
+        
+        return {
+            "status": "success",
+            "data": result
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting async system status: {e}")
+        return {
+            "status": "error",
+            "error": f"Failed to get system status: {str(e)}"
+        }
