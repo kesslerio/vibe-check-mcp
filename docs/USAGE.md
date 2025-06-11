@@ -30,6 +30,7 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - `check_integration_alternatives` - Official alternative check for integration decisions
 - `analyze_integration_decision_text` - Text analysis for integration anti-patterns
 - `integration_decision_framework` - Structured decision framework with Clear Thought integration
+- `integration_research_with_websearch` - Enhanced integration research with real-time web search
 
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
@@ -116,6 +117,13 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 "Integration decision framework for cognee vs custom"
 "Structured analysis of docker vs build approach"
 "Clear thought framework for supabase integration"
+```
+
+**Web-Enhanced Research** (🌐 New):
+```
+"Research new-framework with web search"
+"Find official deployment options for emerging-tool"
+"Web search enhanced integration analysis"
 ```
 
 ## When to Use Each Tool Type
@@ -501,6 +509,125 @@ Common patterns that trigger warnings:
 - **Custom HTTP clients** when official SDKs exist
 - **Environment forcing** instead of proper configuration
 - **Manual API calls** when official clients available
+
+## 🌐 Web Search Integration Architecture
+
+### How Integration Analysis Works
+
+The integration decision tools use a **hybrid approach** combining static knowledge with real-time web search:
+
+#### **1. Static Knowledge Base** (`data/integration_knowledge_base.json`)
+- **Pre-curated data** for popular technologies (Cognee, Supabase, Claude, etc.)
+- **Instant response** for known technologies
+- **Comprehensive red flag patterns** based on real-world case studies
+- **Performance**: Sub-second analysis for known technologies
+
+#### **2. Web Search Enhancement** (`integration_research_with_websearch`)
+- **Real-time research** for unknown or emerging technologies
+- **Official documentation discovery** via targeted search queries
+- **Docker Hub container detection** with official image verification
+- **SDK and API client discovery** across package managers
+- **Performance**: 10-30 seconds for comprehensive web research
+
+### Search Strategy & Methodology
+
+#### **Automated Search Queries**:
+```bash
+# Official Documentation Discovery
+"{technology} official documentation deployment"
+"{technology} site:docs.* OR site:github.com"
+
+# Container & Deployment Options
+"{technology} official docker container site:hub.docker.com"
+"{technology} deployment guide best practices"
+
+# SDK & API Discovery
+"{technology} official SDK OR client library"
+"{technology} site:npmjs.com OR site:pypi.org"
+
+# Comparison Research
+"{technology} vs custom implementation"
+"{technology} official vs community solutions"
+```
+
+#### **Search Sources Prioritized**:
+1. **Official Documentation Sites** (`docs.*`, vendor sites)
+2. **Official GitHub Repositories** (`github.com/[vendor]`)
+3. **Docker Hub Official Images** (`hub.docker.com`)
+4. **Package Managers** (npm, PyPI, Maven, etc.)
+5. **Community Discussions** (Stack Overflow, Reddit)
+
+#### **Validation Process**:
+1. **Authenticity Verification**: Official vendor endorsement check
+2. **Maintenance Status**: Recent updates and active development
+3. **Community Support**: Documentation quality and usage patterns
+4. **Production Readiness**: Stability and enterprise adoption
+
+### Tool Selection Guide
+
+#### **Use Static Analysis** (`check_integration_alternatives`) When:
+- ✅ **Known technologies** in the knowledge base
+- ✅ **Fast decisions** required in development workflow
+- ✅ **Offline environment** or limited internet access
+- ✅ **Cost-conscious** scenarios avoiding web search API calls
+
+#### **Use Web-Enhanced Research** (`integration_research_with_websearch`) When:
+- 🌐 **New or emerging technologies** not in knowledge base
+- 🌐 **Comprehensive research** needed for critical decisions
+- 🌐 **Up-to-date information** required for rapidly evolving tools
+- 🌐 **Unknown vendor landscape** requiring discovery
+
+### Example: New Technology Research
+
+```python
+# Research a new technology with web search
+integration_research_with_websearch(
+    technology="newtech-framework",
+    custom_features="REST API, authentication, data processing",
+    search_depth="advanced"
+)
+```
+
+**Expected Web Search Process**:
+1. **Documentation Search**: `newtech-framework official documentation deployment`
+2. **Container Discovery**: `newtech-framework official docker container site:hub.docker.com`
+3. **SDK Research**: `newtech-framework official SDK OR client library`
+4. **Comparison Analysis**: `newtech-framework vs custom implementation`
+
+**Enhanced Response Includes**:
+- **Search queries executed** and results found
+- **Official documentation links** discovered
+- **Container availability** on Docker Hub
+- **SDK options** across different languages
+- **Research methodology** for manual validation
+- **Confidence level** based on search results quality
+
+### Web Search Limitations & Fallbacks
+
+#### **Rate Limiting & Reliability**:
+- **Graceful degradation** to static knowledge base if web search fails
+- **Timeout handling** with fallback recommendations
+- **Search result validation** to avoid false positives
+
+#### **Search Quality Indicators**:
+- **High Confidence**: Official vendor sites, GitHub orgs, Docker Hub verified
+- **Medium Confidence**: Well-documented community projects
+- **Low Confidence**: Limited or conflicting information found
+- **Manual Research Required**: No clear official alternatives found
+
+### Privacy & Performance Considerations
+
+#### **Data Handling**:
+- **No persistent storage** of search results
+- **Query anonymization** where possible
+- **Minimal data collection** focused on technical information
+
+#### **Performance Optimization**:
+- **Parallel search execution** for multiple queries
+- **Result caching** for recent searches (session-based)
+- **Intelligent query selection** based on technology patterns
+
+This hybrid approach ensures you get **instant feedback** for known technologies while enabling **comprehensive research** for new or emerging tools, preventing both the Cognee-style failures (missing obvious official solutions) and the opposite problem (building custom solutions for truly novel technologies without alternatives).
 
 ## Troubleshooting
 

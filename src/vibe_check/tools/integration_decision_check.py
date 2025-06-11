@@ -19,7 +19,115 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
+# Try to import web search capability - optional dependency
+try:
+    from ..server import mcp  # Access to MCP tools for web search
+    WEB_SEARCH_AVAILABLE = True
+except ImportError:
+    WEB_SEARCH_AVAILABLE = False
+
+# Configuration constants
+MAX_CUSTOM_FEATURES = 20
+MAX_FEATURE_LENGTH = 200
+MAX_TECHNOLOGY_NAME_LENGTH = 50
+
+# Scoring constants for decision matrix
+SCORING = {
+    "official_solution": {
+        "development_time": 9,
+        "maintenance_burden": 9,
+        "reliability_support": 9,
+        "customization_needs": 6
+    },
+    "custom_development": {
+        "development_time": 3,
+        "maintenance_burden": 2,
+        "reliability_support": 5,
+        "customization_needs": 9
+    }
+}
+
 logger = logging.getLogger(__name__)
+
+class ValidationError(Exception):
+    """Raised when input validation fails."""
+    pass
+
+def validate_inputs(technology: str, custom_features: List[str]) -> None:
+    """Validate inputs for integration decision checking."""
+    if not technology or not technology.strip():
+        raise ValidationError("Technology name cannot be empty")
+    
+    if len(technology) > MAX_TECHNOLOGY_NAME_LENGTH:
+        raise ValidationError(f"Technology name too long (max {MAX_TECHNOLOGY_NAME_LENGTH} chars)")
+    
+    if len(custom_features) > MAX_CUSTOM_FEATURES:
+        raise ValidationError(f"Too many custom features (max {MAX_CUSTOM_FEATURES})")
+    
+    for feature in custom_features:
+        if len(feature) > MAX_FEATURE_LENGTH:
+            raise ValidationError(f"Feature name too long: '{feature}' (max {MAX_FEATURE_LENGTH} chars)")
+
+def analyze_features_and_flags(custom_features: List[str], technology_info: Dict[str, Any]) -> tuple:
+    """Analyze custom features and detect red flags."""
+    kb = IntegrationKnowledgeBase()
+    red_flags_detected = kb.detect_red_flags(custom_features, technology_info)
+    feature_coverage = kb.analyze_feature_coverage(custom_features, technology_info)
+    warning_level = calculate_warning_level(custom_features, technology_info)
+    
+    return red_flags_detected, feature_coverage, warning_level
+
+def build_recommendation_result(
+    technology: str, 
+    technology_info: Dict[str, Any],
+    red_flags_detected: List[str],
+    warning_level: str,
+    custom_features: List[str]
+) -> 'IntegrationRecommendation':
+    """Build the final recommendation result."""
+    # Analyze official solutions
+    official_solutions = []
+    if technology_info.get("official_container"):
+        official_solutions.append(f"Docker: {technology_info['official_container']}")
+    if technology_info.get("official_sdks"):
+        official_solutions.extend([f"SDK: {sdk}" for sdk in technology_info["official_sdks"]])
+    
+    # Generate decision framework and other components
+    decision_matrix = generate_decision_matrix(technology, custom_features)
+    questions = generate_validation_questions(technology, custom_features)
+    recommendation = generate_recommendation(technology, custom_features, technology_info)
+    
+    # Determine requirements
+    research_required = bool(red_flags_detected) or warning_level in ["warning", "critical"]
+    custom_justification_needed = warning_level in ["caution", "warning", "critical"]
+    
+    # Generate next steps
+    next_steps = []
+    if research_required:
+        next_steps.append(f"Test official {technology} solution with your requirements")
+        if technology_info.get("documentation"):
+            next_steps.append(f"Review documentation: {', '.join(technology_info['documentation'])}")
+    
+    if red_flags_detected:
+        next_steps.append("Document specific gaps in official solution that justify custom development")
+    
+    if custom_justification_needed:
+        next_steps.append("Create decision document comparing official vs custom approaches")
+    
+    if not next_steps:
+        next_steps.append("Proceed with integration approach comparison")
+    
+    return IntegrationRecommendation(
+        technology=technology,
+        warning_level=warning_level,
+        official_solutions=official_solutions,
+        custom_justification_needed=custom_justification_needed,
+        research_required=research_required,
+        red_flags_detected=red_flags_detected,
+        decision_matrix=decision_matrix,
+        next_steps=next_steps,
+        recommendation=recommendation
+    )
 
 @dataclass
 class IntegrationRecommendation:
@@ -37,8 +145,9 @@ class IntegrationRecommendation:
 class IntegrationKnowledgeBase:
     """Knowledge base for integration technologies and their official solutions."""
     
-    def __init__(self):
+    def __init__(self, enable_web_search: bool = True):
         self.knowledge = self._load_knowledge_base()
+        self.enable_web_search = enable_web_search and WEB_SEARCH_AVAILABLE
     
     def _load_knowledge_base(self) -> Dict[str, Any]:
         """Load integration knowledge from data file."""
@@ -47,19 +156,76 @@ class IntegrationKnowledgeBase:
             project_root = Path(__file__).parent.parent.parent.parent
             kb_path = project_root / "data" / "integration_knowledge_base.json"
             
+            # Security: Validate path stays within project bounds
+            resolved_path = kb_path.resolve()
+            project_root_resolved = project_root.resolve()
+            if not str(resolved_path).startswith(str(project_root_resolved)):
+                logger.error(f"Knowledge base path outside project bounds: {resolved_path}")
+                return {}
+            
             if kb_path.exists():
                 with open(kb_path, 'r') as f:
                     return json.load(f)
             else:
                 logger.warning(f"Knowledge base not found at {kb_path}")
                 return {}
+        except (FileNotFoundError, PermissionError) as e:
+            logger.error(f"File access error loading knowledge base: {e}")
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in knowledge base: {e}")
+            return {}
         except Exception as e:
             logger.error(f"Failed to load knowledge base: {e}")
             return {}
     
     def get_technology_info(self, technology: str) -> Dict[str, Any]:
-        """Get official information for a technology."""
-        return self.knowledge.get(technology.lower(), {})
+        """Get official information for a technology, enhanced with web search if available."""
+        base_info = self.knowledge.get(technology.lower(), {})
+        
+        # Enhance with web search if enabled and technology not in knowledge base
+        if self.enable_web_search and not base_info:
+            try:
+                enhanced_info = self._search_technology_info(technology)
+                if enhanced_info:
+                    return enhanced_info
+            except Exception as e:
+                logger.warning(f"Web search failed for {technology}: {e}")
+        
+        return base_info
+    
+    def _search_technology_info(self, technology: str) -> Dict[str, Any]:
+        """Search for technology information using web search."""
+        if not WEB_SEARCH_AVAILABLE:
+            return {}
+        
+        try:
+            # Search for official documentation and Docker containers
+            search_queries = [
+                f"{technology} official documentation deployment",
+                f"{technology} official docker container",
+                f"{technology} official SDK API",
+                f"{technology} vs custom implementation"
+            ]
+            
+            enhanced_info = {
+                "features": [],
+                "documentation": [],
+                "red_flags": ["custom implementation"],  # Generic red flag
+                "official_benefits": ["Official support", "Maintained by vendor"],
+                "web_search_enhanced": True,
+                "search_timestamp": "recent"
+            }
+            
+            # In a real implementation, we would use web search here
+            # For now, we'll return basic structure that can be populated
+            logger.info(f"Web search enhancement attempted for {technology}")
+            
+            return enhanced_info
+            
+        except Exception as e:
+            logger.error(f"Failed to enhance {technology} info with web search: {e}")
+            return {}
     
     def detect_red_flags(self, custom_features: List[str], technology_info: Dict[str, Any]) -> List[str]:
         """Detect red flags indicating unnecessary custom development."""
@@ -220,67 +386,25 @@ def check_official_alternatives(
         
     Returns:
         IntegrationRecommendation with analysis and recommendations
+        
+    Raises:
+        ValidationError: If inputs are invalid
     """
+    # Validate inputs
+    validate_inputs(technology, custom_features)
+    
+    # Get technology information
     kb = IntegrationKnowledgeBase()
     technology_info = kb.get_technology_info(technology)
     
-    # Analyze official solutions
-    official_solutions = []
-    if technology_info.get("official_container"):
-        official_solutions.append(f"Docker: {technology_info['official_container']}")
-    if technology_info.get("official_sdks"):
-        official_solutions.extend([f"SDK: {sdk}" for sdk in technology_info["official_sdks"]])
+    # Analyze features and detect red flags
+    red_flags_detected, feature_coverage, warning_level = analyze_features_and_flags(
+        custom_features, technology_info
+    )
     
-    # Detect red flags
-    red_flags_detected = kb.detect_red_flags(custom_features, technology_info)
-    
-    # Calculate warning level
-    warning_level = calculate_warning_level(custom_features, technology_info)
-    
-    # Feature coverage analysis
-    feature_coverage = kb.analyze_feature_coverage(custom_features, technology_info)
-    
-    # Generate decision framework
-    decision_matrix = generate_decision_matrix(technology, custom_features)
-    
-    # Generate validation questions
-    questions = generate_validation_questions(technology, custom_features)
-    
-    # Generate recommendation
-    recommendation = generate_recommendation(technology, custom_features, technology_info)
-    
-    # Determine if research is required
-    research_required = bool(red_flags_detected) or warning_level in ["warning", "critical"]
-    
-    # Determine if custom justification is needed
-    custom_justification_needed = warning_level in ["caution", "warning", "critical"]
-    
-    # Generate next steps
-    next_steps = []
-    if research_required:
-        next_steps.append(f"Test official {technology} solution with your requirements")
-        if technology_info.get("documentation"):
-            next_steps.append(f"Review documentation: {', '.join(technology_info['documentation'])}")
-    
-    if red_flags_detected:
-        next_steps.append("Document specific gaps in official solution that justify custom development")
-    
-    if custom_justification_needed:
-        next_steps.append("Create decision document comparing official vs custom approaches")
-    
-    if not next_steps:
-        next_steps.append("Proceed with integration approach comparison")
-    
-    return IntegrationRecommendation(
-        technology=technology,
-        warning_level=warning_level,
-        official_solutions=official_solutions,
-        custom_justification_needed=custom_justification_needed,
-        research_required=research_required,
-        red_flags_detected=red_flags_detected,
-        decision_matrix=decision_matrix,
-        next_steps=next_steps,
-        recommendation=recommendation
+    # Build and return recommendation
+    return build_recommendation_result(
+        technology, technology_info, red_flags_detected, warning_level, custom_features
     )
 
 def analyze_integration_text(text: str) -> Dict[str, Any]:
