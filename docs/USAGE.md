@@ -26,6 +26,12 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - `analyze_pr_llm` - Full Claude CLI PR review
 - `analyze_code_llm` - Deep code analysis with LLM reasoning
 
+### Integration Decision Tools (🔍 New in Issue #113)
+- `check_integration_alternatives` - Official alternative check for integration decisions
+- `analyze_integration_decision_text` - Text analysis for integration anti-patterns
+- `integration_decision_framework` - Structured decision framework with Clear Thought integration
+- `integration_research_with_websearch` - Enhanced integration research with real-time web search
+
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
 - `claude_cli_diagnostics` - Diagnose Claude CLI issues
@@ -90,6 +96,36 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 "Deep code analysis with full LLM reasoning"
 ```
 
+### Integration Decision Analysis (🔍 New)
+
+**Official Alternative Check**:
+```
+"Check cognee integration alternatives"
+"Validate docker vs custom approach for supabase"
+"Integration decision check for claude api"
+```
+
+**Text Analysis for Integration Patterns**:
+```
+"Analyze this integration plan for anti-patterns"
+"Check this text for custom development red flags"
+"Integration vibe check of this technical document"
+```
+
+**Decision Framework Analysis**:
+```
+"Integration decision framework for cognee vs custom"
+"Structured analysis of docker vs build approach"
+"Clear thought framework for supabase integration"
+```
+
+**Web-Enhanced Research** (🌐 New):
+```
+"Research new-framework with web search"
+"Find official deployment options for emerging-tool"
+"Web search enhanced integration analysis"
+```
+
 ## When to Use Each Tool Type
 
 ### Use Fast Analysis (_nollm) When:
@@ -103,6 +139,12 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - **Quality focus**: Comprehensive analysis needed
 - **Learning**: Educational explanations wanted
 - **Complex patterns**: Sophisticated anti-pattern detection
+
+### Use Integration Decision Tools When:
+- **Planning integrations**: Before building custom solutions
+- **Technology evaluation**: Comparing official vs custom approaches
+- **Red flag detection**: Identifying unnecessary custom development
+- **Decision documentation**: Structured integration decision frameworks
 
 ## Command Line Interface
 
@@ -232,6 +274,362 @@ result = analyze_pr_nollm(44, repository="owner/repo")
 # Deep PR analysis  
 result = analyze_pr_llm("PR diff content", pr_description="Feature: New login")
 ```
+
+## Integration Decision Tools - Detailed Guide
+
+### Overview
+
+The integration decision tools (Issue #113) prevent unnecessary custom development by checking for official alternatives before building custom solutions. Based on real-world case studies like the Cognee integration failure where 2+ weeks were spent building custom REST servers instead of using the official Docker container.
+
+### Tool 1: check_integration_alternatives
+
+**Purpose**: Check if a technology provides official solutions for your custom features.
+
+**Sample Prompts**:
+```
+"Check cognee integration with custom REST server, JWT authentication"
+"Validate supabase approach for custom auth, manual database"
+"Integration check for docker with custom container management"
+```
+
+**Real-World Example**:
+```python
+# Cognee Case Study Scenario
+check_integration_alternatives(
+    technology="cognee",
+    custom_features="custom REST server, JWT authentication, storage management",
+    description="Building custom Cognee integration for our application"
+)
+```
+
+**Expected Response**:
+```json
+{
+  "status": "success",
+  "technology": "cognee",
+  "warning_level": "warning",
+  "official_solutions": ["Docker: cognee/cognee:main"],
+  "red_flags_detected": ["Custom custom REST server (official alternative available)"],
+  "research_required": true,
+  "custom_justification_needed": true,
+  "recommendation": "🚨 STOP: Official cognee solution likely covers your needs. Test official approach first before custom development.",
+  "next_steps": [
+    "Test official cognee solution with your requirements",
+    "Review documentation: https://cognee.ai/docs",
+    "Document specific gaps in official solution that justify custom development"
+  ]
+}
+```
+
+### Tool 2: analyze_integration_decision_text
+
+**Purpose**: Analyze text content for integration anti-patterns and provide recommendations.
+
+**Sample Prompts**:
+```
+"Analyze this integration plan for anti-patterns"
+"Check this technical document for custom development red flags"
+"Integration vibe check of this architecture proposal"
+```
+
+**Real-World Example**:
+```python
+text = """
+We're planning to build a custom FastAPI server for Cognee integration.
+The server will handle JWT authentication and manage storage configurations.
+We'll also need custom Supabase authentication instead of using their SDK.
+"""
+
+analyze_integration_decision_text(text, detail_level="comprehensive")
+```
+
+**Expected Response**:
+```json
+{
+  "status": "success",
+  "detected_technologies": ["cognee", "supabase"],
+  "detected_custom_work": ["custom", "fastapi", "authentication", "storage"],
+  "warning_level": "warning",
+  "recommendations": [
+    {
+      "technology": "cognee",
+      "analysis": {
+        "warning_level": "warning",
+        "official_solutions": ["Docker: cognee/cognee:main"],
+        "recommendation": "⚠️ CAUTION: Official cognee solution may cover your needs."
+      }
+    }
+  ],
+  "educational_content": {
+    "integration_best_practices": [
+      "Always research official deployment options first",
+      "Test official solutions with basic requirements"
+    ],
+    "common_anti_patterns": [
+      "Building custom REST servers when official containers exist",
+      "Manual authentication when SDKs provide it"
+    ]
+  },
+  "case_studies": {
+    "cognee_failure": {
+      "problem": "2+ weeks spent building custom FastAPI server",
+      "solution": "cognee/cognee:main Docker container available",
+      "lesson": "Official containers often provide complete functionality"
+    }
+  }
+}
+```
+
+### Tool 3: integration_decision_framework
+
+**Purpose**: Provide structured decision framework with Clear Thought analysis for integration approaches.
+
+**Sample Prompts**:
+```
+"Integration decision framework for cognee vs custom"
+"Structured analysis of docker vs build approach for supabase"
+"Clear thought framework for claude api integration"
+```
+
+**Real-World Example**:
+```python
+integration_decision_framework(
+    technology="cognee",
+    custom_features="REST API, authentication, storage",
+    decision_statement="Choose between official Cognee container vs custom development",
+    analysis_type="weighted-criteria"
+)
+```
+
+**Expected Response**:
+```json
+{
+  "status": "success",
+  "decision_statement": "Choose between official Cognee container vs custom development",
+  "technology": "cognee",
+  "analysis_type": "weighted-criteria",
+  "integration_analysis": {
+    "warning_level": "warning",
+    "official_solutions": ["Docker: cognee/cognee:main"],
+    "red_flags_detected": ["Custom REST API (official alternative available)"]
+  },
+  "decision_options": [
+    {
+      "option": "Official Solution",
+      "pros": ["Vendor maintained and supported", "Production ready and tested"],
+      "cons": ["Less customization control", "Potential feature limitations"],
+      "effort_score": 2,
+      "risk_score": 1,
+      "maintenance_score": 1
+    },
+    {
+      "option": "Custom Development",
+      "pros": ["Full control over implementation", "Exact requirement matching"],
+      "cons": ["High development time", "Ongoing maintenance burden"],
+      "effort_score": 8,
+      "risk_score": 6,
+      "maintenance_score": 8
+    }
+  ],
+  "scoring_matrix": {
+    "official_solution": {
+      "development_time": 9,
+      "maintenance_burden": 9,
+      "reliability_support": 9,
+      "customization_needs": 6
+    },
+    "custom_development": {
+      "development_time": 3,
+      "maintenance_burden": 2,
+      "reliability_support": 5,
+      "customization_needs": 9
+    }
+  },
+  "clear_thought_integration": {
+    "mental_model": "first_principles",
+    "reasoning_approach": "Start with the simplest solution that could work",
+    "validation_steps": [
+      "Test official cognee solution with actual requirements",
+      "Document specific gaps that justify custom development",
+      "Estimate total cost of ownership for both approaches"
+    ]
+  }
+}
+```
+
+### Common Use Cases
+
+#### 1. Pre-Development Integration Check
+```bash
+# Before starting integration work
+vibe check cognee integration alternatives
+```
+
+#### 2. Architecture Review
+```bash
+# Review technical documents for integration anti-patterns
+vibe analyze integration plan for red flags
+```
+
+#### 3. Decision Documentation
+```bash
+# Generate structured decision framework
+vibe integration framework cognee vs custom
+```
+
+#### 4. Team Education
+```bash
+# Comprehensive analysis with case studies
+vibe analyze integration text comprehensive
+```
+
+### Supported Technologies
+
+The tool includes knowledge for popular technologies:
+- **Cognee**: Official Docker container, REST API, authentication
+- **Supabase**: Official SDKs, authentication, database, storage
+- **Claude**: Official SDK, chat completions, function calling
+- **OpenAI**: Official SDK, completions, embeddings
+- **GitHub**: Official SDKs, repository management, APIs
+- **Docker**: Official SDK, container management
+- **Kubernetes**: Official client, pod/service management
+
+### Warning Levels
+
+- **🚨 Critical**: 3+ red flags detected, immediate action required
+- **⚠️ Warning**: 2+ red flags detected, careful evaluation needed
+- **🔍 Caution**: 1 red flag or many official features available
+- **✅ None**: No red flags detected, proceed with comparison
+
+### Red Flags Detected
+
+Common patterns that trigger warnings:
+- **Custom REST server** when official containers exist
+- **Manual authentication** when SDKs provide it
+- **Custom HTTP clients** when official SDKs exist
+- **Environment forcing** instead of proper configuration
+- **Manual API calls** when official clients available
+
+## 🌐 Web Search Integration Architecture
+
+### How Integration Analysis Works
+
+The integration decision tools use a **hybrid approach** combining static knowledge with real-time web search:
+
+#### **1. Static Knowledge Base** (`data/integration_knowledge_base.json`)
+- **Pre-curated data** for popular technologies (Cognee, Supabase, Claude, etc.)
+- **Instant response** for known technologies
+- **Comprehensive red flag patterns** based on real-world case studies
+- **Performance**: Sub-second analysis for known technologies
+
+#### **2. Web Search Enhancement** (`integration_research_with_websearch`)
+- **Real-time research** for unknown or emerging technologies
+- **Official documentation discovery** via targeted search queries
+- **Docker Hub container detection** with official image verification
+- **SDK and API client discovery** across package managers
+- **Performance**: 10-30 seconds for comprehensive web research
+
+### Search Strategy & Methodology
+
+#### **Automated Search Queries**:
+```bash
+# Official Documentation Discovery
+"{technology} official documentation deployment"
+"{technology} site:docs.* OR site:github.com"
+
+# Container & Deployment Options
+"{technology} official docker container site:hub.docker.com"
+"{technology} deployment guide best practices"
+
+# SDK & API Discovery
+"{technology} official SDK OR client library"
+"{technology} site:npmjs.com OR site:pypi.org"
+"{technology} site:deepwiki.com"  # For public GitHub repos
+
+# Comparison Research
+"{technology} vs custom implementation"
+"{technology} official vs community solutions"
+```
+
+#### **Search Sources Prioritized**:
+1. **Official Documentation Sites** (`docs.*`, vendor sites)
+2. **Official GitHub Repositories** (`github.com/[vendor]`)
+3. **DeepWiki Documentation** (`deepwiki.com` - excellent for public GitHub repo understanding)
+4. **Docker Hub Official Images** (`hub.docker.com`)
+5. **Package Managers** (npm, PyPI, Maven, etc.)
+6. **Community Discussions** (Stack Overflow, Reddit)
+
+#### **Validation Process**:
+1. **Authenticity Verification**: Official vendor endorsement check
+2. **Maintenance Status**: Recent updates and active development
+3. **Community Support**: Documentation quality and usage patterns
+4. **Production Readiness**: Stability and enterprise adoption
+
+### Tool Selection Guide
+
+#### **Use Static Analysis** (`check_integration_alternatives`) When:
+- ✅ **Known technologies** in the knowledge base
+- ✅ **Fast decisions** required in development workflow
+- ✅ **Offline environment** or limited internet access
+- ✅ **Cost-conscious** scenarios avoiding web search API calls
+
+#### **Use Web-Enhanced Research** (`integration_research_with_websearch`) When:
+- 🌐 **New or emerging technologies** not in knowledge base
+- 🌐 **Comprehensive research** needed for critical decisions
+- 🌐 **Up-to-date information** required for rapidly evolving tools
+- 🌐 **Unknown vendor landscape** requiring discovery
+
+### Example: New Technology Research
+
+```python
+# Research a new technology with web search
+integration_research_with_websearch(
+    technology="newtech-framework",
+    custom_features="REST API, authentication, data processing",
+    search_depth="advanced"
+)
+```
+
+**Expected Web Search Process**:
+1. **Documentation Search**: `newtech-framework official documentation deployment`
+2. **Container Discovery**: `newtech-framework official docker container site:hub.docker.com`
+3. **SDK Research**: `newtech-framework official SDK OR client library`
+4. **Comparison Analysis**: `newtech-framework vs custom implementation`
+
+**Enhanced Response Includes**:
+- **Search queries executed** and results found
+- **Official documentation links** discovered
+- **Container availability** on Docker Hub
+- **SDK options** across different languages
+- **Research methodology** for manual validation
+- **Confidence level** based on search results quality
+
+### Web Search Limitations & Fallbacks
+
+#### **Rate Limiting & Reliability**:
+- **Graceful degradation** to static knowledge base if web search fails
+- **Timeout handling** with fallback recommendations
+- **Search result validation** to avoid false positives
+
+#### **Search Quality Indicators**:
+- **High Confidence**: Official vendor sites, GitHub orgs, Docker Hub verified
+- **Medium Confidence**: Well-documented community projects
+- **Low Confidence**: Limited or conflicting information found
+- **Manual Research Required**: No clear official alternatives found
+
+### Privacy & Performance Considerations
+
+#### **Data Handling**:
+- **No persistent storage** of search results
+- **Query anonymization** where possible
+- **Minimal data collection** focused on technical information
+
+#### **Performance Optimization**:
+- **Parallel search execution** for multiple queries
+- **Result caching** for recent searches (session-based)
+- **Intelligent query selection** based on technology patterns
+
+This hybrid approach ensures you get **instant feedback** for known technologies while enabling **comprehensive research** for new or emerging tools, preventing both the Cognee-style failures (missing obvious official solutions) and the opposite problem (building custom solutions for truly novel technologies without alternatives).
 
 ## Troubleshooting
 
