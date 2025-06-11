@@ -116,14 +116,26 @@ class AsyncAnalysisWorker:
         Returns:
             WorkerResult with success status and result/error
         """
+        import os
         self.current_job = job
         start_time = time.time()
+        
+        # Register process ID for resource monitoring
+        from .resource_monitor import get_global_resource_monitor
+        resource_monitor = get_global_resource_monitor()
+        process_id = os.getpid()
+        
+        # Update resource monitor with process ID
+        tracker = resource_monitor.job_trackers.get(job.job_id)
+        if tracker:
+            tracker.process_id = process_id
         
         logger.info(
             f"Worker {self.worker_id} processing job {job.job_id}",
             extra={
                 "pr": f"{job.repository}#{job.pr_number}",
-                "pr_size": job.pr_data.get('additions', 0) + job.pr_data.get('deletions', 0)
+                "pr_size": job.pr_data.get('additions', 0) + job.pr_data.get('deletions', 0),
+                "process_id": process_id
             }
         )
         
@@ -161,6 +173,9 @@ class AsyncAnalysisWorker:
             duration = time.time() - start_time
             self.current_job = None
             
+            # Unregister from resource monitoring
+            resource_monitor.unregister_job(job.job_id)
+            
             logger.info(
                 f"Worker {self.worker_id} completed job {job.job_id}",
                 extra={"duration": duration}
@@ -176,6 +191,9 @@ class AsyncAnalysisWorker:
         except Exception as e:
             duration = time.time() - start_time
             error_message = str(e)
+            
+            # Unregister from resource monitoring
+            resource_monitor.unregister_job(job.job_id)
             
             logger.error(
                 f"Worker {self.worker_id} failed job {job.job_id}: {error_message}",

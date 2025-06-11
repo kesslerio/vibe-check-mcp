@@ -98,6 +98,23 @@ async def start_async_analysis(
     Returns:
         Response with job_id and status information
     """
+    # Validate input first
+    from .validation import validate_async_analysis_request
+    
+    is_valid, validation_result = validate_async_analysis_request(pr_number, repository, pr_data)
+    if not is_valid:
+        return {
+            "status": "error",
+            "error": f"Validation failed for {validation_result['field']}: {validation_result['error']}",
+            "validation_error": validation_result,
+            "recommendation": "Fix the invalid input and try again"
+        }
+    
+    # Use sanitized values from validation
+    pr_number = validation_result["pr_number"]
+    repository = validation_result["repository"]
+    pr_data = validation_result["pr_data"]
+    
     # Ensure system is initialized
     if not await initialize_async_system():
         return {
@@ -124,6 +141,11 @@ async def start_async_analysis(
                     "async_threshold_files": config.async_threshold_files
                 }
             }
+        
+        # Start resource monitoring if not already running
+        from .resource_monitor import get_global_resource_monitor
+        resource_monitor = get_global_resource_monitor()
+        await resource_monitor.start_monitoring()
         
         # Queue the analysis
         job_id = await queue.queue_analysis(pr_number, repository, pr_data, priority)
@@ -161,6 +183,15 @@ async def start_async_analysis(
             "queue_info": (await get_global_queue()).get_queue_status()
         }
     except Exception as e:
+        # Handle ResourceError from queue_manager
+        from .queue_manager import ResourceError
+        if isinstance(e, ResourceError):
+            return {
+                "status": "resource_limit_exceeded",
+                "error": str(e),
+                "recommendation": "System is at capacity. Try again later or use manual review",
+                "resource_info": "Resource monitoring detected system limits exceeded"
+            }
         logger.error(f"Error starting async analysis: {e}")
         return {
             "status": "error",
@@ -179,6 +210,20 @@ async def check_analysis_status(job_id: str) -> Dict[str, Any]:
     Returns:
         Comprehensive status information
     """
+    # Validate job ID first
+    from .validation import validate_status_check_request
+    
+    is_valid, validation_result = validate_status_check_request(job_id)
+    if not is_valid:
+        return {
+            "status": "error",
+            "error": f"Invalid job ID: {validation_result['error']}",
+            "job_id": job_id
+        }
+    
+    # Use sanitized job ID
+    job_id = validation_result["job_id"]
+    
     # Ensure system is initialized
     if not await initialize_async_system():
         return {
@@ -233,23 +278,9 @@ async def get_system_status() -> Dict[str, Any]:
             "message": "Async analysis system is not running"
         }
     
-    try:
-        queue = await get_global_queue()
-        worker_manager = await get_global_worker_manager(queue)
-        
-        return {
-            "system_status": "running",
-            "queue_overview": _status_tracker.get_queue_overview(queue),
-            "worker_status": worker_manager.get_worker_status(),
-            "system_initialized": _system_initialized
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting system status: {e}")
-        return {
-            "system_status": "error",
-            "error": str(e)
-        }
+    # Use graceful degradation for system status
+    from .graceful_degradation import system_status_with_fallback
+    return await system_status_with_fallback()
 
 
 def _generate_immediate_analysis(pr_data: Dict[str, Any]) -> Dict[str, Any]:
