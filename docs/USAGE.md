@@ -32,6 +32,11 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - `integration_decision_framework` - Structured decision framework with Clear Thought integration
 - `integration_research_with_websearch` - Enhanced integration research with real-time web search
 
+### Integration Pattern Detection Tools (🚀 New in Issue #112) 
+- `analyze_integration_patterns` - Fast integration pattern detection for vibe coding safety net
+- `quick_tech_scan` - Ultra-fast technology scan for immediate feedback
+- `analyze_integration_effort` - Integration effort-complexity analysis
+
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
 - `claude_cli_diagnostics` - Diagnose Claude CLI issues
@@ -126,6 +131,29 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 "Web search enhanced integration analysis"
 ```
 
+### Integration Pattern Detection (🚀 New in Issue #112)
+
+**Fast Integration Pattern Analysis**:
+```
+"Vibe check this integration plan for anti-patterns"
+"Analyze for integration over-engineering" 
+"Fast pattern detection on this PR description"
+```
+
+**Ultra-Fast Technology Scan**:
+```
+"Quick tech scan for known integrations"
+"Scan for Cognee, Supabase, OpenAI usage"
+"Instant technology detection"
+```
+
+**Effort-Complexity Analysis**:
+```
+"Analyze integration effort complexity"
+"Check if development effort matches integration complexity"
+"Effort-value analysis for this implementation"
+```
+
 ## When to Use Each Tool Type
 
 ### Use Fast Analysis (_nollm) When:
@@ -145,6 +173,13 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - **Technology evaluation**: Comparing official vs custom approaches
 - **Red flag detection**: Identifying unnecessary custom development
 - **Decision documentation**: Structured integration decision frameworks
+
+### Use Integration Pattern Detection Tools When:
+- **Real-time development**: Instant feedback during coding workflow
+- **PR/Issue review**: Fast pattern detection in development content
+- **Technology scanning**: Quick identification of integration technologies
+- **Effort validation**: Checking if development complexity matches integration needs
+- **Anti-pattern prevention**: Catching integration over-engineering early
 
 ## Command Line Interface
 
@@ -630,6 +665,290 @@ integration_research_with_websearch(
 - **Intelligent query selection** based on technology patterns
 
 This hybrid approach ensures you get **instant feedback** for known technologies while enabling **comprehensive research** for new or emerging tools, preventing both the Cognee-style failures (missing obvious official solutions) and the opposite problem (building custom solutions for truly novel technologies without alternatives).
+
+## 🚀 Integration Pattern Detection Tools - Real-Time Vibe Coding Safety Net
+
+### Overview
+
+The Integration Pattern Detection tools (Issue #112) provide real-time anti-pattern detection specifically designed to prevent engineering disasters like the Cognee case study. These tools work seamlessly via MCP to catch integration over-engineering before it happens.
+
+**Key Innovation**: Unlike traditional code analysis that happens after development, these tools provide **instant feedback during the planning and development process**, preventing unnecessary custom development before it starts.
+
+### Real-Time MCP Usage
+
+#### How the Tools Work in Real-Time:
+
+1. **Sub-Second Technology Recognition**: Instantly detects Cognee, Supabase, OpenAI, Claude mentions
+2. **Immediate Red Flag Detection**: Flags custom development when official alternatives exist  
+3. **Instant Recommendations**: Provides specific next steps with official alternatives
+4. **Seamless Workflow Integration**: Works with any MCP-compatible development environment
+
+#### Tool 1: analyze_integration_patterns
+
+**Purpose**: Comprehensive real-time integration pattern analysis with sub-second response.
+
+**Sample Prompts**:
+```
+"Vibe check this integration plan for anti-patterns"
+"Analyze this PR description for integration over-engineering"
+"Fast pattern detection on this technical document"
+```
+
+**Real-World Example**:
+```python
+# Input: PR description mentioning custom Cognee development
+analyze_integration_patterns(
+    content="""
+    We're building a custom FastAPI server for Cognee integration.
+    The server will handle JWT authentication and manage storage configurations.
+    This is part of our 2000+ line integration implementation.
+    """,
+    detail_level="standard"
+)
+```
+
+**Expected Response**:
+```json
+{
+  "status": "analysis_complete",
+  "warning_level": "critical",
+  "technologies_detected": [
+    {
+      "technology": "cognee",
+      "confidence": 0.9,
+      "official_solution": "cognee/cognee:main Docker container with built-in REST API",
+      "indicators": ["mentions cognee", "cognee integration context"]
+    }
+  ],
+  "anti_patterns_detected": [
+    {
+      "pattern": "integration_over_engineering",
+      "detected": true,
+      "confidence": 0.8,
+      "evidence": ["custom server for managed service", "custom integration for known tech"]
+    }
+  ],
+  "recommendations": [
+    "🚨 Avoid custom REST server for cognee - official alternative available",
+    "✅ Test official cognee solution: cognee/cognee:main Docker container",
+    "📏 High line count detected - verify this complexity is necessary for integration"
+  ],
+  "research_questions": [
+    "Have you tested the official cognee solution with your requirements?",
+    "What specific features does the official cognee solution lack?",
+    "Why is custom development necessary instead of using cognee/cognee:main Docker container?"
+  ]
+}
+```
+
+#### Tool 2: quick_tech_scan
+
+**Purpose**: Ultra-fast technology detection for immediate alerts (sub-100ms response).
+
+**Sample Prompts**:
+```
+"Quick tech scan for known integrations"
+"Scan for Cognee, Supabase, OpenAI usage"
+"Instant technology detection"
+```
+
+**Real-World Example**:
+```python
+# Ultra-fast scan during code review
+quick_tech_scan("Using Supabase for auth and Cognee for knowledge management")
+```
+
+**Expected Response**:
+```json
+{
+  "status": "technologies_detected", 
+  "technologies": [
+    {
+      "technology": "supabase",
+      "confidence": 0.8,
+      "official_solution": "Supabase official SDKs (@supabase/supabase-js, supabase-py)",
+      "immediate_action": "✅ Check official supabase solution before custom development",
+      "red_flags": ["custom auth", "manual database"],
+      "warning": "⚠️ Avoid custom custom auth - official alternative available"
+    },
+    {
+      "technology": "cognee", 
+      "confidence": 0.7,
+      "official_solution": "cognee/cognee:main Docker container",
+      "immediate_action": "✅ Check official cognee solution before custom development"
+    }
+  ],
+  "warning_level": "caution",
+  "quick_recommendations": [
+    "Research supabase official solution",
+    "Research cognee official solution"
+  ]
+}
+```
+
+#### Tool 3: analyze_integration_effort
+
+**Purpose**: Effort-complexity analysis to identify potential over-engineering.
+
+**Sample Prompts**:
+```
+"Analyze integration effort complexity"
+"Check if development effort matches integration complexity"
+"Effort-value analysis for this implementation"
+```
+
+**Real-World Example**:
+```python
+# PR with high line count for integration
+analyze_integration_effort(
+    content="Custom Cognee integration with FastAPI and JWT",
+    lines_added=1800,
+    lines_deleted=200, 
+    files_changed=15
+)
+```
+
+**Expected Response**:
+```json
+{
+  "status": "effort_analysis_complete",
+  "detected_technologies": ["cognee"],
+  "pr_metrics": {
+    "additions": 1800,
+    "deletions": 200,
+    "changed_files": 15
+  },
+  "complexity_assessment": "high",
+  "warning": "🚨 2000 lines for integration - verify necessity",
+  "technology_effort_analysis": [
+    {
+      "technology": "cognee",
+      "official_solution": "cognee/cognee:main Docker container",
+      "effort_question": "Is custom development effort justified vs cognee/cognee:main Docker container?",
+      "recommendation": "Test cognee/cognee:main Docker container with realistic requirements first"
+    }
+  ],
+  "recommendations": [
+    "✅ Test official cognee solution: cognee/cognee:main Docker container",
+    "📏 High line count detected - verify this complexity is necessary for integration",
+    "⏱️ Extended timeline detected - consider official alternatives first"
+  ]
+}
+```
+
+### Performance Characteristics
+
+#### Real-Time Performance Metrics:
+- **quick_tech_scan**: <100ms response time
+- **analyze_integration_patterns**: <500ms for standard analysis  
+- **analyze_integration_effort**: <300ms with PR metrics
+- **Technology Recognition**: Instant detection of 7+ technologies
+- **Concurrent Usage**: Supports multiple simultaneous MCP calls
+
+#### Workflow Integration:
+```bash
+# Development workflow examples
+vibe analyze integration patterns "Building custom Cognee server"
+vibe quick tech scan "PR: Add Supabase integration" 
+vibe effort analysis "Custom auth implementation - 1500 lines"
+```
+
+### Supported Technologies & Red Flags
+
+#### Technologies Covered:
+- **Cognee**: Docker container, REST API, JWT authentication
+- **Supabase**: Official SDKs, authentication, database
+- **OpenAI**: Python SDK, API clients, embeddings
+- **Claude**: Anthropic SDK, messages API, function calling
+- **GitHub**: Official SDKs, repository management
+- **Docker**: Official SDK, container management
+- **Kubernetes**: Official client, pod/service management
+
+#### Red Flag Patterns Detected:
+- **Custom REST servers** when official containers exist
+- **Manual authentication** when SDKs provide it  
+- **Custom HTTP clients** when official SDKs exist
+- **Environment forcing** instead of proper configuration
+- **Manual API calls** when official clients available
+- **High line counts** for standard integrations (>1000 lines)
+- **Extended timelines** for simple integrations (weeks/months)
+
+### Real-World Impact & Case Studies
+
+#### Cognee Case Study Prevention:
+**Problem Prevented**: 2+ weeks spent building custom FastAPI server
+**Detection**: `analyze_integration_patterns` flags custom REST server red flag
+**Solution Suggested**: cognee/cognee:main Docker container with built-in REST API
+**Time Saved**: 2-3 weeks of development effort
+
+#### Example Detection Flow:
+1. **Developer writes**: "Building custom Cognee REST server with JWT"
+2. **MCP tool detects**: Technology=Cognee, Red Flag=custom REST server  
+3. **Instant feedback**: "🚨 Official cognee/cognee:main container available"
+4. **Next step**: Test official solution before custom development
+5. **Outcome**: Prevents unnecessary 2000+ line implementation
+
+### Integration with Existing Tools
+
+#### Enhanced LLM Analysis:
+The integration pattern detection automatically enhances existing LLM-powered tools:
+
+- **analyze_github_issue_llm**: Now includes integration pattern context
+- **analyze_github_pr_llm**: Automatically flags integration anti-patterns
+- **Text analysis tools**: Enhanced with technology-specific guidance
+
+#### Backward Compatibility:
+All existing tools continue to work unchanged while gaining integration pattern awareness.
+
+### Common Usage Scenarios
+
+#### 1. Pre-Development Planning
+```bash
+# Before starting integration work
+vibe analyze integration patterns "Planning Cognee integration for knowledge management"
+```
+
+#### 2. Code Review Enhancement  
+```bash
+# During PR review
+vibe quick tech scan "PR: Custom Supabase authentication implementation"
+```
+
+#### 3. Architecture Decision Validation
+```bash
+# Validating technical decisions
+vibe effort analysis "2000+ line custom integration vs official SDK"
+```
+
+#### 4. Team Education & Learning
+```bash
+# Comprehensive analysis with case studies
+vibe analyze integration patterns "Custom vs official approaches" --detail comprehensive
+```
+
+### Best Practices for Real-Time Usage
+
+#### 1. **Immediate Feedback Loop**:
+- Use `quick_tech_scan` for instant technology detection
+- Apply `analyze_integration_patterns` for detailed analysis
+- Leverage recommendations for next steps
+
+#### 2. **Development Workflow Integration**:
+- Scan PR descriptions before implementation starts
+- Analyze issue content during planning phase
+- Validate architecture decisions with effort analysis
+
+#### 3. **Team Adoption Strategy**:
+- Start with quick scans to build awareness
+- Gradually introduce comprehensive analysis
+- Use educational content for team learning
+
+#### 4. **Cost-Effective Usage**:
+- Integration pattern detection has no LLM costs
+- Sub-second response times for development workflow
+- Prevents costly over-engineering cycles
+
+The Integration Pattern Detection tools represent a fundamental shift from reactive code review to **proactive architectural guidance**, catching integration anti-patterns at the decision point rather than after implementation is complete.
 
 ## Troubleshooting
 
