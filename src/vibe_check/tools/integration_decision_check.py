@@ -19,12 +19,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-# Try to import web search capability - optional dependency
-try:
-    from ..server import mcp  # Access to MCP tools for web search
-    WEB_SEARCH_AVAILABLE = True
-except ImportError:
-    WEB_SEARCH_AVAILABLE = False
+# Web search capabilities available via MCP tools
+WEB_SEARCH_AVAILABLE = True  # We can always try MCP tools
 
 # Configuration constants
 MAX_CUSTOM_FEATURES = 20

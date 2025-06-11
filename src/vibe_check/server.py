@@ -550,24 +550,26 @@ def integration_research_with_websearch(
             "confidence_level": "web-enhanced"
         }
         
-        # Try to use web search tools available in the MCP environment
+        # Use available MCP tools for real web search
         try:
-            # Search for official documentation
-            doc_query = f"{technology} official documentation site:docs.* OR site:github.com"
-            # This would be replaced with actual web search in production
-            enhanced_info["web_findings"]["documentation_search"] = f"Searched: {doc_query}"
-            
-            # Search for Docker containers
-            docker_query = f"{technology} official docker container site:hub.docker.com"
-            enhanced_info["web_findings"]["container_search"] = f"Searched: {docker_query}"
-            
-            # Search for SDKs
-            sdk_query = f"{technology} official SDK OR client library"
-            enhanced_info["web_findings"]["sdk_search"] = f"Searched: {sdk_query}"
+            from .tools.web_search_integration import search_technology_documentation
+            search_results = search_technology_documentation(technology, features_list)
+            enhanced_info["web_findings"] = search_results
             
         except Exception as search_error:
             logger.warning(f"Web search execution failed: {search_error}")
             enhanced_info["web_findings"]["search_error"] = str(search_error)
+            # Fallback to search methodology guidance
+            enhanced_info["web_findings"]["fallback_guidance"] = {
+                "manual_search_required": True,
+                "recommended_sources": [
+                    f"https://docs.{technology.lower()}.com",
+                    f"https://github.com/{technology.lower()}",
+                    f"https://deepwiki.com/{technology.lower()}",  # For public GitHub repos
+                    f"https://hub.docker.com/search?q={technology}",
+                    "Official vendor documentation sites"
+                ]
+            }
         
         # Get base recommendation from static knowledge
         try:

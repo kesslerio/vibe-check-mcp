@@ -544,6 +544,7 @@ The integration decision tools use a **hybrid approach** combining static knowle
 # SDK & API Discovery
 "{technology} official SDK OR client library"
 "{technology} site:npmjs.com OR site:pypi.org"
+"{technology} site:deepwiki.com"  # For public GitHub repos
 
 # Comparison Research
 "{technology} vs custom implementation"
@@ -553,9 +554,10 @@ The integration decision tools use a **hybrid approach** combining static knowle
 #### **Search Sources Prioritized**:
 1. **Official Documentation Sites** (`docs.*`, vendor sites)
 2. **Official GitHub Repositories** (`github.com/[vendor]`)
-3. **Docker Hub Official Images** (`hub.docker.com`)
-4. **Package Managers** (npm, PyPI, Maven, etc.)
-5. **Community Discussions** (Stack Overflow, Reddit)
+3. **DeepWiki Documentation** (`deepwiki.com` - excellent for public GitHub repo understanding)
+4. **Docker Hub Official Images** (`hub.docker.com`)
+5. **Package Managers** (npm, PyPI, Maven, etc.)
+6. **Community Discussions** (Stack Overflow, Reddit)
 
 #### **Validation Process**:
 1. **Authenticity Verification**: Official vendor endorsement check
