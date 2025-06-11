@@ -217,11 +217,31 @@ async def analyze_github_issue_llm(
         
         detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
         
+        # Enhanced prompt with integration pattern detection
+        integration_context = ""
+        try:
+            from ..integration_pattern_analysis import quick_technology_scan
+            tech_scan = quick_technology_scan(issue_context)
+            if tech_scan.get("status") == "technologies_detected":
+                tech_list = [t["technology"] for t in tech_scan.get("technologies", [])]
+                integration_context = f"""
+**Integration Technologies Detected:** {', '.join(tech_list)}
+**Integration Alert:** Check for official alternatives before custom development
+"""
+        except Exception:
+            pass  # Continue without integration context if it fails
+
         vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub issue. Focus on preventing common engineering anti-patterns while encouraging good practices.
+
+SPECIAL ATTENTION: This issue mentions integration technologies. Pay special attention to:
+- Whether official solutions (SDKs, containers, APIs) are being considered
+- Signs of custom development when standard approaches might work
+- Integration complexity that could be simplified
 
 {detail_instruction}
 
 {issue_context}
+{integration_context}
 
 Please provide a vibe check analysis in this format:
 
@@ -229,17 +249,18 @@ Please provide a vibe check analysis in this format:
 [One-sentence friendly assessment]
 
 ## 🔍 Engineering Guidance
-- Research Phase: [Have we done our homework on existing solutions?]
-- POC Needs: [Do we need to prove basic functionality first?]
-- Complexity Check: [Is the proposed complexity justified?]
+- Research Phase: [Have we done our homework on existing solutions? Any official alternatives?]
+- POC Needs: [Do we need to prove basic functionality first? Test standard approaches?]
+- Complexity Check: [Is the proposed complexity justified? Could official solutions work?]
+- Integration Check: [If integrating with third-party services, are we using official approaches?]
 
 ## 💡 Friendly Recommendations
-[3-5 practical, encouraging recommendations]
+[3-5 practical, encouraging recommendations - prioritize checking official solutions for any detected technologies]
 
 ## 🎓 Learning Opportunities  
-[2-3 educational suggestions based on patterns detected]
+[2-3 educational suggestions based on patterns detected, include integration best practices if relevant]
 
-Use friendly, coaching language that helps developers learn rather than intimidate."""
+Use friendly, coaching language that helps developers learn rather than intimidate. If integration technologies are detected, gently guide toward researching official solutions first."""
         
         # Run external Claude analysis
         result = await analyze_text_llm(
@@ -428,11 +449,34 @@ async def analyze_github_pr_llm(
             
             detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
             
+            # Enhanced PR prompt with integration pattern detection
+            pr_integration_context = ""
+            try:
+                from ..integration_pattern_analysis import analyze_integration_patterns_fast
+                integration_analysis = analyze_integration_patterns_fast(pr_context, detail_level="brief")
+                if integration_analysis.get("technologies_detected"):
+                    tech_list = [t["technology"] for t in integration_analysis.get("technologies_detected", [])]
+                    warning_level = integration_analysis.get("warning_level", "none")
+                    pr_integration_context = f"""
+**INTEGRATION ANALYSIS:**
+- Technologies Detected: {', '.join(tech_list)}
+- Warning Level: {warning_level}
+- Integration Alert: Verify official alternatives are considered
+"""
+            except Exception:
+                pass  # Continue without integration context if it fails
+
             vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub pull request. Focus on preventing common engineering anti-patterns while encouraging good practices.
+
+SPECIAL ATTENTION: Pay attention to integration patterns:
+- Are official SDKs/containers being used instead of custom solutions?
+- Is the development effort proportional to the integration complexity?
+- Are there signs of reinventing existing solutions?
 
 {detail_instruction}
 
 {pr_context}
+{pr_integration_context}
 
 Please provide a vibe check analysis in this format:
 
@@ -442,19 +486,20 @@ Please provide a vibe check analysis in this format:
 ## 🔍 Engineering Analysis
 - Code Quality: [Structure, naming, organization, maintainability]
 - Security & Performance: [Potential vulnerabilities, performance implications]
-- Anti-Pattern Detection: [Infrastructure-without-implementation, complexity escalation, etc.]
+- Anti-Pattern Detection: [Infrastructure-without-implementation, integration over-engineering, complexity escalation]
+- Integration Patterns: [If integrations present, are official solutions being used?]
 - Testing & Documentation: [Test coverage, documentation updates needed]
 
 ## 💡 Friendly Recommendations
-[3-5 practical, encouraging recommendations for improvement]
+[3-5 practical, encouraging recommendations for improvement - include integration guidance if relevant]
 
 ## 🎓 Learning Opportunities  
-[2-3 educational suggestions based on patterns detected]
+[2-3 educational suggestions based on patterns detected, include integration best practices if applicable]
 
 ## ✅ Ready to Ship?
 [Final recommendation: approve, request changes, or needs discussion]
 
-Use friendly, coaching language that helps developers learn rather than intimidate."""
+Use friendly, coaching language that helps developers learn rather than intimidate. If integration technologies are detected, gently suggest verifying official alternatives."""
             
             # Run external Claude analysis
             result = await analyze_text_llm(

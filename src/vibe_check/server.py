@@ -31,6 +31,12 @@ from .tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_functio
 from .tools.analyze_llm.tool_registry import register_llm_analysis_tools
 from .tools.diagnostics_claude_cli import register_diagnostic_tools
 from .tools.integration_decision_check import check_official_alternatives, analyze_integration_text, ValidationError, SCORING
+from .tools.integration_pattern_analysis import (
+    analyze_integration_patterns_fast, 
+    quick_technology_scan, 
+    analyze_effort_complexity,
+    enhance_text_analysis_with_integration_patterns
+)
 
 # Configure logging
 logging.basicConfig(
@@ -626,6 +632,116 @@ def integration_research_with_websearch(
         }
 
 @mcp.tool()
+def analyze_integration_patterns(
+    content: str,
+    context: str = "",
+    detail_level: str = "standard"
+) -> Dict[str, Any]:
+    """
+    🚀 Fast Integration Pattern Detection for Vibe Coding Safety Net.
+    
+    Real-time detection of integration anti-patterns to prevent engineering disasters
+    like the Cognee case study. Provides instant feedback on technology usage and
+    custom development decisions with sub-second response for development workflow.
+    
+    Features:
+    - 🔍 Technology Recognition: Instant detection of Cognee, Supabase, OpenAI, Claude
+    - ⚠️ Red Flag Detection: Custom development when official alternatives exist
+    - 📊 Effort Analysis: High line counts for standard integrations
+    - 💡 Immediate Recommendations: Official alternatives and next steps
+    
+    Use this tool for: "vibe check this integration plan", "analyze for integration anti-patterns"
+    
+    Args:
+        content: Text content to analyze (PR description, issue content, code comments)
+        context: Additional context (title, file names, related information)
+        detail_level: Analysis detail level (brief/standard/comprehensive)
+        
+    Returns:
+        Real-time integration pattern analysis with actionable recommendations
+    """
+    logger.info(f"Integration pattern analysis for {len(content)} characters")
+    
+    return analyze_integration_patterns_fast(
+        content=content,
+        context=context if context else None,
+        detail_level=detail_level
+    )
+
+@mcp.tool()
+def quick_tech_scan(content: str) -> Dict[str, Any]:
+    """
+    ⚡ Ultra-Fast Technology Scan for Immediate Feedback.
+    
+    Instant detection of known technologies (Cognee, Supabase, OpenAI, Claude)
+    with immediate alerts about official alternatives. Designed for real-time
+    development workflow integration where sub-second response is critical.
+    
+    Features:
+    - ⚡ Sub-second response time
+    - 🎯 Technology-specific official alternatives
+    - 🚨 Immediate red flag alerts
+    - ✅ Quick action recommendations
+    
+    Use this tool for: "scan for known technologies", "quick tech check", "instant integration scan"
+    
+    Args:
+        content: Text content to scan for technology mentions
+        
+    Returns:
+        Instant technology detection with official alternatives
+    """
+    logger.info("Ultra-fast technology scan requested")
+    
+    return quick_technology_scan(content)
+
+@mcp.tool()
+def analyze_integration_effort(
+    content: str,
+    lines_added: int = 0,
+    lines_deleted: int = 0,
+    files_changed: int = 0
+) -> Dict[str, Any]:
+    """
+    📊 Integration Effort-Complexity Analysis.
+    
+    Analyzes the relationship between development effort and integration complexity
+    to identify potential over-engineering. Helps prevent scenarios like the Cognee
+    case study where 2000+ lines were spent on standard integrations.
+    
+    Features:
+    - 📏 Line count analysis for integration work
+    - ⚖️ Effort-value ratio assessment
+    - 🎯 Technology-specific effort guidance
+    - 💡 Official alternative recommendations
+    
+    Use this tool for: "analyze integration effort", "check development complexity", "effort-value analysis"
+    
+    Args:
+        content: Content to analyze for effort indicators
+        lines_added: Lines added in PR/change (optional)
+        lines_deleted: Lines deleted in PR/change (optional)
+        files_changed: Number of files modified (optional)
+        
+    Returns:
+        Effort-complexity analysis with recommendations
+    """
+    logger.info("Integration effort-complexity analysis requested")
+    
+    pr_metrics = None
+    if lines_added > 0 or lines_deleted > 0 or files_changed > 0:
+        pr_metrics = {
+            "additions": lines_added,
+            "deletions": lines_deleted,
+            "changed_files": files_changed
+        }
+    
+    return analyze_effort_complexity(
+        content=content,
+        pr_metrics=pr_metrics
+    )
+
+@mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Check MCP server status and capabilities.
@@ -654,6 +770,9 @@ def server_status() -> Dict[str, Any]:
         "analyze_integration_decision_text - Text analysis for integration anti-patterns (Issue #113 ✅ COMPLETE)",
         "integration_decision_framework - Structured decision framework with Clear Thought integration (Issue #113 ✅ COMPLETE)",
         "integration_research_with_websearch - Enhanced integration research with real-time web search (Issue #113 ✅ COMPLETE)",
+        "analyze_integration_patterns - Fast integration pattern detection for vibe coding safety net (Issue #112 ✅ COMPLETE)",
+        "quick_tech_scan - Ultra-fast technology scan for immediate feedback (Issue #112 ✅ COMPLETE)",
+        "analyze_integration_effort - Integration effort-complexity analysis (Issue #112 ✅ COMPLETE)",
         "server_status - Server status and capabilities"
     ]
     

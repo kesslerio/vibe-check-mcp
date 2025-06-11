@@ -187,5 +187,132 @@
         "text": "skipping research"
       }
     ]
+  },
+  "integration_over_engineering": {
+    "id": "integration_over_engineering",
+    "version": "1.0.0",
+    "name": "Integration Over-Engineering",
+    "description": "Building custom integration solutions when official alternatives exist",
+    "severity": "high",
+    "category": "integration",
+    "detection_threshold": 0.5,
+    "technologies": {
+      "cognee": {
+        "official_solution": "cognee/cognee:main Docker container with built-in REST API",
+        "red_flags": ["custom server", "fastapi server", "custom REST server", "environment forcing", "manual JWT", "storage path fixes"],
+        "features": ["REST API", "JWT authentication", "storage management"]
+      },
+      "supabase": {
+        "official_solution": "Supabase official SDKs (@supabase/supabase-js, supabase-py)",
+        "red_flags": ["custom auth", "manual database", "custom HTTP client"],
+        "features": ["Authentication", "Database", "Storage", "Real-time"]
+      },
+      "openai": {
+        "official_solution": "OpenAI Python SDK",
+        "red_flags": ["HTTP client", "API wrapper", "custom retry", "manual requests"],
+        "features": ["Chat completions", "Embeddings", "Error handling", "Streaming"]
+      },
+      "claude": {
+        "official_solution": "Anthropic Python SDK",
+        "red_flags": ["custom HTTP", "manual API", "custom client"],
+        "features": ["Messages API", "Function calling", "Streaming", "Vision"]
+      }
+    },
+    "indicators": [
+      {
+        "regex": "\\b(?:cognee|supabase|openai|claude|anthropic)\\b.*\\b(?:custom|build|implement|create)\\s+(?:server|client|wrapper|integration)",
+        "description": "custom development for known technology",
+        "weight": 0.5,
+        "text": "custom integration for known tech"
+      },
+      {
+        "regex": "\\b(?:FastAPI|flask|express)\\s+(?:server|app)\\s+for\\s+(?:cognee|supabase|openai|claude)",
+        "description": "building custom server for technology with official solutions",
+        "weight": 0.6,
+        "text": "custom server for managed service"
+      },
+      {
+        "regex": "\\b(?:JWT|authentication|auth)\\s+(?:implementation|handling|management)\\s+for\\s+(?:cognee|supabase)",
+        "description": "manual auth implementation for services that provide it",
+        "weight": 0.5,
+        "text": "manual auth for managed auth service"
+      },
+      {
+        "regex": "\\b(?:storage|database|db)\\s+(?:configuration|setup|management)\\s+(?:for|with)\\s+(?:cognee|supabase)",
+        "description": "manual storage setup for managed storage services",
+        "weight": 0.4,
+        "text": "manual storage for managed service"
+      },
+      {
+        "regex": "\\b(?:environment|env)\\s+(?:variable|var)\\s+(?:forcing|override|hack|workaround)",
+        "description": "environment variable workarounds",
+        "weight": 0.3,
+        "text": "environment forcing"
+      },
+      {
+        "regex": "\\b(?:docker|container)\\s+(?:build|create|setup)\\s+(?:for|with)\\s+(?:cognee|supabase)",
+        "description": "custom container for services with official containers",
+        "weight": 0.5,
+        "text": "custom container for managed service"
+      },
+      {
+        "regex": "\\b(?:requests|urllib|http\\.client)\\s+(?:for|to)\\s+(?:openai|claude|anthropic|supabase)",
+        "description": "manual HTTP clients for services with official SDKs",
+        "weight": 0.4,
+        "text": "manual HTTP for SDK service"
+      }
+    ],
+    "negative_indicators": [
+      {
+        "regex": "\\bofficial\\s+(?:docker|container|image)\\s+(?:tested|tried|using)",
+        "description": "mentions testing official containers",
+        "weight": -0.4
+      },
+      {
+        "regex": "\\bofficial\\s+(?:sdk|library|client)\\s+(?:tested|tried|using|installed)",
+        "description": "mentions using official SDKs",
+        "weight": -0.5
+      },
+      {
+        "regex": "\\b(?:@supabase/supabase-js|supabase-py|openai|anthropic)\\s+(?:sdk|library|client)",
+        "description": "mentions specific official libraries",
+        "weight": -0.6
+      }
+    ]
+  },
+  "effort_value_mismatch": {
+    "id": "effort_value_mismatch",
+    "version": "1.0.0",
+    "name": "Effort-Value Mismatch",
+    "description": "Disproportionate development effort for standard integration tasks",
+    "severity": "medium",
+    "category": "integration",
+    "detection_threshold": 0.4,
+    "indicators": [
+      {
+        "regex": "\\b(?:[0-9]{3,})\\s+(?:lines|loc)\\b.*\\b(?:integration|auth|api|client)",
+        "description": "high line count for integration work",
+        "weight": 0.4,
+        "text": "high line count for integration"
+      },
+      {
+        "regex": "\\b(?:2000|3000|4000|5000)\\+\\s+(?:lines|changes)",
+        "description": "very high line counts",
+        "weight": 0.5,
+        "text": "massive line count"
+      },
+      {
+        "regex": "\\b(?:weeks|months)\\s+(?:of|to)\\s+(?:development|work|implementation)",
+        "description": "extended development time",
+        "weight": 0.3,
+        "text": "extended development time"
+      },
+      {
+        "regex": "\\b(?:complex|complicated|sophisticated)\\s+(?:integration|setup|configuration)",
+        "description": "complexity indicators for standard integrations",
+        "weight": 0.2,
+        "text": "complexity for standard task"
+      }
+    ]
   }
 }
