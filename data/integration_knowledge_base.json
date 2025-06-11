@@ -1,0 +1,218 @@
+{
+  "cognee": {
+    "official_container": "cognee/cognee:main",
+    "features": [
+      "REST API",
+      "JWT authentication",
+      "Storage management",
+      "Graph processing",
+      "FastAPI integration",
+      "Database management"
+    ],
+    "deployment": "docker run -p 8000:8000 cognee/cognee:main",
+    "documentation": [
+      "https://cognee.ai/docs",
+      "https://github.com/cognee-ai/cognee"
+    ],
+    "common_custom_indicators": [
+      "FastAPI",
+      "JWT",
+      "storage",
+      "authentication",
+      "custom REST server",
+      "environment forcing"
+    ],
+    "red_flags": [
+      "custom REST server",
+      "environment forcing",
+      "path workarounds",
+      "manual JWT implementation",
+      "custom storage configuration"
+    ],
+    "official_benefits": [
+      "Professional FastAPI Users integration",
+      "Pre-configured storage and database management",
+      "Production-ready deployment",
+      "Automatic dependency management",
+      "Security best practices"
+    ]
+  },
+  "supabase": {
+    "official_sdks": [
+      "@supabase/supabase-js",
+      "supabase-py",
+      "supabase-csharp",
+      "supabase-swift"
+    ],
+    "features": [
+      "Authentication",
+      "Database",
+      "Storage",
+      "Realtime",
+      "Edge functions",
+      "API management"
+    ],
+    "documentation": [
+      "https://supabase.com/docs",
+      "https://supabase.com/docs/guides/api"
+    ],
+    "red_flags": [
+      "custom auth",
+      "manual database",
+      "custom API client",
+      "direct SQL without SDK"
+    ],
+    "official_benefits": [
+      "Built-in authentication",
+      "Real-time subscriptions",
+      "Type safety with generated types",
+      "Edge function deployment"
+    ]
+  },
+  "claude": {
+    "official_sdks": [
+      "@anthropic-ai/sdk",
+      "anthropic-sdk-python"
+    ],
+    "features": [
+      "Chat completions",
+      "Function calling",
+      "Image analysis",
+      "Structured outputs",
+      "Streaming responses"
+    ],
+    "documentation": [
+      "https://docs.anthropic.com",
+      "https://github.com/anthropics/anthropic-sdk-python"
+    ],
+    "red_flags": [
+      "custom HTTP client",
+      "manual API calls",
+      "custom retry logic",
+      "manual token management"
+    ],
+    "official_benefits": [
+      "Built-in retry logic",
+      "Token counting utilities",
+      "Type safety",
+      "Streaming support"
+    ]
+  },
+  "openai": {
+    "official_sdks": [
+      "openai",
+      "openai-python"
+    ],
+    "features": [
+      "Chat completions",
+      "Embeddings",
+      "Function calling",
+      "Vision",
+      "Audio transcription"
+    ],
+    "documentation": [
+      "https://platform.openai.com/docs",
+      "https://github.com/openai/openai-python"
+    ],
+    "red_flags": [
+      "custom HTTP client",
+      "manual API calls",
+      "custom token counting",
+      "manual rate limiting"
+    ],
+    "official_benefits": [
+      "Built-in rate limiting",
+      "Automatic retries",
+      "Type safety",
+      "Streaming support"
+    ]
+  },
+  "github": {
+    "official_sdks": [
+      "@octokit/rest",
+      "PyGithub",
+      "github3.py"
+    ],
+    "features": [
+      "Repository management",
+      "Issue tracking",
+      "Pull requests",
+      "Actions",
+      "Webhooks"
+    ],
+    "documentation": [
+      "https://docs.github.com/en/rest",
+      "https://github.com/PyGithub/PyGithub"
+    ],
+    "red_flags": [
+      "custom HTTP client",
+      "manual API calls",
+      "custom pagination",
+      "manual authentication"
+    ],
+    "official_benefits": [
+      "Built-in pagination",
+      "Authentication handling",
+      "Rate limit management",
+      "Type safety"
+    ]
+  },
+  "docker": {
+    "official_sdks": [
+      "docker-py",
+      "docker"
+    ],
+    "features": [
+      "Container management",
+      "Image building",
+      "Network management",
+      "Volume management",
+      "Compose integration"
+    ],
+    "documentation": [
+      "https://docker-py.readthedocs.io",
+      "https://docs.docker.com/engine/api/"
+    ],
+    "red_flags": [
+      "shell commands",
+      "subprocess calls",
+      "manual docker commands",
+      "custom container management"
+    ],
+    "official_benefits": [
+      "Python-native API",
+      "Error handling",
+      "Resource management",
+      "Type safety"
+    ]
+  },
+  "kubernetes": {
+    "official_sdks": [
+      "kubernetes",
+      "kubernetes-client"
+    ],
+    "features": [
+      "Pod management",
+      "Service management",
+      "ConfigMap handling",
+      "Secret management",
+      "Deployment automation"
+    ],
+    "documentation": [
+      "https://kubernetes.io/docs/reference/using-api/client-libraries/",
+      "https://github.com/kubernetes-client/python"
+    ],
+    "red_flags": [
+      "kubectl shell commands",
+      "manual YAML generation",
+      "custom API calls",
+      "manual resource management"
+    ],
+    "official_benefits": [
+      "Resource management",
+      "Watch capabilities",
+      "Type safety",
+      "Error handling"
+    ]
+  }
+}

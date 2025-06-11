@@ -30,6 +30,7 @@ from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_too
 from .tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
 from .tools.analyze_llm.tool_registry import register_llm_analysis_tools
 from .tools.diagnostics_claude_cli import register_diagnostic_tools
+from .tools.integration_decision_check import check_official_alternatives, analyze_integration_text
 
 # Configure logging
 logging.basicConfig(
@@ -197,6 +198,310 @@ def analyze_pr_nollm(
     )
 
 @mcp.tool()
+def check_integration_alternatives(
+    technology: str,
+    custom_features: str,
+    description: str = ""
+) -> Dict[str, Any]:
+    """
+    🔍 Official Alternative Check for Integration Decisions.
+    
+    Validates integration approaches against official alternatives to prevent
+    unnecessary custom development. Based on real-world case studies including
+    the Cognee integration failure where 2+ weeks were spent building custom
+    REST servers instead of using the official Docker container.
+    
+    Features:
+    - 🔍 Official alternative detection
+    - ⚠️ Red flag identification for anti-patterns  
+    - 📋 Decision framework generation
+    - 🎯 Custom development justification requirements
+    
+    Use this tool for: "check cognee integration", "validate docker approach", "integration decision"
+    
+    Args:
+        technology: Technology being integrated (e.g., "cognee", "supabase", "claude")
+        custom_features: Comma-separated list of features being custom developed
+        description: Optional description of the integration context
+        
+    Returns:
+        Integration recommendation with research requirements and next steps
+    """
+    logger.info(f"Integration decision check for {technology}: {custom_features}")
+    
+    try:
+        # Parse custom features from comma-separated string
+        features_list = [f.strip() for f in custom_features.split(",") if f.strip()]
+        
+        # Get recommendation
+        recommendation = check_official_alternatives(technology, features_list)
+        
+        # Convert dataclass to dict for JSON serialization
+        result = {
+            "status": "success",
+            "technology": recommendation.technology,
+            "warning_level": recommendation.warning_level,
+            "official_solutions": recommendation.official_solutions,
+            "custom_justification_needed": recommendation.custom_justification_needed,
+            "research_required": recommendation.research_required,
+            "red_flags_detected": recommendation.red_flags_detected,
+            "decision_matrix": recommendation.decision_matrix,
+            "next_steps": recommendation.next_steps,
+            "recommendation": recommendation.recommendation,
+            "description": description
+        }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Integration decision check failed: {e}")
+        return {
+            "status": "error",
+            "message": f"Integration analysis failed: {str(e)}",
+            "technology": technology,
+            "recommendation": "Manual research required due to analysis error"
+        }
+
+@mcp.tool()
+def analyze_integration_decision_text(
+    text: str,
+    detail_level: str = "standard"
+) -> Dict[str, Any]:
+    """
+    🔍 Analyze text for integration decision anti-patterns.
+    
+    Scans text content for integration patterns and provides recommendations
+    to prevent custom development when official alternatives exist. Detects
+    technologies and custom development indicators automatically.
+    
+    Features:
+    - 🔍 Technology detection in text
+    - ⚠️ Custom development pattern identification
+    - 📋 Automatic recommendation generation
+    - 🎯 Integration decision guidance
+    
+    Use this tool for: "analyze this integration plan", "check for integration anti-patterns"
+    
+    Args:
+        text: Text content to analyze for integration patterns
+        detail_level: Educational detail level (brief/standard/comprehensive)
+        
+    Returns:
+        Analysis of detected technologies and integration recommendations
+    """
+    logger.info(f"Integration decision text analysis for {len(text)} characters")
+    
+    try:
+        analysis = analyze_integration_text(text)
+        
+        result = {
+            "status": "success",
+            "detected_technologies": analysis["detected_technologies"],
+            "detected_custom_work": analysis["detected_custom_work"],
+            "warning_level": analysis["warning_level"],
+            "recommendations": analysis["recommendations"],
+            "detail_level": detail_level,
+            "text_length": len(text)
+        }
+        
+        # Add educational content based on detail level
+        if detail_level in ["standard", "comprehensive"]:
+            result["educational_content"] = {
+                "integration_best_practices": [
+                    "Always research official deployment options first",
+                    "Test official solutions with basic requirements",
+                    "Document specific gaps before custom development",
+                    "Consider maintenance burden of custom solutions"
+                ],
+                "common_anti_patterns": [
+                    "Building custom REST servers when official containers exist",
+                    "Manual authentication when SDKs provide it",
+                    "Custom HTTP clients when official SDKs exist",
+                    "Environment forcing instead of proper configuration"
+                ]
+            }
+        
+        if detail_level == "comprehensive":
+            result["case_studies"] = {
+                "cognee_failure": {
+                    "problem": "2+ weeks spent building custom FastAPI server",
+                    "solution": "cognee/cognee:main Docker container available",
+                    "lesson": "Official containers often provide complete functionality"
+                }
+            }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Integration decision text analysis failed: {e}")
+        return {
+            "status": "error",
+            "message": f"Text analysis failed: {str(e)}",
+            "text_length": len(text)
+        }
+
+@mcp.tool()
+def integration_decision_framework(
+    technology: str,
+    custom_features: str,
+    decision_statement: str = "",
+    analysis_type: str = "weighted-criteria"
+) -> Dict[str, Any]:
+    """
+    🧠 Integration Decision Framework with Clear Thought Analysis.
+    
+    Combines integration alternative checking with Clear Thought decision framework
+    to provide structured decision analysis for integration approaches. Designed
+    to prevent unnecessary custom development through systematic evaluation.
+    
+    Features:
+    - 🧠 Clear Thought decision framework integration
+    - 🔍 Official alternative checking
+    - ⚖️ Weighted criteria analysis
+    - 📋 Structured decision documentation
+    
+    Use this tool for: "decide on cognee integration approach", "framework for docker vs custom"
+    
+    Args:
+        technology: Technology being integrated (e.g., "cognee", "supabase")
+        custom_features: Comma-separated list of features being custom developed
+        decision_statement: Decision being made (auto-generated if empty)
+        analysis_type: Type of analysis (weighted-criteria, pros-cons, risk-analysis)
+        
+    Returns:
+        Comprehensive decision framework with recommendations and next steps
+    """
+    logger.info(f"Integration decision framework for {technology}: {analysis_type}")
+    
+    try:
+        # First get the basic integration analysis
+        features_list = [f.strip() for f in custom_features.split(",") if f.strip()]
+        recommendation = check_official_alternatives(technology, features_list)
+        
+        # Generate decision statement if not provided
+        if not decision_statement:
+            decision_statement = f"Choose integration approach for {technology}: Official solution vs Custom development"
+        
+        # Create structured decision framework
+        framework = {
+            "status": "success",
+            "decision_statement": decision_statement,
+            "technology": technology,
+            "analysis_type": analysis_type,
+            "integration_analysis": {
+                "warning_level": recommendation.warning_level,
+                "official_solutions": recommendation.official_solutions,
+                "red_flags_detected": recommendation.red_flags_detected,
+                "research_required": recommendation.research_required
+            },
+            "decision_options": [
+                {
+                    "option": "Official Solution",
+                    "description": f"Use official {technology} container/SDK",
+                    "pros": [
+                        "Vendor maintained and supported",
+                        "Production ready and tested",
+                        "Security updates included",
+                        "Minimal development time",
+                        "Community documentation"
+                    ],
+                    "cons": [
+                        "Less customization control",
+                        "Potential feature limitations",
+                        "Dependency on vendor roadmap"
+                    ],
+                    "effort_score": 2,
+                    "risk_score": 1,
+                    "maintenance_score": 1
+                },
+                {
+                    "option": "Custom Development",
+                    "description": f"Build custom {technology} integration",
+                    "pros": [
+                        "Full control over implementation",
+                        "Exact requirement matching",
+                        "No vendor dependencies"
+                    ],
+                    "cons": [
+                        "High development time",
+                        "Ongoing maintenance burden",
+                        "Security responsibility",
+                        "Documentation overhead",
+                        "Testing complexity"
+                    ],
+                    "effort_score": 8,
+                    "risk_score": 6,
+                    "maintenance_score": 8
+                }
+            ],
+            "criteria_weights": {
+                "development_time": 0.25,
+                "maintenance_burden": 0.30,
+                "reliability_support": 0.25,
+                "customization_needs": 0.20
+            },
+            "recommendation": recommendation.recommendation,
+            "next_steps": recommendation.next_steps
+        }
+        
+        # Add analysis-specific content
+        if analysis_type == "weighted-criteria":
+            framework["scoring_matrix"] = {
+                "official_solution": {
+                    "development_time": 9,  # Low time needed
+                    "maintenance_burden": 9,  # Low burden
+                    "reliability_support": 9,  # High reliability
+                    "customization_needs": 6   # Medium customization
+                },
+                "custom_development": {
+                    "development_time": 3,   # High time needed
+                    "maintenance_burden": 2,  # High burden
+                    "reliability_support": 5, # Medium reliability
+                    "customization_needs": 9  # High customization
+                }
+            }
+        
+        elif analysis_type == "risk-analysis":
+            framework["risk_assessment"] = {
+                "official_solution_risks": [
+                    "Vendor discontinuation (Low probability)",
+                    "Feature gaps for requirements (Medium probability)",
+                    "Breaking changes in updates (Low probability)"
+                ],
+                "custom_development_risks": [
+                    "Development timeline overrun (High probability)",
+                    "Security vulnerabilities (Medium probability)",
+                    "Maintenance neglect over time (High probability)",
+                    "Knowledge silos and team dependencies (Medium probability)"
+                ]
+            }
+        
+        # Add Clear Thought integration guidance
+        framework["clear_thought_integration"] = {
+            "mental_model": "first_principles",
+            "reasoning_approach": "Start with the simplest solution that could work",
+            "decision_trigger": f"Research official {technology} solution thoroughly before considering custom development",
+            "complexity_check": "Is custom development truly necessary or driven by assumptions?",
+            "validation_steps": [
+                f"Test official {technology} solution with actual requirements",
+                "Document specific gaps that justify custom development",
+                "Estimate total cost of ownership for both approaches",
+                "Consider team expertise and long-term maintenance"
+            ]
+        }
+        
+        return framework
+        
+    except Exception as e:
+        logger.error(f"Integration decision framework failed: {e}")
+        return {
+            "status": "error",
+            "message": f"Decision framework analysis failed: {str(e)}",
+            "technology": technology,
+            "recommendation": "Manual decision analysis required due to error"
+        }
+
+@mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Check MCP server status and capabilities.
@@ -221,6 +526,9 @@ def server_status() -> Dict[str, Any]:
         "analyze_github_issue_llm - GitHub issue vibe check with Claude CLI reasoning",
         "analyze_github_pr_llm - GitHub PR vibe check with comprehensive Claude CLI analysis",
         "analyze_llm_status - Status check for Claude CLI integration",
+        "check_integration_alternatives - Official alternative check for integration decisions (Issue #113 ✅ COMPLETE)",
+        "analyze_integration_decision_text - Text analysis for integration anti-patterns (Issue #113 ✅ COMPLETE)",
+        "integration_decision_framework - Structured decision framework with Clear Thought integration (Issue #113 ✅ COMPLETE)",
         "server_status - Server status and capabilities"
     ]
     
