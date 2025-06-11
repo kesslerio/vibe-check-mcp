@@ -231,6 +231,21 @@ async def analyze_github_issue_llm(
         except Exception:
             pass  # Continue without integration context if it fails
 
+        # Check for doom loop patterns in issue content
+        doom_loop_context = ""
+        try:
+            from ..doom_loop_analysis import analyze_text_for_doom_loops
+            doom_analysis = analyze_text_for_doom_loops(issue_context, tool_name="analyze_github_issue_llm")
+            if doom_analysis.get("status") == "doom_loop_detected":
+                severity = doom_analysis.get("severity", "unknown")
+                doom_loop_context = f"""
+**PRODUCTIVITY ALERT:** {severity.upper()} doom loop patterns detected in issue discussion
+**Pattern:** {doom_analysis.get("pattern_type", "").replace('_', ' ').title()}
+**Intervention Needed:** Focus on concrete next steps over endless analysis
+"""
+        except Exception:
+            pass  # Continue without doom loop context if it fails
+
         vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub issue. Focus on preventing common engineering anti-patterns while encouraging good practices.
 
 SPECIAL ATTENTION: This issue mentions integration technologies. Pay special attention to:
@@ -238,10 +253,17 @@ SPECIAL ATTENTION: This issue mentions integration technologies. Pay special att
 - Signs of custom development when standard approaches might work
 - Integration complexity that could be simplified
 
+PRODUCTIVITY FOCUS: If doom loop patterns are detected, emphasize:
+- Moving from analysis to concrete action
+- Setting time limits for decisions
+- Implementing simplest working solution first
+- Avoiding perfectionist paralysis
+
 {detail_instruction}
 
 {issue_context}
 {integration_context}
+{doom_loop_context}
 
 Please provide a vibe check analysis in this format:
 
@@ -466,6 +488,21 @@ async def analyze_github_pr_llm(
             except Exception:
                 pass  # Continue without integration context if it fails
 
+            # Check for doom loop patterns in PR content
+            pr_doom_loop_context = ""
+            try:
+                from ..doom_loop_analysis import analyze_text_for_doom_loops
+                doom_analysis = analyze_text_for_doom_loops(pr_context, tool_name="analyze_github_pr_llm")
+                if doom_analysis.get("status") == "doom_loop_detected":
+                    severity = doom_analysis.get("severity", "unknown")
+                    pr_doom_loop_context = f"""
+**PRODUCTIVITY ALERT:** {severity.upper()} analysis patterns detected in PR
+**Pattern:** {doom_analysis.get("pattern_type", "").replace('_', ' ').title()}
+**Focus:** Prioritize shipping working solution over perfect implementation
+"""
+            except Exception:
+                pass  # Continue without doom loop context if it fails
+
             vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub pull request. Focus on preventing common engineering anti-patterns while encouraging good practices.
 
 SPECIAL ATTENTION: Pay attention to integration patterns:
@@ -473,10 +510,17 @@ SPECIAL ATTENTION: Pay attention to integration patterns:
 - Is the development effort proportional to the integration complexity?
 - Are there signs of reinventing existing solutions?
 
+PRODUCTIVITY FOCUS: If analysis paralysis patterns are detected, emphasize:
+- Shipping working solution over perfect implementation
+- Iterative improvement over big-bang releases
+- Real user feedback over theoretical optimization
+- Time-boxed decisions and concrete milestones
+
 {detail_instruction}
 
 {pr_context}
 {pr_integration_context}
+{pr_doom_loop_context}
 
 Please provide a vibe check analysis in this format:
 

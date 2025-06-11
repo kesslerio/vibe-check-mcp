@@ -314,5 +314,117 @@
         "text": "complexity for standard task"
       }
     ]
+  },
+  "ai_doom_loop": {
+    "id": "ai_doom_loop",
+    "version": "1.0.0",
+    "name": "AI Doom Loop and Analysis Paralysis",
+    "description": "Unproductive AI conversation cycles that lead to endless analysis without concrete progress",
+    "severity": "high",
+    "category": "productivity",
+    "detection_threshold": 0.4,
+    "indicators": [
+      {
+        "regex": "\\b(?:should\\s+we|we\\s+need\\s+to\\s+decide|what\\s+if\\s+we)\\s+(?:use|choose|implement|go\\s+with)",
+        "description": "decision paralysis language patterns",
+        "weight": 0.3,
+        "text": "decision paralysis"
+      },
+      {
+        "regex": "\\b(?:on\\s+the\\s+other\\s+hand|but\\s+then\\s+again|however|alternatively)",
+        "description": "cycling between options without resolution",
+        "weight": 0.4,
+        "text": "option cycling"
+      },
+      {
+        "regex": "\\b(?:pros\\s+and\\s+cons|trade-?offs?|comparing|evaluating|analyzing)\\s+(?:options|approaches|alternatives)",
+        "description": "endless evaluation without decision",
+        "weight": 0.5,
+        "text": "endless evaluation"
+      },
+      {
+        "regex": "\\b(?:what\\s+about|maybe\\s+we\\s+should|perhaps\\s+we\\s+could|we\\s+could\\s+also)",
+        "description": "continued option generation",
+        "weight": 0.3,
+        "text": "option multiplication"
+      },
+      {
+        "regex": "\\b(?:edge\\s+case|corner\\s+case|what\\s+if)\\s+(?:scenario|situation|we\\s+need)",
+        "description": "overthinking edge cases before core implementation",
+        "weight": 0.4,
+        "text": "premature edge case focus"
+      },
+      {
+        "regex": "\\b(?:future|scale|enterprise|production)-?(?:proof|ready|grade|considerations)",
+        "description": "premature optimization and over-engineering",
+        "weight": 0.4,
+        "text": "premature optimization"
+      },
+      {
+        "regex": "\\b(?:best\\s+practice|industry\\s+standard|proper\\s+way|right\\s+approach)",
+        "description": "perfectionist paralysis patterns",
+        "weight": 0.3,
+        "text": "perfectionist paralysis"
+      }
+    ],
+    "negative_indicators": [
+      {
+        "regex": "\\b(?:implementing|building|shipping|deploying|testing)\\s+(?:now|today|this\\s+week)",
+        "description": "concrete implementation language",
+        "weight": -0.5
+      },
+      {
+        "regex": "\\b(?:mvp|minimum\\s+viable|simplest\\s+working|prototype|proof\\s+of\\s+concept)",
+        "description": "iterative development approach",
+        "weight": -0.4
+      },
+      {
+        "regex": "\\b(?:decided|chosen|picking|going\\s+with|starting\\s+with)",
+        "description": "decision-making and action language",
+        "weight": -0.6
+      }
+    ]
+  },
+  "analysis_paralysis": {
+    "id": "analysis_paralysis",
+    "version": "1.0.0", 
+    "name": "Analysis Paralysis",
+    "description": "Excessive analysis that prevents decision-making and implementation progress",
+    "severity": "medium",
+    "category": "productivity",
+    "detection_threshold": 0.3,
+    "indicators": [
+      {
+        "regex": "\\b(?:need\\s+to\\s+research|more\\s+research|further\\s+analysis|deeper\\s+investigation)",
+        "description": "research instead of action",
+        "weight": 0.4,
+        "text": "research over action"
+      },
+      {
+        "regex": "\\b(?:complex|complicated|sophisticated)\\s+(?:solution|approach|architecture|design)",
+        "description": "complexity bias over simplicity",
+        "weight": 0.3,
+        "text": "complexity bias"
+      },
+      {
+        "regex": "\\b(?:all\\s+the\\s+requirements|every\\s+possible|comprehensive\\s+solution)",
+        "description": "attempting to solve everything at once",
+        "weight": 0.4,
+        "text": "comprehensive solution trap"
+      },
+      {
+        "regex": "\\b(?:before\\s+we\\s+start|before\\s+implementing|first\\s+we\\s+need\\s+to\\s+figure\\s+out)",
+        "description": "endless prerequisite gathering",
+        "weight": 0.3,
+        "text": "prerequisite paralysis"
+      }
+    ],
+    "negative_indicators": [
+      {
+        "regex": "\\b(?:start\\s+simple|iterate|improve\\s+later|good\\s+enough)",
+        "description": "iterative mindset",
+        "weight": -0.4
+      }
+    ]
   }
 }
