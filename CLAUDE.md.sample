@@ -1,4 +1,6 @@
-Vibe Check MCP ENGINEERING GUIDELINES
+CLAUDE.md Sample
+
+# VIBE CHECK MCP ENGINEERING GUIDELINES
 
 CORE DOCUMENTS:
 - Technical Implementation Guide: docs/TECHNICAL.md (architecture, validation results, roadmap)
@@ -410,12 +412,94 @@ Vibe Check MCP TOOLS:
     - Returns: Full analysis with educational content and risk assessment
 - mcp__vibe-check__analyze_text_demo(text, detail_level?)
 - mcp__vibe-check__server_status()
+- mcp__vibe-check__analyze_doom_loops("${tech_discussion}", "technology_choice")
+
 
 DEVELOPMENT WORKFLOW:
 Phase 1: Issue definition with First Principles analysis + documentation search
 Phase 2: Development following modularity principles + Clear Thought design patterns
 Phase 3: Testing with debugging approaches + systematic validation
 Phase 4: Integration, deployment, and learning extraction
+
+DOOM LOOP DETECTION:
+Core Detection Patterns:
+- Decision cycling: "should we", "what about", "on the other hand"
+- Analysis paralysis: endless pros/cons without concrete steps
+- Architecture astronaut syndrome: future-proofing without MVP
+- Technology choice loops: comparing options without prototyping
+
+Tool Usage Templates:
+
+ANALYSIS PARALYSIS DETECTION (20+ min sessions, 4+ decision cycles):
+analyze_doom_loops("${conversation_content}")
+Response: "⚠️ Analysis paralysis detected. Set 15-min decision deadline and pick any viable option."
+Trigger: After 3+ "should we" patterns or endless option generation
+
+ARCHITECTURE OVERTHINKING (theoretical discussions):
+session_health_check()
+Response: "🏗️ Build simplest version first. Test with real users before complexity."
+Trigger: Future-proofing language without concrete requirements
+
+TECHNOLOGY CHOICE PARALYSIS (comparison without decision):
+analyze_doom_loops("${tech_discussion}", "technology_choice")
+Response: "⚙️ What does team know best? Pick that. Start building in 30 minutes."
+Trigger: Multiple technology comparisons lasting >15 minutes
+
+EMERGENCY INTERVENTION (critical loops):
+productivity_intervention()
+Response: "🚨 STOP analysis. Pick first viable option. Set 5-min timer. Start coding."
+Trigger: 30+ minutes or 8+ tool calls without progress
+
+SESSION HEALTH MONITORING (passive, every 5 min after 15-min mark):
+session_health_check()
+Response format: "${health_score}/100 - ${duration}min ${health_score < 70 ? 'Consider time-boxing' : 'Productive session'}"
+
+Integration Pattern for Existing Responses:
+Check doom loop status silently
+If detected: Append productivity alert with concrete next steps
+Always end with implementation-focused actions
+
+Severity Calibration:
+Health 90-100: No intervention
+Health 70-89: Gentle nudge "Consider time-boxing next decision"
+Health 50-69: Warning "Analysis paralysis detected. Set 15-min deadline."
+Health <50: Critical "🚨 Stop analysis, pick option, start building"
+
+Psychological Principles:
+- Implementation language breaks abstract thinking
+- Time boundaries force decision closure
+- "Good enough" principle over perfectionism
+- Concrete actions over endless analysis
+- Team expertise trumps theoretical benefits
+
+AI Assistant Guidelines:
+1. Monitor passively, intervene contextually
+2. Use positive framing ("productivity check" not "doom loop")
+3. Provide specific next steps with time limits
+4. Redirect from planning to building
+5. Emphasize validation through usage over theory
+
+Common Triggers:
+- Multiple "should we" without resolution
+- Endless pros/cons lists without decision
+- Architecture discussions without constraints
+- Technology comparisons without prototyping
+- Extended sessions without concrete progress
+
+Never Interrupt:
+- Active implementation work
+- Concrete debugging sessions
+- Code review of working solutions
+- Specific technical problem-solving
+
+Emergency Protocol Template:
+"🚨 PRODUCTIVITY EMERGENCY: Stop this analysis. Pick first viable option from discussion. Set 5-minute timer. Start implementing immediately. Validate with real usage within 1 hour."
+
+Success Metrics:
+- 15-30 minutes saved per analysis session
+- 3x faster decision-making with intervention
+- 60% more coding vs planning time
+- Early intervention prevents expensive paralysis cycles
 
 POST-MORTEM PROCEDURES:
 - Conduct using mcp__clear-thought-server__sequentialthinking for anti-pattern detection failures
