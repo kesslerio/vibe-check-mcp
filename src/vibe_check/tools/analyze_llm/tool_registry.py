@@ -8,7 +8,7 @@ status checking functionality.
 import asyncio
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from fastmcp import FastMCP
 
@@ -41,6 +41,9 @@ def register_llm_analysis_tools(mcp: FastMCP) -> None:
     # Register async analysis tools
     mcp.tool()(check_async_analysis_status)
     mcp.tool()(get_async_system_status)
+    mcp.tool()(async_system_health_check)
+    mcp.tool()(async_system_metrics)
+    mcp.tool()(async_system_degradation_status)
     
     # Register status tool
     @mcp.tool()
@@ -247,4 +250,214 @@ async def get_async_system_status() -> Dict[str, Any]:
         return {
             "status": "error",
             "error": f"Failed to get system status: {str(e)}"
+        }
+
+
+# Health Monitoring Tools
+async def async_system_health_check(detailed: bool = False) -> Dict[str, Any]:
+    """
+    Perform comprehensive health check of the async analysis system.
+    
+    This tool provides detailed health diagnostics for all system components
+    including queue, workers, resource monitoring, and external dependencies.
+    
+    Args:
+        detailed: Whether to include detailed component information
+        
+    Returns:
+        Comprehensive health check results with component status and metrics
+    """
+    logger.info("Performing async system health check")
+    
+    try:
+        from ..async_analysis.health_monitoring import get_global_health_monitor
+        
+        health_monitor = get_global_health_monitor()
+        
+        if detailed:
+            # Perform full health check
+            health_results = await health_monitor.perform_comprehensive_health_check()
+            
+            return {
+                "status": "health_check_complete",
+                "summary": health_monitor.get_health_summary(),
+                "detailed_results": {
+                    component: result.to_dict() 
+                    for component, result in health_results.items()
+                },
+                "alerts": health_monitor.alerts[-10:] if health_monitor.alerts else [],
+                "timestamp": time.time()
+            }
+        else:
+            # Quick health summary
+            summary = health_monitor.get_health_summary()
+            
+            return {
+                "status": "health_summary",
+                "summary": summary,
+                "timestamp": time.time()
+            }
+        
+    except Exception as e:
+        logger.error(f"Error performing health check: {e}")
+        return {
+            "status": "error",
+            "error": f"Health check failed: {str(e)}"
+        }
+
+
+async def async_system_metrics(
+    include_trends: bool = True,
+    include_history: bool = False
+) -> Dict[str, Any]:
+    """
+    Get comprehensive metrics for the async analysis system.
+    
+    This tool provides performance metrics, resource utilization,
+    and system statistics for monitoring and optimization.
+    
+    Args:
+        include_trends: Whether to include trend analysis
+        include_history: Whether to include historical data points
+        
+    Returns:
+        Comprehensive system metrics with performance indicators
+    """
+    logger.info("Collecting async system metrics")
+    
+    try:
+        from ..async_analysis.health_monitoring import get_global_health_monitor
+        
+        health_monitor = get_global_health_monitor()
+        
+        # Collect current metrics
+        current_metrics = await health_monitor.collect_system_metrics()
+        metrics_summary = health_monitor.get_metrics_summary()
+        
+        result = {
+            "status": "metrics_collected",
+            "current_metrics": current_metrics.to_dict(),
+            "summary": metrics_summary,
+            "collection_timestamp": time.time()
+        }
+        
+        if include_history and health_monitor.metrics_history:
+            # Include recent historical data
+            recent_history = health_monitor.metrics_history[-50:]  # Last 50 data points
+            result["historical_data"] = [m.to_dict() for m in recent_history]
+        
+        if include_trends:
+            # Add additional trend analysis
+            result["trends"] = _calculate_extended_trends(health_monitor.metrics_history)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error collecting metrics: {e}")
+        return {
+            "status": "error",
+            "error": f"Metrics collection failed: {str(e)}"
+        }
+
+
+def _calculate_extended_trends(metrics_history: List) -> Dict[str, Any]:
+    """Calculate extended trend analysis from metrics history."""
+    if len(metrics_history) < 5:
+        return {"message": "Insufficient data for trend analysis"}
+    
+    trends = {}
+    
+    try:
+        # Get recent vs older data
+        recent_20 = metrics_history[-20:] if len(metrics_history) >= 20 else metrics_history
+        older_20 = metrics_history[-40:-20] if len(metrics_history) >= 40 else []
+        
+        if older_20:
+            # Queue utilization trend
+            recent_queue = [m.queue_size for m in recent_20]
+            older_queue = [m.queue_size for m in older_20]
+            
+            recent_avg_queue = sum(recent_queue) / len(recent_queue)
+            older_avg_queue = sum(older_queue) / len(older_queue)
+            
+            if older_avg_queue > 0:
+                queue_trend = ((recent_avg_queue - older_avg_queue) / older_avg_queue) * 100
+                trends["queue_utilization_change_percent"] = round(queue_trend, 2)
+            
+            # System resource trends
+            recent_memory = [m.system_memory_percent for m in recent_20]
+            older_memory = [m.system_memory_percent for m in older_20]
+            
+            if recent_memory and older_memory:
+                memory_trend = (sum(recent_memory) / len(recent_memory)) - (sum(older_memory) / len(older_memory))
+                trends["memory_usage_change_percent"] = round(memory_trend, 2)
+        
+        # Overall health trend
+        health_states = [m.overall_health for m in recent_20]
+        healthy_ratio = health_states.count("healthy") / len(health_states)
+        trends["health_stability_percent"] = round(healthy_ratio * 100, 2)
+        
+    except Exception as e:
+        trends["error"] = f"Trend calculation error: {str(e)}"
+    
+    return trends
+
+
+async def async_system_degradation_status(
+    pr_data: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Get graceful degradation status and recommendations.
+    
+    This tool provides information about system availability, fallback usage,
+    and recommended strategies for handling requests during system issues.
+    
+    Args:
+        pr_data: Optional PR metadata to get specific recommendations
+        
+    Returns:
+        Degradation status with recommendations and fallback statistics
+    """
+    logger.info("Getting async system degradation status")
+    
+    try:
+        from ..async_analysis.graceful_degradation import get_global_degradation_manager
+        
+        degradation_manager = get_global_degradation_manager()
+        
+        # Check current system availability
+        availability = await degradation_manager.check_system_availability()
+        
+        # Get fallback statistics
+        fallback_stats = degradation_manager.get_fallback_stats()
+        
+        result = {
+            "status": "degradation_status_retrieved",
+            "system_availability": availability.value,
+            "fallback_statistics": fallback_stats,
+            "timestamp": time.time()
+        }
+        
+        # Get specific recommendations if PR data provided
+        if pr_data:
+            strategy = degradation_manager.get_recommended_strategy(pr_data)
+            result["recommended_strategy"] = strategy
+        
+        # Add general recommendations based on availability
+        if availability.value == "fully_available":
+            result["general_recommendation"] = "System operating normally, all features available"
+        elif availability.value == "degraded":
+            result["general_recommendation"] = "System degraded, expect slower responses and possible fallbacks"
+        elif availability.value == "partial_failure":
+            result["general_recommendation"] = "System experiencing issues, fallbacks likely for complex operations"
+        else:  # unavailable
+            result["general_recommendation"] = "System unavailable, only basic pattern detection available"
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting degradation status: {e}")
+        return {
+            "status": "error",
+            "error": f"Degradation status check failed: {str(e)}"
         }

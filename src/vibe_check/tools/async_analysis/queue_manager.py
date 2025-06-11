@@ -19,6 +19,11 @@ from .config import AsyncAnalysisConfig, DEFAULT_ASYNC_CONFIG, ASYNC_METRICS
 logger = logging.getLogger(__name__)
 
 
+class ResourceError(Exception):
+    """Raised when resource limits prevent job execution."""
+    pass
+
+
 class JobStatus(Enum):
     """Status of an analysis job."""
     QUEUED = "queued"
@@ -151,7 +156,18 @@ class AsyncAnalysisQueue:
             
         Raises:
             asyncio.QueueFull: If queue is at capacity
+            ResourceError: If resource limits prevent job execution
         """
+        # Check resource limits before queuing
+        from .resource_monitor import get_global_resource_monitor
+        
+        resource_monitor = get_global_resource_monitor()
+        can_accept, reason = resource_monitor.should_accept_new_job()
+        
+        if not can_accept:
+            logger.warning(f"Rejecting job due to resource limits: {reason}")
+            raise ResourceError(f"Cannot accept new job: {reason}")
+        
         # Generate unique job ID
         job_id = f"{repository}#{pr_number}#{uuid.uuid4().hex[:8]}"
         
@@ -171,6 +187,9 @@ class AsyncAnalysisQueue:
             await self.job_queue.put(job)
             self.active_jobs[job_id] = job
             ASYNC_METRICS.record_job_queued()
+            
+            # Register job for resource monitoring
+            resource_monitor.register_job(job_id)
             
             logger.info(
                 f"Queued async analysis for {repository}#{pr_number}",
