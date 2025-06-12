@@ -7,15 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-01-06
+
 ### Added
+- AI Doom Loop Detection and Analysis Paralysis Prevention (Issue #116) (#122)
+- Official Alternative Check for Integration Decisions (Issue #113)
+- Async analysis system improvements (Issue #110) (#111)
+- Claude PR Assistant workflow (#119)
+- Chunked analysis for medium-sized PRs (Issue #103) (#108)
+- Circuit breaker pattern for Claude CLI reliability (Issue #102)
+- Async processing queue for massive PRs (Issue #104) (#109)
+- CLAUDE.md.sample with doom loop instructions
+- Extended technology coverage future roadmap documentation
+
+### Fixed
+- Correct test expectations for Supabase integration pattern detection (#120)
+
+### Changed
 - Centralized version management system with VERSION file
 - Release automation script (scripts/release.sh)
 - Version utilities in src/vibe_check/utils/version_utils.py
 - Comprehensive versioning guidelines in CLAUDE.md
 - CONTRIBUTING.md with detailed contribution guidelines
 - Clear "Who is it for" section targeting decision makers at all levels
-
-### Changed
 - Updated LICENSE from MIT to Apache 2.0
 - Refactored version management to use centralized VERSION file
 - **BREAKING**: Renamed docs/Product_Requirements_Document.md → docs/PRD.md
@@ -51,5 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - pytest>=7.4.3 (testing framework)
 - And other quality assurance tools
 
-[Unreleased]: https://github.com/kesslerio/vibe-check-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kesslerio/vibe-check-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kesslerio/vibe-check-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.1.0
