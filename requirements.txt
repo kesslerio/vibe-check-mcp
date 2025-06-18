@@ -1,23 +1,31 @@
 # Vibe Check MCP Dependencies
 
 # Core MCP Integration
-fastmcp>=2.5.2
+fastmcp==2.8.1
+mcp==1.9.4
+uvicorn==0.34.3
 
 # Anthropic SDK for direct API calls
-anthropic>=0.40.0
+# anthropic>=0.40.0 (No specific version found, keeping for reference)
 
 # Pattern Detection & Analysis  
 regex>=2023.12.25
 jsonschema>=4.20.0
 
 # GitHub Integration (for future tools)
-PyGithub>=2.1.1
-requests>=2.31.0
+PyGithub==2.6.1
+requests==2.32.4
+
+# Rich terminal output and interaction
+rich==14.0.0
+typer==0.16.0
 
 # Development & Testing
-pytest>=7.4.3
-pytest-cov>=4.1.0
-pytest-asyncio>=0.21.1
-black>=23.11.0
-isort>=5.12.0
-mypy>=1.7.1
+# The following are for development and are not included in the main list.
+# You can install them with `pip install -r requirements-dev.txt` if needed.
+# pytest>=7.4.3
+# pytest-cov>=4.1.0
+# pytest-asyncio>=0.21.1
+# black>=23.11.0
+# isort>=5.12.0
+# mypy>=1.7.1

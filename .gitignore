@@ -175,7 +175,6 @@ Desktop.ini
 .mcp_cache/
 
 # Project specific
-CLAUDE.md
 CLAUDE*.md
 CLAUDE.md.bak
 .claude/
@@ -191,3 +190,5 @@ mcp-config-minimal.json
 
 # MCP logs
 mcp-logs/
+
+.venv/
