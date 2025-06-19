@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import json
 import logging
+import secrets
 from datetime import datetime
 
 from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
@@ -20,6 +21,144 @@ from ..core.pattern_detector import PatternDetector
 from ..tools.analyze_text_nollm import analyze_text_demo
 
 logger = logging.getLogger(__name__)
+
+
+# Confidence score constants
+class ConfidenceScores:
+    """Constants for confidence levels in persona responses"""
+
+    VERY_HIGH = 0.92
+    HIGH = 0.88
+    GOOD = 0.85
+    MODERATE = 0.82
+    ACCEPTABLE = 0.70
+
+
+class PatternHandler:
+    """Base class for handling specific patterns in persona reasoning"""
+
+    @staticmethod
+    def has_pattern(patterns: List[Dict[str, Any]], pattern_type: str) -> bool:
+        """Check if a specific pattern type exists in the patterns list"""
+        try:
+            return any(p.get("pattern_type") == pattern_type for p in patterns)
+        except (TypeError, AttributeError):
+            return False
+
+    @staticmethod
+    def has_topic_keywords(topic: str, keywords: List[str]) -> bool:
+        """Check if topic contains any of the specified keywords"""
+        topic_lower = topic.lower()
+        return any(keyword in topic_lower for keyword in keywords)
+
+
+class InfrastructurePatternHandler(PatternHandler):
+    """Handles infrastructure-without-implementation pattern responses"""
+
+    @staticmethod
+    def get_senior_engineer_response() -> tuple[str, str, float]:
+        return (
+            "concern",
+            "This looks like infrastructure-first thinking. In my experience spanning 15 years, "
+            "we should always start with working API calls before building abstractions. "
+            "I strongly recommend following the official SDK examples first - they handle edge cases "
+            "we'll inevitably miss in custom implementations.",
+            ConfidenceScores.VERY_HIGH,
+        )
+
+
+class CustomSolutionHandler(PatternHandler):
+    """Handles custom solution patterns and API client decisions"""
+
+    @staticmethod
+    def get_senior_engineer_insight(topic: str) -> tuple[str, str, float]:
+        if PatternHandler.has_topic_keywords(
+            topic, ["custom", "http", "client", "api"]
+        ):
+            return (
+                "insight",
+                "Building custom HTTP clients is rarely necessary and often a maintenance burden. "
+                "Most services provide official SDKs that handle retry logic, authentication, rate limiting, "
+                "and error handling. Let's check for an official solution first - it could save weeks of work.",
+                ConfidenceScores.HIGH,
+            )
+        return (
+            "suggestion",
+            "For long-term maintainability, I suggest starting with the simplest solution that works. "
+            "We can always add complexity later if truly needed. Focus on clear documentation, "
+            "standard patterns, and making it easy for the next developer to understand.",
+            ConfidenceScores.GOOD,
+        )
+
+
+class ProductEngineerHandler(PatternHandler):
+    """Handles product engineer perspective responses"""
+
+    @staticmethod
+    def get_rapid_delivery_response() -> tuple[str, str, float]:
+        return (
+            "suggestion",
+            "Let's not overthink this! What's the fastest way to deliver value to users? "
+            "I'd build a quick prototype with the official tools, get it in front of users this week, "
+            "and iterate based on real feedback. Remember, users don't care about our architecture - "
+            "they care about solving their problems.",
+            ConfidenceScores.VERY_HIGH,
+        )
+
+    @staticmethod
+    def get_planning_challenge(topic: str) -> tuple[str, str, float]:
+        if PatternHandler.has_topic_keywords(topic, ["planning", "architecture"]):
+            return (
+                "challenge",
+                "Are we solving a real user problem or just satisfying our engineering desires? "
+                "I've shipped 50+ features, and the ones that succeed focus on user value, not technical elegance. "
+                "Can we validate this with users before investing heavily in the implementation?",
+                ConfidenceScores.HIGH,
+            )
+        return (
+            "observation",
+            "This sounds good from a product perspective! Can we ship something basic this week and iterate? "
+            "In my startup experience, the first version is never perfect - but it teaches us what users actually need.",
+            ConfidenceScores.GOOD,
+        )
+
+
+class AIEngineerHandler(PatternHandler):
+    """Handles AI engineer perspective responses"""
+
+    @staticmethod
+    def get_integration_insight(topic: str) -> tuple[str, str, float]:
+        if PatternHandler.has_topic_keywords(topic, ["integration", "ai"]):
+            return (
+                "insight",
+                "Modern AI services provide excellent SDKs that handle the complexity for us. "
+                "For example, Claude's SDK manages streaming, tool use, context windows, and retry logic. "
+                "Custom implementations often miss critical edge cases like token limits, rate limiting, "
+                "and proper error handling that the official SDK handles elegantly.",
+                ConfidenceScores.HIGH,
+            )
+        return (
+            "suggestion",
+            "Consider how AI tools can accelerate this work. MCP tools can provide immediate feedback, "
+            "GitHub Copilot can generate boilerplate, and LLMs can help validate our approach. "
+            "Why build from scratch when AI can help us prototype 10x faster?",
+            ConfidenceScores.MODERATE,
+        )
+
+    @staticmethod
+    def get_synthesis_response(
+        previous_contributions: List["ContributionData"],
+    ) -> tuple[str, str, float]:
+        if previous_contributions:
+            return (
+                "synthesis",
+                "Building on the previous points, I see a pattern here: we're considering building "
+                "infrastructure before proving the basic functionality. Modern AI tools can accelerate "
+                "our development - MCP tools, GitHub Copilot, and structured prompts can help generate "
+                "boilerplate and catch anti-patterns early. Let's leverage these tools.",
+                ConfidenceScores.GOOD,
+            )
+        return AIEngineerHandler.get_integration_insight("")
 
 
 # Borrowing Clear-Thought's data structures (adapted to Python)
@@ -165,7 +304,7 @@ class VibeMentorEngine:
     ) -> CollaborativeReasoningSession:
         """Initialize a new collaborative reasoning session"""
 
-        session_id = session_id or f"mentor-session-{hash(topic) % 100000}"
+        session_id = session_id or f"mentor-session-{secrets.token_hex(8)}"
 
         session = CollaborativeReasoningSession(
             topic=topic,
@@ -213,7 +352,7 @@ class VibeMentorEngine:
         persona: PersonaData,
         topic: str,
         patterns: List[Dict[str, Any]],
-        previous_contributions: List[ContributionData],
+        previous_contributions: List["ContributionData"],
         context: Optional[str],
     ) -> tuple[str, str, float]:
         """
@@ -221,109 +360,65 @@ class VibeMentorEngine:
         Returns: (contribution_type, content, confidence)
         """
 
-        # Pattern-based reasoning for each persona
         if persona.id == "senior_engineer":
-            # Senior engineer focuses on maintainability and established patterns
-            try:
-                if any(
-                    p.get("pattern_type") == "infrastructure_without_implementation"
-                    for p in patterns
-                ):
-                    return (
-                        "concern",
-                        "This looks like infrastructure-first thinking. In my experience spanning 15 years, "
-                        "we should always start with working API calls before building abstractions. "
-                        "I strongly recommend following the official SDK examples first - they handle edge cases "
-                        "we'll inevitably miss in custom implementations.",
-                        0.92,
-                    )
-            except (TypeError, AttributeError):
-                # Handle malformed patterns gracefully
-                pass
-
-            if "custom" in topic.lower() and any(
-                word in topic.lower() for word in ["http", "client", "api"]
-            ):
-                return (
-                    "insight",
-                    "Building custom HTTP clients is rarely necessary and often a maintenance burden. "
-                    "Most services provide official SDKs that handle retry logic, authentication, rate limiting, "
-                    "and error handling. Let's check for an official solution first - it could save weeks of work.",
-                    0.88,
-                )
-            else:
-                return (
-                    "suggestion",
-                    "For long-term maintainability, I suggest starting with the simplest solution that works. "
-                    "We can always add complexity later if truly needed. Focus on clear documentation, "
-                    "standard patterns, and making it easy for the next developer to understand.",
-                    0.85,
-                )
-
+            return self._reason_as_senior_engineer(patterns, topic)
         elif persona.id == "product_engineer":
-            # Product engineer focuses on shipping value quickly
-            if patterns:
-                return (
-                    "suggestion",
-                    "Let's not overthink this! What's the fastest way to deliver value to users? "
-                    "I'd build a quick prototype with the official tools, get it in front of users this week, "
-                    "and iterate based on real feedback. Remember, users don't care about our architecture - "
-                    "they care about solving their problems.",
-                    0.90,
-                )
-            elif "planning" in topic.lower() or "architecture" in topic.lower():
-                return (
-                    "challenge",
-                    "Are we solving a real user problem or just satisfying our engineering desires? "
-                    "I've shipped 50+ features, and the ones that succeed focus on user value, not technical elegance. "
-                    "Can we validate this with users before investing heavily in the implementation?",
-                    0.87,
-                )
-            else:
-                return (
-                    "observation",
-                    "This sounds good from a product perspective! Can we ship something basic this week and iterate? "
-                    "In my startup experience, the first version is never perfect - but it teaches us what users actually need.",
-                    0.85,
-                )
-
+            return self._reason_as_product_engineer(patterns, topic)
         elif persona.id == "ai_engineer":
-            # AI engineer focuses on modern tools and AI assistance
-            if "integration" in topic.lower() or "ai" in topic.lower():
-                return (
-                    "insight",
-                    "Modern AI services provide excellent SDKs that handle the complexity for us. "
-                    "For example, Claude's SDK manages streaming, tool use, context windows, and retry logic. "
-                    "Custom implementations often miss critical edge cases like token limits, rate limiting, "
-                    "and proper error handling that the official SDK handles elegantly.",
-                    0.89,
-                )
-            elif previous_contributions:
-                # Synthesize previous contributions
-                return (
-                    "synthesis",
-                    "Building on the previous points, I see a pattern here: we're considering building "
-                    "infrastructure before proving the basic functionality. Modern AI tools can accelerate "
-                    "our development - MCP tools, GitHub Copilot, and structured prompts can help generate "
-                    "boilerplate and catch anti-patterns early. Let's leverage these tools.",
-                    0.86,
-                )
-            else:
-                return (
-                    "suggestion",
-                    "Consider how AI tools can accelerate this work. MCP tools can provide immediate feedback, "
-                    "GitHub Copilot can generate boilerplate, and LLMs can help validate our approach. "
-                    "Why build from scratch when AI can help us prototype 10x faster?",
-                    0.82,
-                )
+            return self._reason_as_ai_engineer(patterns, topic, previous_contributions)
 
-        # Default response
+        # Default response for unknown personas
         return (
             "observation",
             f"From my {persona.name} perspective with expertise in {', '.join(persona.expertise[:2])}, "
             f"this requires careful consideration of trade-offs.",
-            0.70,
+            ConfidenceScores.ACCEPTABLE,
         )
+
+    def _reason_as_senior_engineer(
+        self, patterns: List[Dict[str, Any]], topic: str
+    ) -> tuple[str, str, float]:
+        """Generate senior engineer perspective based on patterns and topic"""
+
+        # Check for infrastructure-without-implementation pattern
+        if InfrastructurePatternHandler.has_pattern(
+            patterns, "infrastructure_without_implementation"
+        ):
+            return InfrastructurePatternHandler.get_senior_engineer_response()
+
+        # Handle custom solution patterns
+        return CustomSolutionHandler.get_senior_engineer_insight(topic)
+
+    def _reason_as_product_engineer(
+        self, patterns: List[Dict[str, Any]], topic: str
+    ) -> tuple[str, str, float]:
+        """Generate product engineer perspective focused on rapid delivery"""
+
+        # If patterns detected, focus on rapid prototyping
+        if patterns:
+            return ProductEngineerHandler.get_rapid_delivery_response()
+
+        # Otherwise, handle based on topic
+        return ProductEngineerHandler.get_planning_challenge(topic)
+
+    def _reason_as_ai_engineer(
+        self,
+        patterns: List[Dict[str, Any]],
+        topic: str,
+        previous_contributions: List["ContributionData"],
+    ) -> tuple[str, str, float]:
+        """Generate AI engineer perspective focused on modern tooling"""
+
+        # Check for AI/integration topics first
+        if PatternHandler.has_topic_keywords(topic, ["integration", "ai"]):
+            return AIEngineerHandler.get_integration_insight(topic)
+
+        # Synthesize if there are previous contributions
+        if previous_contributions:
+            return AIEngineerHandler.get_synthesis_response(previous_contributions)
+
+        # Default AI engineer suggestion
+        return AIEngineerHandler.get_integration_insight("")
 
     def advance_stage(self, session: CollaborativeReasoningSession) -> str:
         """Advance to the next stage in the reasoning process"""
