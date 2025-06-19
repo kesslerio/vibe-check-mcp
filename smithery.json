@@ -1,0 +1,204 @@
+{
+  "name": "vibe-check-mcp",
+  "version": "0.2.0",
+  "description": "AI coding safety net - anti-pattern detection for engineering decisions with real-time feedback",
+  "author": "Martin Kessler <kesslerio@users.noreply.github.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/kesslerio/vibe-check-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kesslerio/vibe-check-mcp.git"
+  },
+  "keywords": ["mcp", "ai", "coding", "anti-patterns", "engineering", "safety", "claude", "fastmcp"],
+  "mcp": {
+    "server": {
+      "command": "python",
+      "args": ["-m", "vibe_check.server"],
+      "transport": "stdio",
+      "env": {
+        "PYTHONPATH": "${PACKAGE_PATH}/src"
+      }
+    },
+    "capabilities": {
+      "tools": true,
+      "resources": false,
+      "prompts": false
+    },
+    "tools": [
+      {
+        "name": "analyze_text_nollm",
+        "description": "Fast text analysis using direct pattern detection (no LLM calls)"
+      },
+      {
+        "name": "analyze_issue_nollm", 
+        "description": "Fast GitHub issue analysis using direct pattern detection"
+      },
+      {
+        "name": "analyze_pr_nollm",
+        "description": "Fast PR analysis using direct pattern detection"
+      },
+      {
+        "name": "review_pr_comprehensive",
+        "description": "Advanced PR review with file type analysis and Claude integration"
+      },
+      {
+        "name": "check_integration_alternatives",
+        "description": "Official alternative check for integration decisions"
+      },
+      {
+        "name": "analyze_integration_decision_text",
+        "description": "Analyze text for integration decision anti-patterns"
+      },
+      {
+        "name": "integration_decision_framework",
+        "description": "Integration decision framework with Clear Thought analysis"
+      },
+      {
+        "name": "integration_research_with_websearch",
+        "description": "Enhanced integration research with real-time web search"
+      },
+      {
+        "name": "analyze_integration_patterns",
+        "description": "Fast integration pattern detection for vibe coding safety net"
+      },
+      {
+        "name": "quick_tech_scan",
+        "description": "Ultra-fast technology scan for immediate feedback"
+      },
+      {
+        "name": "analyze_integration_effort",
+        "description": "Integration effort-complexity analysis"
+      },
+      {
+        "name": "analyze_doom_loops",
+        "description": "AI doom loop detection and analysis paralysis prevention"
+      },
+      {
+        "name": "session_health_check",
+        "description": "MCP session health and productivity analysis"
+      },
+      {
+        "name": "productivity_intervention",
+        "description": "Emergency productivity intervention and loop breaking"
+      },
+      {
+        "name": "reset_session_tracking",
+        "description": "Reset session tracking for fresh start"
+      },
+      {
+        "name": "vibe_check_mentor",
+        "description": "Senior engineer collaborative reasoning with multi-perspective feedback"
+      },
+      {
+        "name": "server_status",
+        "description": "Get server status and capabilities"
+      },
+      {
+        "name": "claude_cli_status",
+        "description": "Check Claude CLI availability and version information"
+      },
+      {
+        "name": "claude_cli_diagnostics",
+        "description": "Diagnose Claude CLI integration issues and timeout problems"
+      },
+      {
+        "name": "validate_mcp_configuration",
+        "description": "Comprehensive Claude CLI and MCP configuration validation"
+      },
+      {
+        "name": "check_claude_cli_integration",
+        "description": "Quick Claude CLI integration health check"
+      },
+      {
+        "name": "analyze_text_llm",
+        "description": "Deep text analysis using Claude CLI reasoning"
+      },
+      {
+        "name": "analyze_pr_llm",
+        "description": "Comprehensive PR review using Claude CLI reasoning"
+      },
+      {
+        "name": "analyze_code_llm",
+        "description": "Deep code analysis using Claude CLI reasoning"
+      },
+      {
+        "name": "analyze_issue_llm",
+        "description": "Deep GitHub issue analysis using Claude CLI reasoning"
+      },
+      {
+        "name": "analyze_github_issue_llm",
+        "description": "GitHub issue vibe check using Claude CLI reasoning"
+      },
+      {
+        "name": "analyze_github_pr_llm",
+        "description": "GitHub PR vibe check with comprehensive Claude CLI analysis"
+      },
+      {
+        "name": "check_async_analysis_status",
+        "description": "Check the status of a queued async analysis"
+      },
+      {
+        "name": "get_async_system_status",
+        "description": "Get the overall status of the async analysis system"
+      },
+      {
+        "name": "async_system_health_check",
+        "description": "Perform comprehensive health check of the async analysis system"
+      },
+      {
+        "name": "async_system_metrics",
+        "description": "Get comprehensive metrics for the async analysis system"
+      },
+      {
+        "name": "async_system_degradation_status",
+        "description": "Get graceful degradation status and recommendations"
+      },
+      {
+        "name": "analyze_llm_status",
+        "description": "Check the status of external Claude CLI integration"
+      },
+      {
+        "name": "test_claude_cli_with_env",
+        "description": "Test Claude CLI without environment isolation"
+      }
+    ]
+  },
+  "dependencies": {
+    "python": ">=3.8",
+    "fastmcp": ">=2.8.1",
+    "mcp": ">=1.9.4"
+  },
+  "envTemplate": {
+    "GITHUB_TOKEN": {
+      "description": "GitHub Personal Access Token for repository access (required for GitHub integration)",
+      "required": false,
+      "type": "string",
+      "pattern": "^ghp_[a-zA-Z0-9]{36}$"
+    },
+    "PYTHONPATH": {
+      "description": "Path to Python source code directory",
+      "required": true,
+      "type": "string",
+      "default": "${PACKAGE_PATH}/src"
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level for the MCP server",
+      "required": false,
+      "type": "string",
+      "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+      "default": "INFO"
+    }
+  },
+  "installInstructions": {
+    "pre": [
+      "pip install -r requirements.txt"
+    ],
+    "post": [
+      "echo '✅ Vibe Check MCP installed successfully! Configure your GitHub token if needed for GitHub integration.'"
+    ]
+  },
+  "validation": {
+    "testCommand": "python -c \"import sys; sys.path.insert(0, 'src'); from vibe_check.server import mcp; print('✅ MCP server loads successfully')\"",
+    "healthCheck": "python -c \"import sys; sys.path.insert(0, 'src'); import vibe_check; print('✅ Vibe Check MCP is ready')\""
+  }
+}
