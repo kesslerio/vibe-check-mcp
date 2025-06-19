@@ -18,9 +18,11 @@ from github.Issue import Issue
 from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
 from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
+from ..utils.logging_framework import get_vibe_logger, create_migration_logger
 
-# Configure logging
+# Configure logging - maintain backward compatibility
 logger = logging.getLogger(__name__)
+vibe_logger = get_vibe_logger("issue_analyzer")
 
 
 class GitHubIssueAnalyzer:
@@ -40,6 +42,10 @@ class GitHubIssueAnalyzer:
         """
         self.github_client = Github(github_token) if github_token else Github()
         self.pattern_detector = PatternDetector()
+        self.vibe_logger = get_vibe_logger("issue_analyzer")
+        
+        # User-friendly initialization
+        self.vibe_logger.progress("Initializing GitHub Issue Analyzer", "🤖")
         logger.info("GitHub Issue Analyzer initialized")
     
     def analyze_issue(
@@ -65,72 +71,104 @@ class GitHubIssueAnalyzer:
             ValueError: For invalid parameters
             GithubException: For GitHub API errors
         """
-        try:
-            # Input validation
-            if issue_number <= 0:
-                raise ValueError("Issue number must be positive")
-            
-            # Parse detail level
+        # Use rich progress tracking for the entire analysis
+        with self.vibe_logger.operation(f"vibe check for issue #{issue_number}", 5):
             try:
-                detail_enum = DetailLevel(detail_level.lower())
-            except ValueError:
-                detail_enum = DetailLevel.STANDARD
-                logger.warning(f"Invalid detail level '{detail_level}', using 'standard'")
+                # Step 1: Input validation
+                self.vibe_logger.step("Validating input parameters")
+                if issue_number <= 0:
+                    raise ValueError("Issue number must be positive")
+                
+                # Parse detail level
+                try:
+                    detail_enum = DetailLevel(detail_level.lower())
+                except ValueError:
+                    detail_enum = DetailLevel.STANDARD
+                    self.vibe_logger.warning(f"Invalid detail level '{detail_level}', using 'standard'")
+                
+                # Parse focus patterns
+                focus_pattern_list = None
+                if focus_patterns and focus_patterns.lower() != "all":
+                    focus_pattern_list = [p.strip() for p in focus_patterns.split(",")]
+                    # Validate pattern names
+                    valid_patterns = self.pattern_detector.get_pattern_types()
+                    invalid_patterns = [p for p in focus_pattern_list if p not in valid_patterns]
+                    if invalid_patterns:
+                        self.vibe_logger.warning(f"Invalid patterns ignored: {invalid_patterns}")
+                        focus_pattern_list = [p for p in focus_pattern_list if p in valid_patterns]
+                
+                # Step 2: Fetch GitHub issue data
+                self.vibe_logger.step("Fetching GitHub issue data")
+                issue_data = self._fetch_issue_data(issue_number, repository)
+                
+                # Step 3: Run pattern detection
+                self.vibe_logger.step("Running pattern detection")
+                content = issue_data["body"] or ""
+                context = f"Title: {issue_data['title']}"
+                
+                detected_patterns = self.pattern_detector.analyze_text_for_patterns(
+                    content=content,
+                    context=context,
+                    focus_patterns=focus_pattern_list,
+                    detail_level=detail_enum
+                )
+                
+                # Step 4: Generate analysis response
+                self.vibe_logger.step("Generating analysis report")
+                analysis_result = self._generate_analysis_response(
+                    issue_data=issue_data,
+                    detected_patterns=detected_patterns,
+                    detail_level=detail_enum
+                )
+                
+                # Step 5: Finalize results
+                self.vibe_logger.step("Finalizing results")
+                
+                # Display results summary
+                self.vibe_logger.stats("Analysis Results", {
+                    "patterns_detected": len(detected_patterns),
+                    "issue_number": issue_number,
+                    "detail_level": detail_level
+                })
+                
+                if detected_patterns:
+                    max_confidence = max(p.confidence for p in detected_patterns)
+                    if max_confidence >= 0.8:
+                        vibe_emoji = "🚨"
+                        vibe_text = "Bad Vibes"
+                    elif max_confidence >= 0.6:
+                        vibe_emoji = "⚠️"
+                        vibe_text = "Mixed Vibes"
+                    else:
+                        vibe_emoji = "💡"
+                        vibe_text = "Minor Concerns"
+                else:
+                    vibe_emoji = "✅"
+                    vibe_text = "Good Vibes"
+                
+                self.vibe_logger.success(f"Vibe check complete! Overall vibe: {vibe_emoji} {vibe_text}")
+                logger.info(f"Analysis completed for issue #{issue_number}: {len(detected_patterns)} patterns detected")
+                return analysis_result
             
-            # Parse focus patterns
-            focus_pattern_list = None
-            if focus_patterns and focus_patterns.lower() != "all":
-                focus_pattern_list = [p.strip() for p in focus_patterns.split(",")]
-                # Validate pattern names
-                valid_patterns = self.pattern_detector.get_pattern_types()
-                invalid_patterns = [p for p in focus_pattern_list if p not in valid_patterns]
-                if invalid_patterns:
-                    logger.warning(f"Invalid patterns ignored: {invalid_patterns}")
-                    focus_pattern_list = [p for p in focus_pattern_list if p in valid_patterns]
-            
-            # Fetch GitHub issue data
-            issue_data = self._fetch_issue_data(issue_number, repository)
-            
-            # Analyze issue content for anti-patterns
-            content = issue_data["body"] or ""
-            context = f"Title: {issue_data['title']}"
-            
-            detected_patterns = self.pattern_detector.analyze_text_for_patterns(
-                content=content,
-                context=context,
-                focus_patterns=focus_pattern_list,
-                detail_level=detail_enum
-            )
-            
-            # Generate comprehensive analysis response
-            analysis_result = self._generate_analysis_response(
-                issue_data=issue_data,
-                detected_patterns=detected_patterns,
-                detail_level=detail_enum
-            )
-            
-            logger.info(f"Analysis completed for issue #{issue_number}: {len(detected_patterns)} patterns detected")
-            return analysis_result
-            
-        except GithubException as e:
-            error_msg = f"GitHub API error: {e.data.get('message', str(e))}"
-            logger.error(error_msg)
-            return {
-                "error": error_msg,
-                "status": "github_api_error",
-                "issue_number": issue_number,
-                "repository": repository
-            }
-            
-        except Exception as e:
-            error_msg = f"Analysis failed: {str(e)}"
-            logger.error(error_msg)
-            return {
-                "error": error_msg,
-                "status": "analysis_error", 
-                "issue_number": issue_number,
-                "repository": repository
-            }
+            except GithubException as e:
+                error_msg = f"GitHub API error: {e.data.get('message', str(e))}"
+                self.vibe_logger.error(error_msg, exception=e)
+                return {
+                    "error": error_msg,
+                    "status": "github_api_error",
+                    "issue_number": issue_number,
+                    "repository": repository
+                }
+                
+            except Exception as e:
+                error_msg = f"Analysis failed: {str(e)}"
+                self.vibe_logger.error(error_msg, exception=e)
+                return {
+                    "error": error_msg,
+                    "status": "analysis_error", 
+                    "issue_number": issue_number,
+                    "repository": repository
+                }
     
     def _fetch_issue_data(self, issue_number: int, repository: Optional[str]) -> Dict[str, Any]:
         """
@@ -173,6 +211,7 @@ class GitHubIssueAnalyzer:
                 "repository": repository
             }
             
+            self.vibe_logger.info(f"Retrieved issue #{issue_number}: '{issue.title}'", "📄")
             logger.info(f"Fetched issue #{issue_number} from {repository}")
             return issue_data
             
@@ -375,6 +414,10 @@ def analyze_issue(
         result = analyze_issue(123, "owner/repo", "comprehensive", "comprehensive", True)
     """
     try:
+        # Initialize VibeLogger for this analysis
+        analysis_logger = get_vibe_logger(f"vibe_check_issue_{issue_number}")
+        analysis_logger.progress(f"Starting vibe check for issue #{issue_number}", "🤖")
+        
         # Parse analysis mode
         mode = VibeCheckMode.COMPREHENSIVE if analysis_mode.lower() == "comprehensive" else VibeCheckMode.QUICK
         
@@ -383,23 +426,31 @@ def analyze_issue(
             detail_enum = DetailLevel(detail_level.lower())
         except ValueError:
             detail_enum = DetailLevel.STANDARD
-            logger.warning(f"Invalid detail level '{detail_level}', using 'standard'")
+            analysis_logger.warning(f"Invalid detail level '{detail_level}', using 'standard'")
         
         # Auto-enable comment posting for comprehensive mode (unless explicitly disabled)
         if mode == VibeCheckMode.COMPREHENSIVE and post_comment is None:
             post_comment = True
         
+        analysis_logger.info(f"Analysis mode: {mode.value}, Detail level: {detail_enum.value}", "⚙️")
+        
         # Get vibe check framework
         framework = get_vibe_check_framework()
         
         # Run comprehensive vibe check
-        vibe_result = framework.check_issue_vibes(
-            issue_number=issue_number,
-            repository=repository,
-            mode=mode,
-            detail_level=detail_enum,
-            post_comment=post_comment
-        )
+        with analysis_logger.operation(f"vibe check analysis ({mode.value} mode)", 3):
+            analysis_logger.step("Initializing vibe check framework")
+            
+            analysis_logger.step("Running comprehensive analysis")
+            vibe_result = framework.check_issue_vibes(
+                issue_number=issue_number,
+                repository=repository,
+                mode=mode,
+                detail_level=detail_enum,
+                post_comment=post_comment
+            )
+            
+            analysis_logger.step("Preparing response")
         
         # Convert to MCP tool response format
         from datetime import datetime
@@ -447,12 +498,22 @@ def analyze_issue(
             }
         }
         
+        # Display final results
+        analysis_logger.stats("Vibe Check Results", {
+            "overall_vibe": vibe_result.overall_vibe,
+            "vibe_level": vibe_result.vibe_level.value,
+            "mode": mode.value
+        })
+        
+        analysis_logger.success(f"Vibe check complete! Overall: {vibe_result.overall_vibe}")
+        
         # Sanitize any GitHub API URLs to frontend URLs
         from .shared.github_helpers import sanitize_github_urls_in_response
         return sanitize_github_urls_in_response(result)
         
     except Exception as e:
         error_msg = f"Vibe check failed: {str(e)}"
+        vibe_logger.error(error_msg, exception=e)
         logger.error(error_msg)
         return {
             "error": error_msg,
