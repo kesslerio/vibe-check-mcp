@@ -625,6 +625,103 @@ class VibeMentorEngine:
 
         return references
 
+    def generate_interrupt_intervention(
+        self,
+        query: str,
+        phase: str,
+        primary_pattern: Dict[str, Any],
+        pattern_confidence: float,
+    ) -> Dict[str, Any]:
+        """
+        Generate a focused interrupt intervention based on detected patterns and phase.
+        Returns a single question/suggestion for quick decision guidance.
+        """
+        pattern_type = primary_pattern.get("pattern_type", "unknown")
+        
+        # Phase-specific questions mapped to patterns
+        phase_questions = {
+            "planning": {
+                "infrastructure_without_implementation": 
+                    "Have you checked if an official SDK exists for this?",
+                "custom_solution_preferred": 
+                    "Would a simpler solution achieve the same user value?",
+                "documentation_neglect":
+                    "Have you reviewed the official documentation first?",
+                "complexity_escalation":
+                    "Is this complexity solving a real problem or a hypothetical one?",
+                "default":
+                    "Have you validated this approach with the simplest possible solution?"
+            },
+            "implementation": {
+                "infrastructure_without_implementation":
+                    "This abstraction adds complexity - is it solving a real problem?",
+                "custom_solution_preferred":
+                    "Consider using the standard library function instead",
+                "documentation_neglect":
+                    "The official docs show a simpler approach - have you tried it?",
+                "complexity_escalation":
+                    "Could this be done with half the code?",
+                "default":
+                    "Is there a more direct way to implement this?"
+            },
+            "review": {
+                "infrastructure_without_implementation":
+                    "Does this match the original requirements?",
+                "custom_solution_preferred":
+                    "What would happen if we removed this custom layer?",
+                "documentation_neglect":
+                    "How does this compare to the documented approach?",
+                "complexity_escalation":
+                    "Which parts of this could be simplified?",
+                "default":
+                    "Have we introduced unnecessary complexity?"
+            }
+        }
+        
+        # Get phase-specific question
+        questions = phase_questions.get(phase, phase_questions["planning"])
+        question = questions.get(pattern_type, questions["default"])
+        
+        # Determine severity based on pattern confidence and type
+        severity_map = {
+            "infrastructure_without_implementation": "high",
+            "custom_solution_preferred": "medium",
+            "documentation_neglect": "medium",
+            "complexity_escalation": "low",
+        }
+        severity = severity_map.get(pattern_type, "low")
+        
+        # Generate quick suggestion based on pattern
+        suggestions = {
+            "infrastructure_without_implementation": 
+                "Check docs.api.com/sdks first",
+            "custom_solution_preferred":
+                "Try the standard approach",
+            "documentation_neglect":
+                "Review official documentation",
+            "complexity_escalation":
+                "Consider YAGNI principle",
+            "default":
+                "Validate with simpler approach"
+        }
+        suggestion = suggestions.get(pattern_type, suggestions["default"])
+        
+        # Adjust suggestion based on specific keywords in query
+        if "http" in query.lower() or "client" in query.lower():
+            suggestion = "Check for official SDK with retry/auth handling"
+        elif "auth" in query.lower():
+            suggestion = "Use established auth library (OAuth2, JWT)"
+        elif "abstract" in query.lower() or "layer" in query.lower():
+            suggestion = "Start concrete, abstract only when patterns emerge"
+        
+        return {
+            "question": question,
+            "severity": severity,
+            "suggestion": suggestion,
+            "pattern_type": pattern_type,
+            "confidence": pattern_confidence
+        }
+
 
 def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]]) -> str:
     """Generate a quick summary based on vibe level and patterns"""

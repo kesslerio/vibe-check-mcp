@@ -466,5 +466,165 @@ class TestVibeCheckMentorIntegration:
             assert num_contributions == expected_count
 
 
+class TestInterruptMode:
+    """Test the interrupt mode functionality"""
+
+    def test_generate_interrupt_intervention_planning_phase(self):
+        """Test interrupt intervention generation for planning phase"""
+        engine = VibeMentorEngine()
+        
+        # Test infrastructure pattern
+        primary_pattern = {
+            "pattern_type": "infrastructure_without_implementation",
+            "detected": True,
+            "confidence": 0.9
+        }
+        
+        result = engine.generate_interrupt_intervention(
+            query="I'll build a custom HTTP client for the API",
+            phase="planning",
+            primary_pattern=primary_pattern,
+            pattern_confidence=0.9
+        )
+        
+        assert result["question"] == "Have you checked if an official SDK exists for this?"
+        assert result["severity"] == "high"
+        assert result["suggestion"] == "Check for official SDK with retry/auth handling"
+        assert result["pattern_type"] == "infrastructure_without_implementation"
+        assert result["confidence"] == 0.9
+
+    def test_generate_interrupt_intervention_implementation_phase(self):
+        """Test interrupt intervention generation for implementation phase"""
+        engine = VibeMentorEngine()
+        
+        # Test complexity escalation pattern
+        primary_pattern = {
+            "pattern_type": "complexity_escalation",
+            "detected": True,
+            "confidence": 0.75
+        }
+        
+        result = engine.generate_interrupt_intervention(
+            query="Adding abstraction layer for future flexibility",
+            phase="implementation",
+            primary_pattern=primary_pattern,
+            pattern_confidence=0.75
+        )
+        
+        assert result["question"] == "Could this be done with half the code?"
+        assert result["severity"] == "low"
+        assert result["suggestion"] == "Start concrete, abstract only when patterns emerge"
+        assert result["pattern_type"] == "complexity_escalation"
+
+    def test_generate_interrupt_intervention_review_phase(self):
+        """Test interrupt intervention generation for review phase"""
+        engine = VibeMentorEngine()
+        
+        # Test custom solution pattern
+        primary_pattern = {
+            "pattern_type": "custom_solution_preferred",
+            "detected": True,
+            "confidence": 0.8
+        }
+        
+        result = engine.generate_interrupt_intervention(
+            query="Completed custom authentication system",
+            phase="review",
+            primary_pattern=primary_pattern,
+            pattern_confidence=0.8
+        )
+        
+        assert result["question"] == "What would happen if we removed this custom layer?"
+        assert result["severity"] == "medium"
+        assert result["suggestion"] == "Use established auth library (OAuth2, JWT)"
+        assert result["pattern_type"] == "custom_solution_preferred"
+
+    def test_generate_interrupt_intervention_unknown_pattern(self):
+        """Test interrupt intervention with unknown pattern type"""
+        engine = VibeMentorEngine()
+        
+        # Unknown pattern
+        primary_pattern = {
+            "pattern_type": "unknown_pattern",
+            "detected": True,
+            "confidence": 0.7
+        }
+        
+        result = engine.generate_interrupt_intervention(
+            query="Some technical decision",
+            phase="planning",
+            primary_pattern=primary_pattern,
+            pattern_confidence=0.7
+        )
+        
+        # Should use default questions/suggestions
+        assert "validated" in result["question"].lower()
+        assert result["severity"] == "low"
+        assert result["suggestion"] == "Validate with simpler approach"
+
+    def test_interrupt_mode_phase_awareness(self):
+        """Test that interrupt mode provides phase-specific questions"""
+        engine = VibeMentorEngine()
+        
+        pattern = {
+            "pattern_type": "documentation_neglect",
+            "detected": True,
+            "confidence": 0.85
+        }
+        
+        # Test same pattern in different phases
+        phases = ["planning", "implementation", "review"]
+        questions_seen = set()
+        
+        for phase in phases:
+            result = engine.generate_interrupt_intervention(
+                query="Building integration without checking docs",
+                phase=phase,
+                primary_pattern=pattern,
+                pattern_confidence=0.85
+            )
+            questions_seen.add(result["question"])
+        
+        # Should have different questions for different phases
+        assert len(questions_seen) == 3
+
+    def test_interrupt_mode_keyword_based_suggestions(self):
+        """Test that suggestions adapt based on query keywords"""
+        engine = VibeMentorEngine()
+        
+        pattern = {
+            "pattern_type": "custom_solution_preferred",
+            "detected": True,
+            "confidence": 0.8
+        }
+        
+        # Test HTTP client query
+        result1 = engine.generate_interrupt_intervention(
+            query="Building custom HTTP client",
+            phase="planning",
+            primary_pattern=pattern,
+            pattern_confidence=0.8
+        )
+        assert "SDK" in result1["suggestion"]
+        
+        # Test auth query
+        result2 = engine.generate_interrupt_intervention(
+            query="Custom auth implementation",
+            phase="planning", 
+            primary_pattern=pattern,
+            pattern_confidence=0.8
+        )
+        assert "OAuth2" in result2["suggestion"] or "JWT" in result2["suggestion"]
+        
+        # Test abstraction query
+        result3 = engine.generate_interrupt_intervention(
+            query="Adding abstraction layer",
+            phase="planning",
+            primary_pattern=pattern,
+            pattern_confidence=0.8
+        )
+        assert "concrete" in result3["suggestion"].lower()
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
