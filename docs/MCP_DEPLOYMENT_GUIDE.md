@@ -317,6 +317,8 @@ Once deployed, you can use these tools in Claude Code:
 | `analyze_text` | Text analysis for documents | "Analyze this technical document" |
 | `analyze_code` | Code review with coaching | "Review this code for anti-patterns" |
 | `server_status` | Check server health | "Show vibe check server status" |
+| `validate_mcp_configuration` | Comprehensive configuration validation | "Validate my MCP setup" |
+| `check_claude_cli_integration` | Quick Claude CLI health check | "Is Claude CLI working?" |
 
 ### Quick Test Commands
 
@@ -327,6 +329,99 @@ Once deployed, you can use these tools in Claude Code:
 "Show me the vibe check server status"
 
 "Analyze this code for complexity patterns: [paste code]"
+
+# Configuration validation (Issue #98)
+"Validate my MCP setup"
+
+"Is Claude CLI working?"
+
+"Check my configuration for integration issues"
+```
+
+## 🔍 Configuration Validation and Troubleshooting
+
+The vibe-check MCP server includes comprehensive configuration validation (Issue #98) to prevent integration issues like the Claude CLI hanging problem resolved in issue #94.
+
+### Automatic Startup Validation
+
+The server automatically validates configuration on startup:
+
+- ✅ **Claude CLI Availability**: Checks if `claude` command is available and working
+- 📄 **MCP Configuration Files**: Validates structure of `.claude_desktop_config.json`, `mcp.json`, etc.
+- 🔐 **Tool Permissions**: Verifies permission configurations and allowlists
+- 🔧 **Environment Setup**: Checks `PYTHONPATH`, `GITHUB_TOKEN`, and other variables
+- 📦 **Dependencies**: Validates critical Python packages (fastmcp, click, etc.)
+
+### Configuration Validation Tools
+
+#### `validate_mcp_configuration`
+Comprehensive validation of your entire MCP setup:
+
+```bash
+# In Claude Code:
+"Validate my MCP configuration"
+"Check my setup for integration issues"
+"Diagnose my MCP configuration"
+```
+
+**Returns**: Detailed validation results with:
+- Overall health status
+- Results grouped by severity (Critical/Warning/Info)
+- Actionable recommendations
+- Summary statistics
+
+#### `check_claude_cli_integration`
+Quick Claude CLI specific health check:
+
+```bash
+# In Claude Code:
+"Is Claude CLI working?"
+"Quick Claude CLI check"
+"Test Claude CLI integration"
+```
+
+**Returns**: Focused Claude CLI status with:
+- Availability and version information
+- Basic integration environment check
+- Quick action recommendations
+
+### Common Configuration Issues
+
+| Issue | Symptoms | Solution |
+|-------|----------|----------|
+| **Claude CLI not found** | "claude: command not found" | Install Claude CLI or add to PATH |
+| **MCP config missing** | Server starts but no tools available | Create MCP configuration file |
+| **Invalid JSON config** | Server fails to start | Fix JSON syntax in configuration |
+| **Missing PYTHONPATH** | Import errors, module not found | Set PYTHONPATH to include src directory |
+| **Permission denied** | Tool access failures | Check file permissions and access controls |
+
+### Error Messages and Suggestions
+
+The validation system provides clear error messages with actionable suggestions:
+
+- **Critical Issues**: Block server startup, require immediate attention
+- **Warnings**: Server starts but with degraded functionality  
+- **Info**: Informational status, everything working correctly
+
+### Validation Output Example
+
+```
+Configuration Validation Results:
+========================================
+
+CRITICAL:
+  ❌ Missing critical dependencies: fastmcp
+     💡 Install missing dependencies: pip install fastmcp
+
+WARNING:
+  ⚠️ Claude CLI not found in PATH
+     💡 Install Claude CLI or add it to your PATH for full functionality
+  ⚠️ No MCP configuration files found
+     💡 Create MCP configuration file for Claude CLI integration
+
+INFO:
+  ✅ Environment setup looks good
+  ✅ Python path configuration detected
 ```
 
 ## 📖 Additional Resources
