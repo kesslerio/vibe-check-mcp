@@ -20,7 +20,7 @@ These scripts serve as **proof-of-concept implementations** and **feature specif
 | Script | Purpose | Status |
 |--------|---------|--------|
 | `lint-code.sh` | Code quality validation | ✅ Stable |
-| ~~`triage-issue.sh`~~ | 🚀 **MIGRATED** | GitHub MCP tools | ✅ **COMPLETED** - Removed in [Issue #71](https://github.com/kesslerio/vibe-check-mcp/issues/71) |
+| `triage-issue.sh` | ✅ Prototype | `triage_issue` (planned) | 🔄 **NO MCP EQUIVALENT YET** |
 | `shared/` | Common functions | ✅ Stable |
 
 ## 📋 Usage During Development
