@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 from ..shared.claude_integration import analyze_content_async, ClaudeCliExecutor, ClaudeCliResult
+from ...utils.token_utils import get_token_counter, analyze_content_size
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +35,13 @@ class ClaudeIntegration:
     - Save debug information and metadata
     """
     
-    # Maximum prompt size before switching to summary mode
-    MAX_PROMPT_SIZE = 50000  # 50k character threshold
+    # Token-based limits for MCP protocol
+    MAX_TOKEN_LIMIT = 25000  # MCP token limit
+    FILE_MODE_THRESHOLD = 20000  # Switch to file mode early
+    CHUNKED_MODE_THRESHOLD = 50000  # Use chunking for very large content
+    
+    # Legacy character limit for backward compatibility
+    MAX_PROMPT_SIZE = 50000  # 50k character threshold (deprecated)
     
     def __init__(self, timeout_seconds: int = 300):
         """
@@ -47,6 +53,7 @@ class ClaudeIntegration:
         self.external_claude = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
         self.logger = logger
         self.model = None  # Will be set per analysis
+        self.token_counter = get_token_counter()  # Initialize token counter
     
     def check_claude_availability(self) -> bool:
         """
@@ -175,6 +182,102 @@ class ClaudeIntegration:
                 task_type=task_type
             )
     
+    async def analyze_with_file_mode(
+        self, 
+        content: str, 
+        context: str = "",
+        model: str = "sonnet"
+    ) -> Optional[ClaudeCliResult]:
+        """
+        Execute analysis using temporary files for large content.
+        
+        Args:
+            content: Large content to analyze
+            context: Additional context for analysis
+            model: Claude model to use
+            
+        Returns:
+            ClaudeCliResult with analysis or None if failed
+        """
+        self.logger.info("🗂️ Using file-based analysis for large content")
+        
+        try:
+            # Create temporary file with the content
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+                f.write(content)
+                temp_path = f.name
+            
+            # Build command arguments using file input
+            command_args = [
+                self.external_claude.claude_cli_path,
+                "--model", model,
+                "--file", temp_path
+            ]
+            
+            # Add context as additional prompt if provided
+            if context:
+                command_args.extend(["-p", context])
+            
+            try:
+                # Execute Claude CLI with file input
+                process = await asyncio.create_subprocess_exec(
+                    *command_args,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    cwd=os.path.expanduser("~")
+                )
+                
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=self.external_claude.timeout_seconds
+                    )
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+                    return ClaudeCliResult(
+                        success=False,
+                        error=f"File-based analysis timed out after {self.external_claude.timeout_seconds} seconds",
+                        exit_code=-1,
+                        execution_time=0,
+                        command_used=f"claude --model {model} --file [TEMP_FILE]",
+                        task_type="pr_review_file_mode"
+                    )
+                
+                success = process.returncode == 0
+                output = stdout.decode('utf-8', errors='replace') if stdout else ""
+                error = stderr.decode('utf-8', errors='replace') if stderr else ""
+                
+                self.logger.info(f"🗂️ File-based analysis completed: {'success' if success else 'failed'}")
+                
+                return ClaudeCliResult(
+                    success=success,
+                    output=output,
+                    error=error,
+                    exit_code=process.returncode,
+                    execution_time=0,  # Not tracking execution time for file mode
+                    command_used=f"claude --model {model} --file [TEMP_FILE]",
+                    task_type="pr_review_file_mode"
+                )
+                
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_path)
+                except Exception as cleanup_error:
+                    self.logger.warning(f"Failed to clean up temp file {temp_path}: {cleanup_error}")
+                    
+        except Exception as e:
+            self.logger.error(f"❌ File-based analysis failed: {e}")
+            return ClaudeCliResult(
+                success=False,
+                error=f"File-based analysis error: {str(e)}",
+                exit_code=-1,
+                execution_time=0,
+                command_used="file_mode_error",
+                task_type="pr_review_file_mode"
+            )
+    
     async def run_claude_analysis(
         self, 
         prompt_content: str, 
@@ -206,10 +309,46 @@ class ClaudeIntegration:
             # Create initial combined content for size check
             combined_content = f"{prompt_content}\n\n{data_content}"
             combined_size = len(combined_content)
-            self.logger.info(f"🔍 Combined content size: {combined_size} chars")
             
-            # ADAPTIVE PROMPT SIZING: If content is too large, reduce it
-            if combined_size > self.MAX_PROMPT_SIZE:
+            # TOKEN-AWARE ANALYSIS: Check token count and determine mode
+            token_analysis = analyze_content_size(combined_content, f"PR #{pr_number}")
+            token_count = token_analysis["token_count"]
+            analysis_mode = token_analysis["analysis_mode"]
+            
+            self.logger.info(f"🔍 Combined content: {combined_size} chars, {token_count} tokens")
+            self.logger.info(f"🔄 Analysis mode: {analysis_mode}")
+            
+            # INTELLIGENT MODE SELECTION based on token count
+            if analysis_mode == "file_based":
+                self.logger.info(f"🗂️ Large content detected ({token_count} tokens > {self.FILE_MODE_THRESHOLD}) - using file-based analysis")
+                
+                # Try file-based analysis first
+                file_result = await self.analyze_with_file_mode(
+                    content=combined_content,
+                    context=f"Analyze this Pull Request #{pr_number}",
+                    model=model
+                )
+                
+                if file_result and file_result.success:
+                    self.logger.info("✅ File-based analysis completed successfully")
+                    # Parse and return the result similar to standard mode
+                    parsed_result = self._parse_claude_output(file_result.output, pr_number)
+                    if parsed_result:
+                        parsed_result["analysis_method"] = "file_based"
+                        parsed_result["token_count"] = token_count
+                        parsed_result["analysis_mode"] = analysis_mode
+                        return parsed_result
+                else:
+                    self.logger.warning("⚠️ File-based analysis failed, falling back to content reduction")
+            
+            elif analysis_mode == "chunked":
+                self.logger.warning(f"🧩 Very large content detected ({token_count} tokens > {self.CHUNKED_MODE_THRESHOLD})")
+                self.logger.info("🔀 This content should use chunked analysis - please use ChunkedAnalyzer instead")
+                # For now, fall back to summary mode
+                analysis_mode = "file_based"
+            
+            # LEGACY FALLBACK: Character-based sizing for backward compatibility
+            if combined_size > self.MAX_PROMPT_SIZE or analysis_mode in ["file_based", "chunked"]:
                 self.logger.warning(f"⚠️ Large prompt detected ({combined_size} chars > {self.MAX_PROMPT_SIZE}) - switching to summary analysis")
                 
                 if summary_content_generator:
@@ -228,8 +367,8 @@ class ClaudeIntegration:
                     )
                     combined_content = f"{prompt_content}\n\n{reduced_data_content}"
             
-            # Set adaptive timeout based on content size
-            timeout_seconds = self._calculate_adaptive_timeout(combined_size, pr_number)
+            # Set adaptive timeout based on token count and content
+            timeout_seconds = self._calculate_adaptive_timeout(combined_content, pr_number)
             
             # Update external Claude CLI timeout dynamically
             self.external_claude.timeout_seconds = timeout_seconds
@@ -299,23 +438,35 @@ class ClaudeIntegration:
             self.logger.debug(f"Stack trace: {traceback.format_exc()}")
             return None
     
-    def _calculate_adaptive_timeout(self, content_size: int, pr_number: int) -> int:
+    def _calculate_adaptive_timeout(self, content: str, pr_number: int) -> int:
         """
-        Calculate adaptive timeout based on content size and PR complexity.
+        Calculate adaptive timeout based on token count and content complexity.
         
         Args:
-            content_size: Size of content to analyze in characters
+            content: Content to analyze (for token counting)
             pr_number: PR number for logging
             
         Returns:
             Appropriate timeout in seconds
         """
+        # Get token count for more accurate timeout calculation
+        token_count = self.token_counter.count_tokens(content)
+        content_size = len(content)
+        
         # Base timeout
         base_timeout = 60
         
-        # Add time based on content size (roughly 1 second per 1000 characters)
-        size_factor = content_size // 1000
-        size_timeout = min(size_factor, 300)  # Cap at 5 minutes for size
+        # Token-based timeout calculation (more accurate than character-based)
+        # Roughly 1 second per 500 tokens for complex analysis
+        token_factor = token_count // 500
+        token_timeout = min(token_factor, 400)  # Cap at 6.5 minutes for token processing
+        
+        # Character-based fallback for backward compatibility
+        char_factor = content_size // 2000  # More conservative than before
+        char_timeout = min(char_factor, 300)  # Cap at 5 minutes for character processing
+        
+        # Use the higher of token-based or character-based calculation
+        size_timeout = max(token_timeout, char_timeout)
         
         # Add buffer for complex analysis
         buffer_timeout = 60
@@ -325,7 +476,7 @@ class ClaudeIntegration:
         # Ensure reasonable bounds
         final_timeout = max(60, min(total_timeout, 600))  # Between 1-10 minutes
         
-        self.logger.info(f"🕐 Calculated adaptive timeout: {final_timeout}s for {content_size} chars")
+        self.logger.info(f"🕐 Calculated adaptive timeout: {final_timeout}s for {content_size} chars, {token_count} tokens")
         
         return final_timeout
     

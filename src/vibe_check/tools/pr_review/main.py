@@ -16,6 +16,7 @@ from .feedback_categorizer import FeedbackCategorizer
 from .chunked_analyzer import ChunkedAnalyzer, analyze_pr_with_chunking
 from .file_type_analyzer import FileTypeAnalyzer
 from ..shared.pr_classifier import classify_pr_size, PrSizeCategory, should_use_chunked_analysis
+from ..mcp_protocol_handler import get_mcp_handler, analyze_with_token_limit_bypass
 
 logger = logging.getLogger(__name__)
 
@@ -251,15 +252,75 @@ APPROVE/REQUEST_CHANGES/REJECT with clear rationale.
 {pr_data.get('diff', '')[:2000]}...
 """
     
-    result = await claude_integration.run_claude_analysis(
-        prompt_content=prompt_content,
-        data_content=data_content,
-        pr_number=pr_number,
-        pr_data=pr_data,
-        model=model
-    )
-    
-    return result or {"analysis": "Claude analysis failed", "recommendation": "MANUAL_REVIEW"}
+    # USE TOKEN LIMIT BYPASS: Intelligent handling of large prompts
+    try:
+        logger.info("🔄 Using intelligent token limit bypass for PR analysis")
+        
+        # Use the MCP token limit handler for intelligent mode selection
+        bypass_result = await analyze_with_token_limit_bypass(
+            prompt=prompt_content,
+            data=data_content,
+            context={
+                "pr_number": pr_number,
+                "pr_data": pr_data,
+                "model": model,
+                "analysis_type": "pr_review"
+            }
+        )
+        
+        if bypass_result["success"]:
+            logger.info(f"✅ Token limit bypass successful using {bypass_result.get('method', 'unknown')} method")
+            
+            # Parse the analysis result for compatibility with existing code
+            analysis_text = bypass_result["analysis"]
+            
+            # Try to parse it using the existing Claude integration parser
+            parsed_result = claude_integration._parse_claude_output(analysis_text, pr_number)
+            
+            # Add bypass metadata
+            if parsed_result:
+                parsed_result["analysis_method"] = bypass_result.get("method", "token_bypass")
+                parsed_result["token_count"] = bypass_result.get("token_count", 0)
+                parsed_result["processing_metadata"] = bypass_result.get("processing_metadata", {})
+                return parsed_result
+            else:
+                # Fallback: return raw analysis if parsing fails
+                return {
+                    "analysis": analysis_text,
+                    "analysis_method": bypass_result.get("method", "token_bypass"),
+                    "token_count": bypass_result.get("token_count", 0),
+                    "recommendation": "MANUAL_REVIEW",
+                    "processing_metadata": bypass_result.get("processing_metadata", {})
+                }
+        else:
+            logger.warning(f"⚠️ Token limit bypass failed: {bypass_result.get('error', 'Unknown error')}")
+            
+            # Fallback to original Claude integration
+            logger.info("🔄 Falling back to original Claude integration")
+            result = await claude_integration.run_claude_analysis(
+                prompt_content=prompt_content,
+                data_content=data_content,
+                pr_number=pr_number,
+                pr_data=pr_data,
+                model=model
+            )
+            
+            return result or {"analysis": "Claude analysis failed", "recommendation": "MANUAL_REVIEW"}
+            
+    except Exception as e:
+        logger.error(f"❌ Token limit bypass failed with exception: {e}")
+        
+        # Fallback to original Claude integration
+        logger.info("🔄 Falling back to original Claude integration after bypass failure")
+        result = await claude_integration.run_claude_analysis(
+            prompt_content=prompt_content,
+            data_content=data_content,
+            pr_number=pr_number,
+            pr_data=pr_data,
+            model=model
+        )
+        
+        return result or {"analysis": "Claude analysis failed", "recommendation": "MANUAL_REVIEW"}
 
 
 def _generate_fallback_analysis(

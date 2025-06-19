@@ -20,6 +20,9 @@ requests==2.32.4
 rich==14.0.0
 typer==0.16.0
 
+# Token counting for MCP limit bypass
+tiktoken>=0.5.0
+
 # Development & Testing
 # The following are for development and are not included in the main list.
 # You can install them with `pip install -r requirements-dev.txt` if needed.

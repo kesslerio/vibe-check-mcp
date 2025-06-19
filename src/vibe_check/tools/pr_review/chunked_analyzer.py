@@ -16,6 +16,7 @@ from datetime import datetime
 
 from ..shared.pr_classifier import PrSizeCategory, PrSizeMetrics, classify_pr_size
 from ..shared.claude_integration import analyze_content_async_with_circuit_breaker
+from ...utils.token_utils import get_token_counter, analyze_content_size
 from ..shared.circuit_breaker import ClaudeCliError, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ class FileChunk:
     total_lines: int
     estimated_complexity: float
     file_types: List[str] = field(default_factory=list)
+    estimated_tokens: int = 0  # Estimated token count for this chunk
     
     @property
     def file_count(self) -> int:
@@ -37,6 +39,26 @@ class FileChunk:
     @property
     def filenames(self) -> List[str]:
         return [f.get('filename', f.get('name', 'unknown')) for f in self.files]
+    
+    def calculate_token_estimate(self, token_counter) -> int:
+        """Calculate estimated token count for this chunk's content."""
+        if not self.files:
+            return 0
+        
+        # Estimate tokens based on patches/diffs in files
+        total_content = ""
+        for file_data in self.files:
+            patch = file_data.get('patch', '')
+            if patch:
+                total_content += patch + "\n"
+        
+        if total_content:
+            self.estimated_tokens = token_counter.count_tokens(total_content, "code")
+        else:
+            # Fallback: estimate from line count (roughly 10 tokens per line for code)
+            self.estimated_tokens = self.total_lines * 10
+        
+        return self.estimated_tokens
 
 
 @dataclass
@@ -92,13 +114,15 @@ class FileChunker:
     """
     Intelligent file chunking strategy for PR analysis.
     
-    Groups files into logical chunks based on size, type, and relationships
-    to optimize analysis quality and performance.
+    Groups files into logical chunks based on token count, size, type, and relationships
+    to optimize analysis quality and performance while respecting MCP token limits.
     """
     
-    def __init__(self, max_lines_per_chunk: int = 500):
+    def __init__(self, max_lines_per_chunk: int = 500, max_tokens_per_chunk: int = 15000):
         self.max_lines_per_chunk = max_lines_per_chunk
-        logger.debug(f"FileChunker initialized with max {max_lines_per_chunk} lines per chunk")
+        self.max_tokens_per_chunk = max_tokens_per_chunk  # Conservative token limit per chunk
+        self.token_counter = get_token_counter()
+        logger.debug(f"FileChunker initialized with max {max_lines_per_chunk} lines, {max_tokens_per_chunk} tokens per chunk")
     
     def create_chunks(self, pr_files: List[Dict[str, Any]]) -> List[FileChunk]:
         """
@@ -216,44 +240,63 @@ class FileChunker:
         )
     
     def _group_files_into_chunks(self, sorted_files: List[Dict[str, Any]]) -> List[FileChunk]:
-        """Group files into logical chunks."""
+        """Group files into logical chunks using both line and token limits."""
         chunks = []
         current_chunk_files = []
         current_chunk_lines = 0
+        current_chunk_tokens = 0
         chunk_id = 1
         
         for file_data in sorted_files:
             file_changes = file_data.get('total_changes', 0)
             
-            # If this file alone exceeds chunk size, create dedicated chunk
-            if file_changes > self.max_lines_per_chunk:
+            # Estimate tokens for this file
+            file_content = file_data.get('patch', '')
+            file_tokens = self.token_counter.count_tokens(file_content, "code") if file_content else file_changes * 10  # Fallback estimate
+            
+            # If this file alone exceeds chunk limits, create dedicated chunk
+            if file_changes > self.max_lines_per_chunk or file_tokens > self.max_tokens_per_chunk:
                 # Finalize current chunk if it has files
                 if current_chunk_files:
-                    chunks.append(self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines))
+                    chunk = self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines)
+                    chunk.estimated_tokens = current_chunk_tokens
+                    chunks.append(chunk)
                     chunk_id += 1
                     current_chunk_files = []
                     current_chunk_lines = 0
+                    current_chunk_tokens = 0
                 
                 # Create dedicated chunk for large file
-                chunks.append(self._create_chunk(chunk_id, [file_data], file_changes))
+                large_chunk = self._create_chunk(chunk_id, [file_data], file_changes)
+                large_chunk.estimated_tokens = file_tokens
+                chunks.append(large_chunk)
                 chunk_id += 1
                 continue
             
-            # Check if adding this file would exceed chunk size
-            if current_chunk_lines + file_changes > self.max_lines_per_chunk and current_chunk_files:
+            # Check if adding this file would exceed either limit
+            would_exceed_lines = current_chunk_lines + file_changes > self.max_lines_per_chunk
+            would_exceed_tokens = current_chunk_tokens + file_tokens > self.max_tokens_per_chunk
+            
+            if (would_exceed_lines or would_exceed_tokens) and current_chunk_files:
                 # Finalize current chunk
-                chunks.append(self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines))
+                chunk = self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines)
+                chunk.estimated_tokens = current_chunk_tokens
+                chunks.append(chunk)
                 chunk_id += 1
                 current_chunk_files = []
                 current_chunk_lines = 0
+                current_chunk_tokens = 0
             
             # Add file to current chunk
             current_chunk_files.append(file_data)
             current_chunk_lines += file_changes
+            current_chunk_tokens += file_tokens
         
         # Finalize last chunk if it has files
         if current_chunk_files:
-            chunks.append(self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines))
+            chunk = self._create_chunk(chunk_id, current_chunk_files, current_chunk_lines)
+            chunk.estimated_tokens = current_chunk_tokens
+            chunks.append(chunk)
         
         return chunks
     
@@ -283,18 +326,21 @@ class ChunkedAnalyzer:
         self,
         chunk_timeout: int = 60,
         max_concurrent_chunks: int = 3,
-        max_lines_per_chunk: int = 500
+        max_lines_per_chunk: int = 500,
+        max_tokens_per_chunk: int = 15000
     ):
         self.chunk_timeout = chunk_timeout
         self.max_concurrent_chunks = max_concurrent_chunks
-        self.chunker = FileChunker(max_lines_per_chunk)
+        self.chunker = FileChunker(max_lines_per_chunk, max_tokens_per_chunk)
+        self.token_counter = get_token_counter()
         
         logger.info(
             f"ChunkedAnalyzer initialized",
             extra={
                 "chunk_timeout": chunk_timeout,
                 "max_concurrent": max_concurrent_chunks,
-                "max_lines_per_chunk": max_lines_per_chunk
+                "max_lines_per_chunk": max_lines_per_chunk,
+                "max_tokens_per_chunk": max_tokens_per_chunk
             }
         )
     
