@@ -6,6 +6,8 @@ Allows users to adjust the personality level from professional to playful.
 """
 
 import os
+import threading
+import logging
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any
@@ -74,7 +76,8 @@ class VibeConfig:
         try:
             return VibeLevel(env_level)
         except ValueError:
-            # Default to casual if invalid level specified
+            # Log warning for invalid level and default to casual
+            logger.warning(f"Invalid VIBE_LEVEL '{env_level}' specified. Valid values are: professional, casual, playful. Falling back to 'casual'.")
             return VibeLevel.CASUAL
     
     def _get_messages_for_level(self, level: VibeLevel) -> VibeMessages:
@@ -144,7 +147,11 @@ class VibeConfig:
         Returns:
             Vibe-appropriate message string
         """
-        return getattr(self._messages, key, key)
+        if hasattr(self._messages, key):
+            return getattr(self._messages, key)
+        else:
+            logger.warning(f"Unknown vibe message key '{key}'. Available keys: {list(self._messages.__dict__.keys())}")
+            return f"[Unknown message: {key}]"
     
     def set_level(self, level: VibeLevel):
         """
@@ -179,6 +186,11 @@ class VibeConfig:
         Returns:
             Formatted detection message
         """
+        # Validate confidence range
+        if not 0.0 <= confidence <= 1.0:
+            logger.warning(f"Invalid confidence value {confidence}. Expected range 0.0-1.0. Clamping to valid range.")
+            confidence = max(0.0, min(1.0, confidence))
+            
         if self.level == VibeLevel.PROFESSIONAL:
             return f"Pattern detected: {pattern_type} (confidence: {confidence:.2f})"
         elif self.level == VibeLevel.CASUAL:
@@ -234,13 +246,19 @@ class VibeConfig:
 
 # Global vibe configuration instance
 _global_vibe_config = None
+_config_lock = threading.Lock()
+
+logger = logging.getLogger(__name__)
 
 
 def get_vibe_config() -> VibeConfig:
-    """Get the global vibe configuration instance."""
+    """Get the global vibe configuration instance with thread safety."""
     global _global_vibe_config
     if _global_vibe_config is None:
-        _global_vibe_config = VibeConfig()
+        with _config_lock:
+            # Double-checked locking pattern
+            if _global_vibe_config is None:
+                _global_vibe_config = VibeConfig()
     return _global_vibe_config
 
 

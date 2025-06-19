@@ -15,7 +15,7 @@ import logging
 from typing import Dict, Any
 
 from fastmcp import FastMCP
-from vibe_check.core.vibe_config import get_vibe_config, vibe_message
+from ..core.vibe_config import get_vibe_config, vibe_message
 
 logger = logging.getLogger(__name__)
 
