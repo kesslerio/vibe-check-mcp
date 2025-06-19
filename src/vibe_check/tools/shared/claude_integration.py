@@ -3,18 +3,73 @@ Claude CLI Integration
 
 Consolidated Claude CLI execution utilities shared across vibe check tools.
 Provides consistent Claude CLI execution, timeout handling, and environment isolation.
+
+Model Selection:
+- "sonnet" (default): Fast, efficient for routine analysis
+- "opus": Advanced reasoning for complex scenarios  
+- "haiku": Ultra-fast for simple checks
+- Full model names: e.g., "claude-sonnet-4-20250514" for version pinning
+
+Security Features:
+- Input validation prevents command injection attacks
+- Model parameter validation with helpful error messages
+- Environment isolation to prevent recursion issues
 """
 
 import asyncio
 import json
 import logging
 import os
+import re
 import subprocess
 import tempfile
 import time
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
+
+
+# Valid model configurations
+VALID_MODELS = {"sonnet", "opus", "haiku"}
+VALID_MODEL_PATTERNS = [
+    r"^claude-(sonnet|opus|haiku)-[\d]+-[\d]{8}$",  # claude-sonnet-4-20250514
+    r"^claude-[\d][\.\d]*-(sonnet|opus|haiku)$",     # claude-3.5-sonnet
+]
+
+
+def _validate_model(model: str) -> str:
+    """
+    Validate Claude model parameter to prevent command injection and provide helpful errors.
+    
+    Args:
+        model: Model name to validate
+        
+    Returns:
+        The validated model name
+        
+    Raises:
+        ValueError: If model name is invalid or potentially dangerous
+    """
+    if not model or not isinstance(model, str):
+        raise ValueError("Model must be a non-empty string")
+    
+    # Check for command injection patterns
+    dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "{", "}", "<", ">"]
+    if any(char in model for char in dangerous_chars):
+        raise ValueError(f"Invalid model name contains dangerous characters: {model}")
+    
+    # Allow simple model names
+    if model in VALID_MODELS:
+        return model
+    
+    # Allow full model names that match expected patterns
+    for pattern in VALID_MODEL_PATTERNS:
+        if re.match(pattern, model):
+            return model
+    
+    # Log warning for unknown models but allow them (Claude CLI will validate)
+    logger.warning(f"Unknown model '{model}', will be validated by Claude CLI")
+    return model
 
 
 class ClaudeCliResult:
@@ -355,8 +410,9 @@ Please apply these guidelines throughout your analysis and recommendations."""
             # The JSON format was returning session metadata instead of analysis content
         ]
         
-        # Add model parameter for Claude model selection
-        args.extend(['--model', model])
+        # Add model parameter for Claude model selection (with validation)
+        validated_model = _validate_model(model)
+        args.extend(['--model', validated_model])
         
         # Add max turns only if specified (None = no limit)
         if max_turns is not None:
@@ -531,6 +587,10 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 error_msg = result.stderr.strip() if result.stderr else "Claude CLI failed"
                 output = result.stdout.strip() if result.stdout else ""
                 
+                # Check if error is related to model parameter
+                if "model" in error_msg.lower() or "invalid" in error_msg.lower():
+                    error_msg = f"Model '{model}' error: {error_msg}"
+                
                 logger.error(f"Claude CLI failed. Exit code: {result.returncode}. Stderr: {error_msg}")
                 
                 return ClaudeCliResult(
@@ -637,6 +697,11 @@ Please apply these guidelines throughout your analysis and recommendations."""
             else:
                 # Handle error
                 error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
+                
+                # Check if error is related to model parameter
+                if "model" in error_msg.lower() or "invalid" in error_msg.lower():
+                    error_msg = f"Model '{model}' error: {error_msg}"
+                
                 logger.error(f"Claude CLI failed: {error_msg}")
                 
                 return ClaudeCliResult(
