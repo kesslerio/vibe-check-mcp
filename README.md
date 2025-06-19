@@ -4,6 +4,7 @@
 
 Vibe Check MCP stops you from building yourself into a corner with AI-generated code. It's like having a senior developer looking over your shoulder, catching the expensive mistakes before you waste days on unfixable problems.
 
+[![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
@@ -76,19 +77,33 @@ Vibe Check MCP provides **two modes of analysis** to catch engineering anti-patt
 - Python 3.8+ with pip
 - GitHub token (optional, for GitHub integration)
 
-### 🚀 One-Command Installation
+### 🎯 **Recommended: Smithery One-Line Installation**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
+npx -y @smithery/cli install vibe-check-mcp --client claude
 ```
 
 This automatically:
-- ✅ Installs Vibe Check MCP
-- ✅ Configures Claude Code integration
-- ✅ Sets up GitHub token if provided
-- ✅ Verifies installation
+- ✅ Installs Vibe Check MCP with all dependencies
+- ✅ Configures Claude Code MCP integration
+- ✅ Sets up proper environment variables
+- ✅ Verifies installation and server health
+- ✅ Enables automatic updates via Smithery
 
-### 📦 Manual Installation
+### 🔐 GitHub Configuration (Optional)
+
+For private repository support, configure your GitHub token:
+
+```bash
+# Set GitHub token for private repository access
+export GITHUB_TOKEN="ghp_your_token_here"
+# Add to your shell profile (~/.zshrc, ~/.bashrc) for persistence
+```
+
+### Alternative Installation Methods
+
+<details>
+<summary>📦 Manual Installation (Click to expand)</summary>
 
 ```bash
 # 1. Clone and install
@@ -111,38 +126,41 @@ claude mcp add-json vibe-check '{
 
 ⚠️ **CRITICAL**: Never use `-s user` flag with MCP servers as it causes infinite recursion and Claude Code timeouts. This project only works in Claude Code SDK (non-interactive) mode. See [Claude Code SDK docs](https://docs.anthropic.com/en/docs/claude-code/sdk) for details.
 ```
+</details>
 
-### 🔐 GitHub Configuration
-
-**For Private Repository Support:**
-
-GitHub integration works automatically for public repositories. For private repositories, you need proper authentication:
+<details>
+<summary>🚀 Script-Based Installation (Click to expand)</summary>
 
 ```bash
-# Option 1: GitHub Personal Access Token (Recommended)
-export GITHUB_TOKEN="ghp_your_token_here"
-# Or add to your shell profile (~/.zshrc, ~/.bashrc)
-
-# Option 2: GitHub CLI Authentication (Fallback)
-gh auth login
-# Vibe Check MCP will use gh CLI tokens as fallback if direct token fails
-
-# Option 3: Environment Variable in MCP Config
-claude mcp add-json vibe-check '{
-  "env": {
-    "GITHUB_TOKEN": "ghp_your_token_here"
-  }
-}'
+curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
 ```
 
-**GitHub Token Permissions Required:**
-- ✅ `repo` (for private repository access)
+This automatically:
+- ✅ Installs Vibe Check MCP
+- ✅ Configures Claude Code integration
+- ✅ Sets up GitHub token if provided
+- ✅ Verifies installation
+</details>
+
+### 🔍 Verify Installation
+
+```bash
+# Test that the MCP server is working
+claude --version
+# Should show Claude Code is running with vibe-check-mcp available
+
+# Test a quick analysis
+claude "Quick vibe check: analyze this text for any engineering anti-patterns"
+```
+
+**GitHub Token Permissions (for GitHub integration):**
+- ✅ `repo` (for private repository access)  
 - ✅ `read:org` (for organization repositories)
 
-**Troubleshooting Private Repository Issues:**
+**Troubleshooting:**
 - **"HTTP 404" errors on private repos**: Check GitHub token has `repo` scope
-- **"Authentication failed"**: Verify token is valid with `gh auth status`
-- **No token found**: Set `GITHUB_TOKEN` environment variable or use `gh auth login`
+- **MCP server not found**: Restart Claude Code after installation
+- **Import errors**: Ensure Python 3.8+ and dependencies are installed
 
 ## 🚀 Usage Examples
 
