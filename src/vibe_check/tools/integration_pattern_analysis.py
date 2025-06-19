@@ -14,6 +14,7 @@ MCP Real-Time Usage:
 """
 
 import logging
+import threading
 from typing import Dict, Any, List, Optional
 
 from ..core.integration_pattern_detector import IntegrationPatternDetector
@@ -22,13 +23,24 @@ logger = logging.getLogger(__name__)
 
 # Global detector instance for performance (MCP tools need fast response)
 _integration_detector = None
+_detector_lock = threading.Lock()
 
 def get_integration_detector() -> IntegrationPatternDetector:
-    """Get or create the global integration pattern detector instance"""
+    """Get or create the global integration pattern detector instance (thread-safe)"""
     global _integration_detector
     if _integration_detector is None:
-        _integration_detector = IntegrationPatternDetector()
+        with _detector_lock:
+            # Double-check locking pattern
+            if _integration_detector is None:
+                _integration_detector = IntegrationPatternDetector()
     return _integration_detector
+
+
+def reset_integration_detector():
+    """Reset the global detector instance (for testing purposes)"""
+    global _integration_detector
+    with _detector_lock:
+        _integration_detector = None
 
 
 def analyze_integration_patterns_fast(
