@@ -161,60 +161,10 @@ class GitHubIssueAnalyzer:
                 logger.info(f"Analysis completed for issue #{issue_number}: {len(detected_patterns)} patterns detected")
                 return analysis_result
             
-            # Parse focus patterns
-            focus_pattern_list = None
-            if focus_patterns and focus_patterns.lower() != "all":
-                focus_pattern_list = [p.strip() for p in focus_patterns.split(",")]
-                # Validate pattern names
-                valid_patterns = self.pattern_detector.get_pattern_types()
-                invalid_patterns = [p for p in focus_pattern_list if p not in valid_patterns]
-                if invalid_patterns:
-                    logger.warning(f"Invalid patterns ignored: {invalid_patterns}")
-                    focus_pattern_list = [p for p in focus_pattern_list if p in valid_patterns]
-            
-            # Fetch GitHub issue data
-            issue_data = self._fetch_issue_data(issue_number, repository)
-            
-            # Analyze issue content for anti-patterns
-            content = issue_data["body"] or ""
-            context = f"Title: {issue_data['title']}"
-            
-            detected_patterns = self.pattern_detector.analyze_text_for_patterns(
-                content=content,
-                context=context,
-                focus_patterns=focus_pattern_list,
-                detail_level=detail_enum
-            )
-            
-            # Generate comprehensive analysis response
-            analysis_result = self._generate_analysis_response(
-                issue_data=issue_data,
-                detected_patterns=detected_patterns,
-                detail_level=detail_enum
-            )
-            
-            logger.info(f"Analysis completed for issue #{issue_number}: {len(detected_patterns)} patterns detected")
-            return analysis_result
-            
-        except GithubException as e:
-            error_msg = f"GitHub's giving us some attitude: {e.data.get('message', str(e))}"
-            self.vibe_logger.error(error_msg, exception=e)
-            return {
-                "error": error_msg,
-                "status": "github_being_moody",
-                "issue_number": issue_number,
-                "repository": repository
-            }
-            
-        except Exception as e:
-            error_msg = f"Vibe check hit a snag: {str(e)}"
-            self.vibe_logger.error(error_msg, exception=e)
-            return {
-                "error": error_msg,
-                "status": "analysis_error", 
-                "issue_number": issue_number,
-                "repository": repository
-            }
+            except Exception as e:
+                self.vibe_logger.error(f"Analysis failed: {str(e)}")
+                logger.error(f"Error analyzing issue #{issue_number}: {e}")
+                raise
     
     def _fetch_issue_data(self, issue_number: int, repository: Optional[str]) -> Dict[str, Any]:
         """

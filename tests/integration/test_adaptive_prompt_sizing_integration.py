@@ -46,7 +46,7 @@ index abc123..def456 100644
 --- a/src/module_{file_num}.py
 +++ b/src/module_{file_num}.py
 @@ -1,10 +1,25 @@
- """Module {file_num} with comprehensive refactoring."""
+ \"\"\"Module {file_num} with comprehensive refactoring.\"\"\"
  
 +import logging
 +from typing import Dict, Any, List, Optional
