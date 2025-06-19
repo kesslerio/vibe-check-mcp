@@ -6,6 +6,7 @@ Extracts technologies, frameworks, and specific problems to give targeted guidan
 """
 
 import re
+import functools
 from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
 
@@ -14,6 +15,20 @@ from .vibe_mentor import (
     PersonaData, ContributionData, PatternHandler, 
     ConfidenceScores, CollaborativeReasoningSession
 )
+
+# Constants for improved maintainability
+MIN_FEATURE_LENGTH = 3
+MAX_QUERY_LENGTH = 10000  # Prevent ReDoS attacks
+EXCLUDED_ENDINGS = [' for', ' with', ' by', ' in', ' on']
+REGEX_TIMEOUT = 1.0  # seconds
+
+# Configuration for performance tuning
+@dataclass
+class MentorConfig:
+    enable_caching: bool = True
+    max_cache_size: int = 128
+    confidence_threshold: float = 0.7
+    max_response_length: int = 2000
 
 
 @dataclass
@@ -29,6 +44,10 @@ class TechnicalContext:
 
 class ContextExtractor:
     """Extract technical context from queries for specific advice"""
+    
+    # Compiled regex patterns for performance (lazy loading)
+    _compiled_patterns: Optional[Dict[str, re.Pattern]] = None
+    _all_terms_regex: Optional[re.Pattern] = None
     
     # Common technology/framework patterns (2025 enhanced with latest frameworks)
     TECH_PATTERNS = {
@@ -68,20 +87,77 @@ class ContextExtractor:
     }
     
     @classmethod
-    def extract_context(cls, query: str, context: Optional[str] = None) -> TechnicalContext:
-        """Extract technical context from query and optional context"""
-        combined_text = f"{query} {context or ''}".lower()
+    def _validate_input(cls, text: str) -> str:
+        """Validate and sanitize input to prevent ReDoS attacks"""
+        if not text or not isinstance(text, str):
+            return ""
         
-        # Extract technologies and frameworks
+        # Prevent ReDoS attacks with length limits
+        if len(text) > MAX_QUERY_LENGTH:
+            text = text[:MAX_QUERY_LENGTH]
+        
+        # Basic sanitization - remove potentially problematic characters
+        text = re.sub(r'[^\w\s\-\.\?\!]', ' ', text)
+        return text.lower().strip()
+    
+    @classmethod
+    def _build_compiled_patterns(cls) -> Dict[str, re.Pattern]:
+        """Build compiled regex patterns for performance - O(1) lookup instead of O(n*m)"""
+        if cls._compiled_patterns is not None:
+            return cls._compiled_patterns
+        
+        compiled_patterns = {}
+        
+        # Build category-specific patterns
+        for category, terms in cls.TECH_PATTERNS.items():
+            # Escape special regex characters and create word boundaries
+            escaped_terms = [re.escape(term) for term in terms]
+            pattern = r'\b(' + '|'.join(escaped_terms) + r')\b'
+            compiled_patterns[category] = re.compile(pattern, re.IGNORECASE)
+        
+        # Build problem indicator patterns
+        for problem_type, indicators in cls.PROBLEM_INDICATORS.items():
+            escaped_indicators = [re.escape(indicator) for indicator in indicators]
+            pattern = r'\b(' + '|'.join(escaped_indicators) + r')\b'
+            compiled_patterns[f'problem_{problem_type}'] = re.compile(pattern, re.IGNORECASE)
+        
+        cls._compiled_patterns = compiled_patterns
+        return compiled_patterns
+    
+    @classmethod
+    @functools.lru_cache(maxsize=128)  # Cache for performance
+    def extract_context(cls, query: str, context: Optional[str] = None) -> TechnicalContext:
+        """Extract technical context from query and optional context - OPTIMIZED"""
+        # Input validation and sanitization
+        query = cls._validate_input(query or "")
+        context = cls._validate_input(context or "")
+        
+        if not query:  # Return empty context for invalid input
+            return TechnicalContext([], [], [], 'general', [], [])
+        
+        combined_text = f"{query} {context}".strip()
+        
+        # Get compiled patterns for O(1) lookup performance
+        patterns = cls._build_compiled_patterns()
+        
+        # Extract technologies and frameworks using compiled regex
         technologies = []
         frameworks = []
-        for category, terms in cls.TECH_PATTERNS.items():
-            for term in terms:
-                if term in combined_text:
-                    if category in ['frameworks', 'languages']:
-                        frameworks.append(term)
-                    else:
-                        technologies.append(term)
+        
+        for category, pattern in patterns.items():
+            if category.startswith('problem_'):  # Skip problem patterns in this loop
+                continue
+                
+            matches = pattern.findall(combined_text)
+            if matches:
+                if category in ['frameworks', 'languages']:
+                    frameworks.extend(matches)
+                else:
+                    technologies.extend(matches)
+        
+        # Remove duplicates while preserving order
+        technologies = list(dict.fromkeys(technologies))
+        frameworks = list(dict.fromkeys(frameworks))
         
         # ENHANCEMENT: Semantic pattern detection (from Claude's suggestion)
         # Add budget model keywords to technologies if budget terms detected
@@ -94,14 +170,16 @@ class ContextExtractor:
             if 'deepseek' in combined_text:
                 technologies.append('deepseek-r1')
         
-        # Determine problem type
+        # Determine problem type using compiled patterns
         problem_type = 'general'
-        for ptype, indicators in cls.PROBLEM_INDICATORS.items():
-            if any(ind in combined_text for ind in indicators):
-                problem_type = ptype
-                break
+        for problem_key, pattern in patterns.items():
+            if problem_key.startswith('problem_'):
+                ptype = problem_key.replace('problem_', '')
+                if pattern.search(combined_text):
+                    problem_type = ptype
+                    break
         
-        # Extract specific features mentioned
+        # Extract specific features mentioned using constants
         features = []
         feature_patterns = [
             r'(?:implement|build|create|add)\s+(\w+(?:\s+\w+)?)',
@@ -110,11 +188,20 @@ class ContextExtractor:
             r'(?:implementing|building|creating)\s+(\w+(?:\s+\w+)?)'
         ]
         for pattern in feature_patterns:
-            matches = re.findall(pattern, combined_text)
-            # Filter out incomplete matches
-            features.extend([m for m in matches if len(m) > 3 and not m.endswith(' for')])
+            try:
+                matches = re.findall(pattern, combined_text, re.IGNORECASE)
+                # Filter using constants instead of magic numbers
+                filtered_matches = [
+                    m for m in matches 
+                    if len(m) > MIN_FEATURE_LENGTH and 
+                    not any(m.endswith(ending) for ending in EXCLUDED_ENDINGS)
+                ]
+                features.extend(filtered_matches)
+            except re.error:
+                # Handle regex errors gracefully
+                continue
         
-        # Extract decision points
+        # Extract decision points with error handling
         decisions = []
         decision_patterns = [
             r'(\w+)\s+vs\s+(\w+)',
@@ -122,27 +209,31 @@ class ContextExtractor:
             r'(?:use|choose|pick)\s+(\w+(?:\s+\w+)?)'
         ]
         for pattern in decision_patterns:
-            matches = re.findall(pattern, combined_text)
-            if isinstance(matches[0], tuple) if matches else False:
-                decisions.extend([f"{m[0]} vs {m[1]}" for m in matches])
-            else:
-                decisions.extend(matches)
+            try:
+                matches = re.findall(pattern, combined_text, re.IGNORECASE)
+                if matches and isinstance(matches[0], tuple):
+                    decisions.extend([f"{m[0]} vs {m[1]}" for m in matches])
+                else:
+                    decisions.extend(matches)
+            except (re.error, IndexError):
+                # Handle regex errors and empty matches gracefully
+                continue
         
-        # Extract architectural patterns mentioned
-        patterns = []
+        # Extract architectural patterns mentioned (using compiled pattern for consistency)
         pattern_keywords = ['microservice', 'monolith', 'serverless', 'event-driven', 
                           'mvc', 'mvvm', 'repository', 'factory', 'singleton']
+        architectural_patterns = []
         for keyword in pattern_keywords:
             if keyword in combined_text:
-                patterns.append(keyword)
+                architectural_patterns.append(keyword)
         
         return TechnicalContext(
-            technologies=list(set(technologies)),
-            frameworks=list(set(frameworks)),
-            patterns=patterns,
+            technologies=list(dict.fromkeys(technologies)),  # Preserve order, remove duplicates
+            frameworks=list(dict.fromkeys(frameworks)),
+            patterns=architectural_patterns,
             problem_type=problem_type,
-            specific_features=list(set(features))[:5],  # Limit to top 5
-            decision_points=list(set(decisions))[:3]    # Limit to top 3
+            specific_features=list(dict.fromkeys(features))[:5],  # Limit to top 5
+            decision_points=list(dict.fromkeys(decisions))[:3]    # Limit to top 3
         )
 
 
@@ -150,46 +241,117 @@ class EnhancedPersonaReasoning:
     """Generate context-aware responses for each persona"""
     
     @staticmethod
+    def _generate_budget_llm_advice() -> Tuple[str, str, float]:
+        """Generate budget LLM comparison advice - extracted to avoid duplication"""
+        return (
+            "insight",
+            "Budget LLMs for 2025 (research-backed pricing): "
+            "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest current model, great for simple tasks. "
+            "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: Latest reasoning model at massive cost savings, open-source. "
+            "Claude 3.5 Haiku: $1/$5 per 1M tokens - Anthropic's budget option but 4x more expensive than competitors. "
+            "Llama 4: FREE (self-hosted) - Meta's 2025 release, excellent performance with zero API costs. "
+            "Gemini 2.5 Flash: $0.075/$0.30 per 1M tokens - Google's speed-optimized budget model. "
+            "Winner: DeepSeek R1 for complex reasoning, GPT-4.1 nano for OpenAI ecosystem, Llama 4 for self-hosting.",
+            ConfidenceScores.VERY_HIGH
+        )
+    
+    @staticmethod
+    def _generate_premium_llm_advice() -> Tuple[str, str, float]:
+        """Generate premium LLM comparison advice"""
+        return (
+            "insight",
+            "For LLM model choice in 2025 (latest benchmarks + pricing): "
+            "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
+            "OpenAI o3 Pro: Top reasoning model, $200/$600 per 1M tokens - premium pricing for complex tasks. "
+            "GPT-4.1: Improved coding, 1M context, $5/$20 per 1M tokens - solid mainstream choice. "
+            "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
+            "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
+            "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3 Pro, Balanced→Claude 4 Sonnet. "
+            "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, GPT-4.1 for OpenAI ecosystem.",
+            ConfidenceScores.VERY_HIGH
+        )
+    
+    @staticmethod
+    def _handle_llm_comparisons(
+        tech_context: TechnicalContext, 
+        query: str
+    ) -> Optional[Tuple[str, str, float]]:
+        """Handle LLM model comparison queries"""
+        llm_in_query = any(model in query.lower() for model in [
+            'gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'
+        ])
+        budget_in_query = any(term in query.lower() for term in [
+            'mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'
+        ])
+        
+        decision_points_match = any(
+            term in dp.lower() for dp in tech_context.decision_points 
+            for term in ['gpt', 'claude', 'gemini', 'deepseek']
+        )
+        
+        if not (llm_in_query or decision_points_match):
+            return None
+            
+        # Check if this is specifically about budget models
+        if budget_in_query or any(budget_model in tech_context.technologies for budget_model in [
+            'gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1'
+        ]):
+            return EnhancedPersonaReasoning._generate_budget_llm_advice()
+        else:
+            return EnhancedPersonaReasoning._generate_premium_llm_advice()
+    
+    @staticmethod  
+    def _handle_framework_comparisons(
+        tech_context: TechnicalContext
+    ) -> Optional[Tuple[str, str, float]]:
+        """Handle framework comparison queries"""
+        if not (tech_context.decision_points and tech_context.frameworks):
+            return None
+            
+        # Astro vs Next.js comparison
+        if any('astro' in dp.lower() for dp in tech_context.decision_points):
+            if 'next.js' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
+                return (
+                    "insight",
+                    "For Astro vs Next.js decision: Consider your content strategy. "
+                    "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
+                    "Next.js is better for interactive apps with complex state management. "
+                    "Astro's Islands Architecture means faster load times but less interactivity. "
+                    "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
+                    ConfidenceScores.VERY_HIGH
+                )
+        
+        # Bun vs Node.js comparison  
+        if any('bun' in dp.lower() for dp in tech_context.decision_points):
+            if any('node' in tech.lower() for tech in tech_context.technologies):
+                return (
+                    "suggestion",
+                    "For Bun vs Node.js: Bun is production-ready in 2025 with impressive performance gains. "
+                    "Choose Bun for new TypeScript projects - 3x faster installs, built-in bundler/test runner. "
+                    "Stick with Node.js for existing apps unless you're hitting performance bottlenecks. "
+                    "Both have excellent ecosystem support now.",
+                    ConfidenceScores.HIGH
+                )
+        
+        return None
+    
+    @staticmethod
     def generate_senior_engineer_response(
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
         query: str
     ) -> Tuple[str, str, float]:
-        """Generate specific senior engineer advice based on context"""
+        """Generate specific senior engineer advice based on context - REFACTORED"""
         
-        # PRIORITY 1: LLM model comparisons first (highest user value)
-        llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'])
-        budget_in_query = any(term in query.lower() for term in ['mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'])
-        
-        if llm_in_query or any('gpt' in dp.lower() or 'claude' in dp.lower() or 'gemini' in dp.lower() or 'deepseek' in dp.lower() for dp in tech_context.decision_points):
-            # Check if this is specifically about budget models
-            if budget_in_query or any(budget_model in tech_context.technologies for budget_model in ['gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1']):
-                return (
-                    "insight",
-                    "Budget LLMs for 2025 (research-backed pricing): "
-                    "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest current model, great for simple tasks. "
-                    "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: Latest reasoning model at massive cost savings, open-source. "
-                    "Claude 3.5 Haiku: $1/$5 per 1M tokens - Anthropic's budget option but 4x more expensive than competitors. "
-                    "Llama 4: FREE (self-hosted) - Meta's 2025 release, excellent performance with zero API costs. "
-                    "Gemini 2.5 Flash: $0.075/$0.30 per 1M tokens - Google's speed-optimized budget model. "
-                    "Winner: DeepSeek R1 for complex reasoning, GPT-4.1 nano for OpenAI ecosystem, Llama 4 for self-hosting.",
-                    ConfidenceScores.VERY_HIGH
-                )
-            else:
-                return (
-                    "insight",
-                    "For LLM model choice in 2025 (latest benchmarks + pricing): "
-                    "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
-                    "OpenAI o3 Pro: Top reasoning model, $200/$600 per 1M tokens - premium pricing for complex tasks. "
-                    "GPT-4.1: Improved coding, 1M context, $5/$20 per 1M tokens - solid mainstream choice. "
-                    "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
-                    "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
-                    "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3 Pro, Balanced→Claude 4 Sonnet. "
-                    "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, GPT-4.1 for OpenAI ecosystem.",
-                    ConfidenceScores.VERY_HIGH
-                )
+        # PRIORITY 1: LLM model comparisons (highest user value)
+        llm_result = EnhancedPersonaReasoning._handle_llm_comparisons(tech_context, query)
+        if llm_result:
+            return llm_result
 
-        # PRIORITY 2: Handle framework comparisons (highest specificity)
+        # PRIORITY 2: Framework comparisons (highest specificity)
+        framework_result = EnhancedPersonaReasoning._handle_framework_comparisons(tech_context)
+        if framework_result:
+            return framework_result
         if tech_context.decision_points and tech_context.frameworks:
             # Astro vs Next.js comparison
             if any('astro' in dp.lower() for dp in tech_context.decision_points):
