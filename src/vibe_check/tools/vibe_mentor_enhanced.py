@@ -43,6 +43,8 @@ class ContextExtractor:
         'payments': ['stripe', 'paypal', 'square', 'braintree', 'razorpay', 'lemon squeezy', 'paddle'],
         'api': ['rest', 'graphql', 'grpc', 'websocket', 'webhook', 'trpc', 'prisma', 'apollo', 'relay', 'urql'],
         'ai': ['openai', 'claude', 'gpt', 'llm', 'embedding', 'vector', 'rag', 'pinecone', 'weaviate', 'qdrant', 'langchain', 'llamaindex', 'vercel ai', 'huggingface'],
+        'vector_dbs': ['pinecone', 'weaviate', 'qdrant', 'chroma', 'milvus', 'pgvector', 'zilliz', 'faiss'],
+        'graph_dbs': ['neo4j', 'falkordb', 'neptune', 'arangodb', 'tigergraph', 'orientdb', 'nebula', 'dgraph'],
         'ai_frameworks': ['langchain', 'llamaindex', 'crewai', 'autogen', 'semantic kernel', 'langgraph', 'openai swarm', 'haystack', 'dspy', 'guidance'],
         'llm_models': ['gpt-4', 'gpt-4o', 'claude-3.5', 'claude', 'gemini', 'llama', 'mistral', 'anthropic', 'openai', 'deepseek', 'qwen'],
         'local_llm': ['ollama', 'llama.cpp', 'vllm', 'text-generation-webui', 'localai', 'jan'],
@@ -632,19 +634,33 @@ class EnhancedPersonaReasoning:
     ) -> Tuple[str, str, float]:
         """Generate specific AI engineer advice based on context"""
         
-        # RAG/Vector DB systems (comprehensive 2025 research)
+        # RAG/Vector DB systems (corrected 2025 research)
         if any(term in query.lower() for term in ['rag', 'vector', 'embedding']) or any(t in tech_context.technologies for t in ['rag', 'vector', 'embedding', 'pinecone', 'weaviate', 'qdrant', 'chroma']):
-            vector_techs = [t for t in tech_context.technologies if t in ['pinecone', 'weaviate', 'qdrant', 'chroma', 'vector', 'rag']]
             return (
                 "insight",
-                f"For RAG systems in 2025 (latest research): "
-                f"Vector DBs ranked by performance: Qdrant (fastest, lowest latency) > Pinecone (best managed) > Weaviate (most features) > Chroma (prototyping). "
-                f"Embeddings: OpenAI text-embedding-3-large (best quality, $0.00013/1K tokens) vs sentence-transformers (free, local, good quality). "
-                f"Chunking strategy: Semantic chunking beats fixed-size. Use 512-1024 tokens with 20% overlap. "
-                f"Must-haves: Hybrid search (vector + keyword) improves retrieval by 30%, metadata filtering for context. "
-                f"Framework: LlamaIndex for RAG-first, avoid LangChain complexity. "
-                f"Monitor retrieval quality first - it's usually the bottleneck, not generation.",
+                f"For RAG systems in 2025 (corrected benchmarks): "
+                f"Vector DBs by use case: Milvus (highest QPS), Zilliz (managed Milvus, lowest latency), Qdrant (good balance), Pinecone (ease of use), Weaviate (feature-rich), Chroma (prototyping). "
+                f"Real ranking: Milvus > Weaviate ≈ Qdrant > Pinecone > Chroma for performance. "
+                f"Embeddings: OpenAI text-embedding-3-large (best quality, $0.00013/1K) vs sentence-transformers all-MiniLM-L6-v2 (free, 80% quality). "
+                f"Chunking: Semantic > fixed-size. 512-1024 tokens, 20% overlap, respect document boundaries. "
+                f"Architecture: LlamaIndex for RAG, hybrid search (vector+keyword), metadata filtering, pgvector for simple cases. "
+                f"Monitor: retrieval precision@k matters more than generation quality.",
                 ConfidenceScores.VERY_HIGH
+            )
+        
+        # Graph Database systems
+        if any(term in query.lower() for term in ['graph', 'knowledge graph', 'neo4j', 'relationships']) or any(t in tech_context.technologies for t in ['neo4j', 'falkordb', 'neptune', 'arangodb']):
+            graph_dbs = [t for t in tech_context.technologies if t in ['neo4j', 'falkordb', 'neptune', 'arangodb', 'tigergraph']]
+            return (
+                "suggestion",
+                f"For graph databases in 2025: "
+                f"Performance: FalkorDB (sub-140ms p99) >> Neo4j (46.9s p99 in benchmarks), but Neo4j has massive ecosystem. "
+                f"Managed: Amazon Neptune (AWS), ArangoDB Cloud (multi-model). "
+                f"Use cases: Neo4j for mature ecosystems, FalkorDB for performance-critical AI/RAG, ArangoDB for multi-model needs. "
+                f"For knowledge graphs in RAG: FalkorDB offers Redis compatibility + graph performance. "
+                f"Architecture: Start with pgvector + basic relations, upgrade to dedicated graph DB when complexity increases. "
+                f"Don't over-engineer - most 'graph' problems are just foreign keys with extra steps.",
+                ConfidenceScores.HIGH
             )
         
         # General AI/LLM integration (not RAG)
