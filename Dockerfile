@@ -44,8 +44,6 @@ RUN pip install --no-cache-dir \
 # Copy source code
 COPY src/ ./src/
 COPY data/ ./data/
-COPY tests/ ./tests/
-COPY scripts/ ./scripts/
 
 # Change ownership to mcp user
 RUN chown -R mcp:mcp /app
@@ -70,7 +68,7 @@ FROM base as production
 # Copy only necessary files for production
 COPY src/ ./src/
 COPY data/ ./data/
-COPY scripts/ ./scripts/
+COPY VERSION .
 
 # Create config directory for mounting
 RUN mkdir -p /app/config && chown -R mcp:mcp /app
