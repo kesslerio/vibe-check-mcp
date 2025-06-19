@@ -39,6 +39,7 @@ from .tools.integration_pattern_analysis import (
 )
 from .tools.pr_review import review_pull_request
 from .tools.vibe_mentor import get_mentor_engine, _generate_summary
+from .tools.config_validation import validate_configuration, format_validation_results, log_validation_results, register_config_validation_tools
 
 # Configure logging
 logging.basicConfig(
@@ -56,6 +57,9 @@ mcp = FastMCP("Vibe Check MCP")
 
 # Register user diagnostic tools (essential for all users)
 register_diagnostic_tools(mcp)
+
+# Register configuration validation tools (Issue #98)
+register_config_validation_tools(mcp)
 
 # Register LLM-powered analysis tools
 register_llm_analysis_tools(mcp)
@@ -1224,6 +1228,8 @@ def server_status() -> Dict[str, Any]:
         "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
         "claude_cli_status - Essential: Check Claude CLI availability and version",
         "claude_cli_diagnostics - Essential: Diagnose Claude CLI timeout and recursion issues",
+        "validate_mcp_configuration - Comprehensive Claude CLI and MCP configuration validation (Issue #98 ✅ COMPLETE)",
+        "check_claude_cli_integration - Quick Claude CLI integration health check (Issue #98 ✅ COMPLETE)",
         "analyze_text_llm - Claude CLI content analysis with LLM reasoning",
         "analyze_pr_llm - Claude CLI PR review with comprehensive analysis",
         "analyze_code_llm - Claude CLI code analysis for anti-patterns",
@@ -1333,6 +1339,26 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
     """
     try:
         logger.info("🚀 Starting Vibe Check MCP Server...")
+        
+        # Configuration validation (Issue #98)
+        logger.info("🔍 Validating configuration for Claude CLI and MCP integration...")
+        can_start, validation_results = validate_configuration()
+        
+        # Log validation results
+        log_validation_results(validation_results)
+        
+        # Check if any critical validations failed
+        if not can_start:
+            logger.error("❌ Critical configuration validation failed - server cannot start safely")
+            print("\n" + format_validation_results(validation_results))
+            sys.exit(1)
+        
+        # Log success
+        warnings = [r for r in validation_results if not r.success and r.level.value == "warning"]
+        if warnings:
+            logger.warning(f"⚠️ Configuration validation completed with {len(warnings)} warnings")
+        else:
+            logger.info("✅ Configuration validation passed - all systems ready")
         
         # Quick engine validation
         logger.info("📊 Core detection engine: 87.5% accuracy, 0% false positives")
