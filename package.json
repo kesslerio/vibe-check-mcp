@@ -1,6 +1,6 @@
 {
   "name": "vibe-check-mcp",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Vibe Check MCP - Anti-pattern detection and mentoring for better engineering decisions",
   "main": "src/vibe_check/server.py",
   "bin": {

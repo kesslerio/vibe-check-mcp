@@ -43,6 +43,9 @@ class ContextExtractor:
         'payments': ['stripe', 'paypal', 'square', 'braintree', 'razorpay', 'lemon squeezy', 'paddle'],
         'api': ['rest', 'graphql', 'grpc', 'websocket', 'webhook', 'trpc', 'prisma', 'apollo', 'relay', 'urql'],
         'ai': ['openai', 'claude', 'gpt', 'llm', 'embedding', 'vector', 'rag', 'pinecone', 'weaviate', 'qdrant', 'langchain', 'llamaindex', 'vercel ai', 'huggingface'],
+        'ai_frameworks': ['langchain', 'llamaindex', 'crewai', 'autogen', 'semantic kernel', 'langgraph', 'openai swarm', 'haystack', 'dspy', 'guidance'],
+        'llm_models': ['gpt-4', 'gpt-4o', 'claude-3.5', 'claude', 'gemini', 'llama', 'mistral', 'anthropic', 'openai', 'deepseek', 'qwen'],
+        'local_llm': ['ollama', 'llama.cpp', 'vllm', 'text-generation-webui', 'localai', 'jan'],
         'testing': ['jest', 'pytest', 'cypress', 'playwright', 'vitest', 'testing library', 'storybook', 'chromatic'],
         'bundlers': ['vite', 'webpack', 'parcel', 'rollup', 'esbuild', 'swc', 'turbo', 'rspack'],
         'ci_cd': ['github actions', 'jenkins', 'gitlab ci', 'circleci', 'travis', 'buildkite', 'drone'],
@@ -141,8 +144,66 @@ class EnhancedPersonaReasoning:
     ) -> Tuple[str, str, float]:
         """Generate specific senior engineer advice based on context"""
         
-        # ENHANCEMENT: Prioritize technical context over patterns
-        # If we have specific technologies mentioned, give specific advice
+        # PRIORITY 1: Handle framework comparisons first (highest specificity)
+        if tech_context.decision_points and tech_context.frameworks:
+            # Astro vs Next.js comparison
+            if any('astro' in dp.lower() for dp in tech_context.decision_points):
+                if 'next.js' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
+                    return (
+                        "insight",
+                        "For Astro vs Next.js decision: Consider your content strategy. "
+                        "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
+                        "Next.js is better for interactive apps with complex state management. "
+                        "Astro's Islands Architecture means faster load times but less interactivity. "
+                        "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
+                        ConfidenceScores.VERY_HIGH
+                    )
+            
+            # Bun vs Node.js comparison  
+            if any('bun' in dp.lower() for dp in tech_context.decision_points):
+                if any('node' in tech.lower() for tech in tech_context.technologies):
+                    return (
+                        "suggestion",
+                        "For Bun vs Node.js: Bun is production-ready in 2025 with impressive performance gains. "
+                        "Choose Bun for new TypeScript projects - 3x faster installs, built-in bundler/test runner. "
+                        "Stick with Node.js for existing apps unless you're hitting performance bottlenecks. "
+                        "Both have excellent ecosystem support now.",
+                        ConfidenceScores.HIGH
+                    )
+            
+            # AI Framework comparisons (based on 2025 research)
+            ai_frameworks_mentioned = [t for t in tech_context.technologies if t in ['langchain', 'llamaindex', 'crewai', 'autogen', 'semantic kernel', 'langgraph']]
+            ai_in_decisions = any(fw in query.lower() for fw in ['langchain', 'llamaindex', 'crewai', 'autogen'])
+            
+            if len(ai_frameworks_mentioned) >= 2 or ai_in_decisions:
+                return (
+                    "insight",
+                    f"For AI framework choice in 2025 (based on current research): "
+                    f"LlamaIndex wins for RAG - cleaner APIs, purpose-built for search/retrieval. "
+                    f"CrewAI is best for multi-agent systems but built on LangChain (inherits complexity). "
+                    f"LangGraph offers fine-grained control over agent workflows, well-designed for production. "
+                    f"AutoGen excels at autonomous code generation and agent-to-agent communication. "
+                    f"LangChain has massive ecosystem but heavily abstracted, difficult for simple tasks. "
+                    f"My 2025 advice: LlamaIndex for RAG, LangGraph for complex workflows, avoid LangChain for new projects.",
+                    ConfidenceScores.VERY_HIGH
+                )
+            
+            # LLM model comparisons (latest 2025 models and pricing)
+            llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3'])
+            if llm_in_query or any('gpt' in dp.lower() or 'claude' in dp.lower() or 'gemini' in dp.lower() for dp in tech_context.decision_points):
+                return (
+                    "insight",
+                    "For LLM model choice in 2025 (latest benchmarks + pricing): "
+                    "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
+                    "OpenAI o3: Strong reasoning, native tool use, $10/$40 per 1M tokens (80% cheaper than before). "
+                    "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
+                    "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
+                    "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3, Balanced→Claude 4 Sonnet. "
+                    "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, o3 for complex reasoning.",
+                    ConfidenceScores.VERY_HIGH
+                )
+        
+        # PRIORITY 2: Technology-specific advice
         if tech_context.technologies:
             tech = tech_context.technologies[0]
             
@@ -255,9 +316,22 @@ class EnhancedPersonaReasoning:
                     ConfidenceScores.HIGH
                 )
         
-        # Framework-specific advice (even without specific technologies)
-        if tech_context.frameworks and not tech_context.technologies:
+        # Framework-specific advice (prioritize frameworks over other technologies)
+        if tech_context.frameworks:
             framework = tech_context.frameworks[0]
+            
+            # Handle specific framework comparisons first
+            if tech_context.decision_points and any('astro' in dp.lower() for dp in tech_context.decision_points):
+                if 'next' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
+                    return (
+                        "insight",
+                        "For Astro vs Next.js decision: Consider your content strategy. "
+                        "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
+                        "Next.js is better for interactive apps with complex state management. "
+                        "Astro's Islands Architecture means faster load times but less interactivity. "
+                        "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
+                        ConfidenceScores.VERY_HIGH
+                    )
             
             if framework in ['react', 'vue', 'angular']:
                 return (
@@ -558,19 +632,18 @@ class EnhancedPersonaReasoning:
     ) -> Tuple[str, str, float]:
         """Generate specific AI engineer advice based on context"""
         
-        # Check for RAG/Vector DB first (more specific than general AI)
-        if any(term in query.lower() for term in ['rag', 'vector', 'embedding']) or any(t in tech_context.technologies for t in ['rag', 'vector', 'embedding', 'pinecone', 'weaviate']):
-            # This is a RAG-specific query
-            vector_techs = [t for t in tech_context.technologies if t in ['pinecone', 'weaviate', 'qdrant', 'vector', 'rag', 'openai', 'embedding']]
+        # RAG/Vector DB systems (comprehensive 2025 research)
+        if any(term in query.lower() for term in ['rag', 'vector', 'embedding']) or any(t in tech_context.technologies for t in ['rag', 'vector', 'embedding', 'pinecone', 'weaviate', 'qdrant', 'chroma']):
+            vector_techs = [t for t in tech_context.technologies if t in ['pinecone', 'weaviate', 'qdrant', 'chroma', 'vector', 'rag']]
             return (
                 "insight",
-                f"For {'RAG with ' + vector_techs[0] if vector_techs else 'RAG/vector'} systems: Don't build from scratch. "
-                f"1) Use LangChain/LlamaIndex for orchestration - they handle chunking, retrieval, and chain management, "
-                f"2) For vector storage: Pinecone (easiest), Weaviate (feature-rich), or Qdrant (self-hostable), "
-                f"3) Start with OpenAI embeddings (ada-002) - switch to open source later if needed, "
-                f"4) Implement hybrid search (vector + BM25) for 30% better results, "
-                f"5) Use metadata filtering to improve relevance. "
-                f"I've built 5 RAG systems - custom implementations always miss edge cases like token limits and context windows.",
+                f"For RAG systems in 2025 (latest research): "
+                f"Vector DBs ranked by performance: Qdrant (fastest, lowest latency) > Pinecone (best managed) > Weaviate (most features) > Chroma (prototyping). "
+                f"Embeddings: OpenAI text-embedding-3-large (best quality, $0.00013/1K tokens) vs sentence-transformers (free, local, good quality). "
+                f"Chunking strategy: Semantic chunking beats fixed-size. Use 512-1024 tokens with 20% overlap. "
+                f"Must-haves: Hybrid search (vector + keyword) improves retrieval by 30%, metadata filtering for context. "
+                f"Framework: LlamaIndex for RAG-first, avoid LangChain complexity. "
+                f"Monitor retrieval quality first - it's usually the bottleneck, not generation.",
                 ConfidenceScores.VERY_HIGH
             )
         
@@ -617,6 +690,33 @@ class EnhancedPersonaReasoning:
                 ConfidenceScores.GOOD
             )
         
+        
+        # AI Framework-specific recommendations
+        if any(fw in tech_context.technologies for fw in ['langchain', 'llamaindex', 'crewai', 'autogen']):
+            framework = next(fw for fw in tech_context.technologies if fw in ['langchain', 'llamaindex', 'crewai', 'autogen'])
+            return (
+                "insight",
+                f"For {framework} in 2025: "
+                f"LangChain: Use LangGraph for complex workflows, avoid deep nesting of chains. "
+                f"LlamaIndex: Perfect for RAG - use their query engines, don't build retrieval from scratch. "
+                f"CrewAI: Define clear agent roles and tasks, leverage their planning capabilities. "
+                f"AutoGen: Set up proper conversation patterns, use code execution agents carefully. "
+                f"All frameworks: Monitor token usage religiously and implement caching.",
+                ConfidenceScores.VERY_HIGH
+            )
+        
+        # Local vs Cloud LLM decision
+        if any(local in tech_context.technologies for local in ['ollama', 'llama.cpp', 'local']) and \
+           any(cloud in tech_context.technologies for cloud in ['openai', 'claude', 'gemini']):
+            return (
+                "suggestion",
+                "For local vs cloud LLMs: Consider your requirements: "
+                "Local (Ollama/Llama.cpp): Better for privacy, cost-effective at scale, no API limits. "
+                "Cloud (OpenAI/Claude): Superior quality, multimodal capabilities, faster time-to-market. "
+                "Hybrid approach works well: use cloud for prototyping, local for production if privacy/cost matters. "
+                "In 2025, local models like Llama 3.2 are surprisingly capable for many tasks.",
+                ConfidenceScores.HIGH
+            )
         
         # AI-assisted debugging
         if tech_context.problem_type == "debugging":
