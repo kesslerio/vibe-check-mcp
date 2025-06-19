@@ -23,7 +23,7 @@ from typing import Dict, Any, Optional
 try:
     from fastmcp import FastMCP
 except ImportError:
-    print("❌ FastMCP not installed. Install with: pip install fastmcp")
+    print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
     sys.exit(1)
 
 from .tools.analyze_text_nollm import analyze_text_demo

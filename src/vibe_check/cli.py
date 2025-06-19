@@ -20,6 +20,7 @@ from typing import List, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_check.core.vibe_config import get_vibe_config, vibe_message, vibe_error
 
 
 def parse_vibe_command(args: List[str]) -> Optional[dict]:
@@ -72,12 +73,13 @@ def analyze_github_issue(issue_number: int, repository: Optional[str] = None, mo
         if result.returncode == 0:
             return json.loads(result.stdout)
         else:
-            print(f"❌ MCP analysis failed: {result.stderr}")
+            print(vibe_error(f"MCP analysis went sideways: {result.stderr}"))
             return None
             
     except Exception as e:
-        print(f"⚠️  MCP integration unavailable: {e}")
-        print("💡 For full GitHub integration, ensure MCP server is configured")
+        vibe_config = get_vibe_config()
+        print(vibe_error(f"MCP integration isn't vibing: {e}"))
+        print(f"💫 {vibe_config.get_message('github_integration')}")
         return None
 
 
@@ -123,7 +125,7 @@ def test_cognee_case():
         print()
     
     if not results:
-        print("❌ No patterns detected - this should have detected infrastructure-without-implementation!")
+        print(vibe_error("Hmm, missed some vibes here - should've caught that infrastructure pattern!"))
         return False
     
     # Check if infrastructure pattern was detected with high confidence
@@ -153,7 +155,7 @@ def test_good_case():
     results = detector.analyze_text_for_patterns(good_text)
     
     if results:
-        print("❌ False positive detected:")
+        print(vibe_error("Whoa, false vibes alert:"))
         for result in results:
             print(format_detection_result(result))
         return False
@@ -259,12 +261,12 @@ def interactive_test():
                 for result in results:
                     print(format_detection_result(result))
             else:
-                print("\n✅ No anti-patterns detected")
+                print(f"\n{vibe_message('no_patterns')}")
         
         except KeyboardInterrupt:
             break
         except Exception as e:
-            print(f"Error: {e}")
+            print(vibe_error(str(e)))
     
     print("\nThanks for testing!")
 
@@ -287,14 +289,14 @@ def main():
                 )
                 
                 if result:
-                    print("✅ Analysis complete!")
+                    print(vibe_message('analysis_complete'))
                     if isinstance(result, dict):
                         print(f"📊 Patterns detected: {result.get('patterns_detected', 0)}")
                         if result.get('anti_patterns'):
                             for pattern in result['anti_patterns']:
                                 print(f"🚨 {pattern['type']}: {pattern.get('confidence', 0):.2f} confidence")
                 else:
-                    print("❌ Analysis failed - ensure MCP server is configured")
+                    print(vibe_error("Vibe check crashed - let's fix that MCP server setup"))
                 return
         
         # Legacy commands for testing

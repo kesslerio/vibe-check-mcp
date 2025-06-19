@@ -15,6 +15,7 @@ import logging
 from typing import Dict, Any
 
 from fastmcp import FastMCP
+from vibe_check.core.vibe_config import get_vibe_config, vibe_message
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +63,15 @@ def register_diagnostic_tools(mcp: FastMCP) -> None:
                             "stderr": version_result.stderr.strip(),
                             "exit_code": version_result.returncode
                         },
-                        "status": "✅ Claude CLI is available and working"
+                        "vibe": "✅ Claude CLI is vibing perfectly"
                     }
                 else:
                     return {
                         "available": False,
                         "error": "Claude CLI not found in PATH",
                         "which_output": which_result.stderr.strip(),
-                        "status": "❌ Claude CLI not found",
-                        "suggestion": "Install Claude CLI or add it to your PATH"
+                        "vibe": "❌ Claude CLI went missing",
+                        "fix_the_vibe": "Get Claude CLI installed or add it to your PATH"
                     }
             
             loop = asyncio.get_event_loop()
@@ -81,7 +82,7 @@ def register_diagnostic_tools(mcp: FastMCP) -> None:
             return {
                 "available": False,
                 "error": f"Error checking Claude CLI availability: {str(e)}",
-                "status": "⚠️ Unable to check Claude CLI status",
+                "vibe": "⚠️ Can't read Claude CLI's vibe right now",
                 "suggestion": "Check your system configuration and try again"
             }
 
@@ -144,11 +145,11 @@ def register_diagnostic_tools(mcp: FastMCP) -> None:
             
         # Generate user-friendly status
         if risk_level == "low":
-            status = "✅ Claude CLI should work normally"
+            vibe = "✅ Claude CLI vibes are looking good"
         elif risk_level == "medium":
-            status = "⚠️ Claude CLI may experience timeouts"
+            vibe = "⚠️ Claude CLI might get moody with timeouts"
         else:
-            status = "❌ Claude CLI likely to have issues"
+            vibe = "❌ Claude CLI vibes are way off"
             
         # Add general recommendations
         if not recommendations:
@@ -160,7 +161,7 @@ def register_diagnostic_tools(mcp: FastMCP) -> None:
         execution_time = time.time() - start_time
         
         return {
-            "status": status,
+            "vibe": vibe,
             "risk_level": risk_level,
             "issues_found": issues_found,
             "recommendations": recommendations,
