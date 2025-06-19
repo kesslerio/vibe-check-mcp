@@ -8,16 +8,18 @@ Inspired by Clear-Thought's collaborative reasoning patterns with native impleme
 for vibe-check educational coaching.
 """
 
-from typing import Dict, Any, List, Optional, Literal, Union
+# Standard library
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
+from typing import Dict, Any, List, Optional, Literal, Union
 import json
 import logging
 import secrets
-from datetime import datetime
 
-from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
+# Local imports
 from ..core.pattern_detector import PatternDetector
+from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
 from ..tools.analyze_text_nollm import analyze_text_demo
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ class PatternHandler:
     def has_pattern(patterns: List[Dict[str, Any]], pattern_type: str) -> bool:
         """Check if a specific pattern type exists in the patterns list"""
         try:
-            return any(p.get("pattern_type") == pattern_type for p in patterns)
+            return any(p.get("pattern_type") == pattern_type for p in patterns if isinstance(p, dict))
         except (TypeError, AttributeError):
             return False
 
@@ -304,7 +306,7 @@ class VibeMentorEngine:
     ) -> CollaborativeReasoningSession:
         """Initialize a new collaborative reasoning session"""
 
-        session_id = session_id or f"mentor-session-{secrets.token_hex(8)}"
+        session_id = session_id or f"mentor-session-{int(datetime.now().timestamp())}-{secrets.token_hex(4)}"
 
         session = CollaborativeReasoningSession(
             topic=topic,
@@ -747,3 +749,9 @@ def get_mentor_engine() -> VibeMentorEngine:
     if _mentor_engine is None:
         _mentor_engine = VibeMentorEngine()
     return _mentor_engine
+
+
+def cleanup_mentor_engine() -> None:
+    """Clear global engine state for testing/cleanup"""
+    global _mentor_engine
+    _mentor_engine = None

@@ -25,6 +25,7 @@ from vibe_check.tools.vibe_mentor import (
     ContributionData,
     CollaborativeReasoningSession,
     get_mentor_engine,
+    cleanup_mentor_engine,
     _generate_summary,
 )
 
@@ -354,9 +355,7 @@ class TestGetMentorEngine:
     def test_get_mentor_engine_singleton(self):
         """Test that get_mentor_engine returns singleton instance"""
         # Clear any existing instance
-        import vibe_check.tools.vibe_mentor as mentor_module
-
-        mentor_module._mentor_engine = None
+        cleanup_mentor_engine()
 
         # First call
         engine1 = get_mentor_engine()
@@ -366,6 +365,9 @@ class TestGetMentorEngine:
         # Should return same instance
         assert engine1 is engine2
         assert isinstance(engine1, VibeMentorEngine)
+        
+        # Cleanup after test
+        cleanup_mentor_engine()
 
 
 class TestVibeCheckMentorIntegration:
