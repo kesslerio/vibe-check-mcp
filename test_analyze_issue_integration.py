@@ -44,7 +44,7 @@ async def test_analyze_issue_integration():
         # Test basic analysis mode (should always work)
         print("4. Testing basic analysis mode...")
         try:
-            result = analyzer.analyze_issue_basic(
+            result = await analyzer.analyze_issue_basic(
                 issue_number=65,  # This issue
                 repository="kesslerio/vibe-check-mcp",
                 detail_level="standard"

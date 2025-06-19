@@ -237,7 +237,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
                 "fallback_recommendation": "Use basic analysis mode"
             }
     
-    def analyze_issue_basic(
+    async def analyze_issue_basic(
         self,
         issue_number: int,
         repository: Optional[str] = None,
@@ -349,7 +349,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             logger.info(f"Starting hybrid analysis for issue #{issue_number}")
             
             # Run basic pattern detection first (fast)
-            basic_result = self.analyze_issue_basic(
+            basic_result = await self.analyze_issue_basic(
                 issue_number=issue_number,
                 repository=repository,
                 detail_level=detail_level
@@ -448,9 +448,14 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
         if repository is None:
             repository = "kesslerio/vibe-check-mcp"  # Default to this project
         
-        # Validate repository format
+        # Validate repository format with enhanced security
         if "/" not in repository:
             raise ValueError("Repository must be in format 'owner/repo'")
+        
+        # Sanitize repository input to prevent injection
+        import re
+        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]/[a-zA-Z0-9][a-zA-Z0-9._-]*[a-zA-Z0-9]$', repository):
+            raise ValueError("Repository format contains invalid characters")
         
         try:
             # Get repository and issue
@@ -703,12 +708,36 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
         Returns:
             Pattern detection analysis (original format)
         """
-        return self.analyze_issue_basic(
-            issue_number=issue_number,
-            repository=repository,
-            focus_patterns=focus_patterns,
-            detail_level=detail_level
-        )
+        # Handle async call for backward compatibility
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're already in an async context, create a new thread
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, self.analyze_issue_basic(
+                        issue_number=issue_number,
+                        repository=repository,
+                        focus_patterns=focus_patterns,
+                        detail_level=detail_level
+                    ))
+                    return future.result()
+            else:
+                return loop.run_until_complete(self.analyze_issue_basic(
+                    issue_number=issue_number,
+                    repository=repository,
+                    focus_patterns=focus_patterns,
+                    detail_level=detail_level
+                ))
+        except Exception:
+            # Fallback: run in new event loop
+            return asyncio.run(self.analyze_issue_basic(
+                issue_number=issue_number,
+                repository=repository,
+                focus_patterns=focus_patterns,
+                detail_level=detail_level
+            ))
 
 
 # Backward compatibility alias for existing tests
@@ -865,11 +894,12 @@ def analyze_issue_legacy(
         analyzer = get_enhanced_github_analyzer(enable_claude_cli=False)
         
         # Run basic analysis for full backward compatibility
-        result = analyzer.analyze_issue_basic(
+        import asyncio
+        result = asyncio.run(analyzer.analyze_issue_basic(
             issue_number=issue_number,
             repository=repository,
             detail_level=detail_level
-        )
+        ))
         
         # Legacy vibe check integration (if post_comment is requested)
         if post_comment:
