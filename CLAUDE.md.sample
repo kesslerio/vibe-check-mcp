@@ -29,14 +29,17 @@ When encountering existing complex code:
 - TEST if standard APIs achieve same result
 - Use mcp__clear-thought-server__mentalmodel(First Principles) for analysis
 
-ENGINEERING RED FLAGS (Stop and reassess):
+ENGINEERING RED FLAGS (Auto-trigger vibe_check_mentor):
 - Building workarounds for third-party bugs instead of using different APIs
-- Spending >2 hours without checking official docs
+- Spending >30 minutes without checking official docs
 - Assuming complex code is necessary without testing alternatives
 - Continuing investment due to sunk cost fallacy
+- Any "should I build X vs Y" decisions
+- Integration/architecture planning sessions
 
 THIRD-PARTY INTEGRATION PROTOCOL:
 Phase 1: Research & Validation
+- MANDATORY: vibe_check_mentor(query="Integration approach for X API", reasoning_depth="standard")
 - Review standard docs for simplest API patterns
 - Create minimal POC with real data
 - Use mcp__clear-thought-server__mentalmodel(First Principles) if complex
@@ -413,6 +416,20 @@ Vibe Check MCP TOOLS:
 - mcp__vibe-check__analyze_text_demo(text, detail_level?)
 - mcp__vibe-check__server_status()
 - mcp__vibe-check__analyze_doom_loops("${tech_discussion}", "technology_choice")
+
+MANDATORY COLLABORATIVE REASONING (auto-triggered by red flags):
+
+Architecture decisions (MANDATORY before implementation):
+vibe_check_mentor(query="Should I build X or use Y?", reasoning_depth="standard")
+
+Integration planning (MANDATORY for all APIs):
+vibe_check_mentor(query="Custom HTTP client vs SDK for Z API", reasoning_depth="comprehensive")
+
+Technical debt assessment:
+vibe_check_mentor(query="Consolidate auth systems?", context="3 different implementations", reasoning_depth="standard")
+
+Stuck >30 minutes (MANDATORY intervention):
+vibe_check_mentor(query="Problem description", context="what I've tried", reasoning_depth="quick")
 
 
 DEVELOPMENT WORKFLOW:

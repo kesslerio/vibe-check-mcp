@@ -5,7 +5,7 @@ Provides file type-specific analysis guidelines and prompts based on the
 Claude GitHub action patterns. Each file type has specific review criteria.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 import logging
 

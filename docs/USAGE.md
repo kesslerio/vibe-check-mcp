@@ -43,6 +43,177 @@ All tools follow the crystal clear `_llm` / `_nollm` naming pattern:
 - `productivity_intervention` - Emergency productivity intervention and loop breaking
 - `reset_session_tracking` - Reset session tracking for fresh start
 
+### Collaborative Reasoning Tools (🧠 New in Issue #126)
+- `vibe_check_mentor` - Senior engineer collaborative reasoning with multi-persona feedback
+
+## Vibe Check Mentor: Collaborative Engineering Reasoning
+
+The `vibe_check_mentor` tool combines vibe-check pattern detection with collaborative reasoning, providing senior engineer feedback through multiple engineering perspectives. Unlike the traditional vibe coaching framework, this tool simulates a technical review meeting with three distinct engineering personas.
+
+### How It Differs from Vibe Coaching
+
+**Traditional Vibe Coaching Framework:**
+- Single perspective analysis
+- Educational coaching approach
+- Focus on teaching anti-pattern recognition
+- Generic recommendations
+
+**Vibe Check Mentor (Collaborative Reasoning):**
+- Multi-persona engineering perspectives
+- Real-time collaborative discussion simulation
+- Context-aware, pattern-driven responses
+- Actionable engineering insights from experienced viewpoints
+
+### Engineering Personas
+
+**🏗️ Senior Software Engineer**
+- 15+ years experience building scalable systems
+- Focus: Maintainability, proven solutions, technical debt
+- Perspective: "Use established patterns, document everything"
+- Specialty: Architecture decisions, avoiding technical debt
+
+**🚀 Product Engineer** 
+- Startup experience, 50+ feature shipments
+- Focus: Rapid delivery, user value, MVP approach
+- Perspective: "Ship fast, iterate based on feedback"
+- Specialty: Balancing speed vs perfection, user-focused decisions
+
+**🤖 AI/ML Engineer**
+- Deep learning research, extensive LLM integrations
+- Focus: Human-AI collaboration, modern tooling
+- Perspective: "Leverage AI tools for 10x productivity"
+- Specialty: AI integration patterns, tool-augmented development
+
+### Practical Use Cases
+
+#### 1. Integration Decision Making
+```
+Query: "Should I build a custom HTTP client or use the official SDK?"
+Context: "Need to integrate with Stripe API for payments"
+
+Expected Output:
+- Senior Engineer: "Use official SDK - handles edge cases you'll miss"
+- Product Engineer: "Ship with SDK this week, iterate if needed"  
+- AI Engineer: "SDKs have better error handling and rate limiting"
+- Consensus: Use official SDK, prototype quickly
+```
+
+#### 2. Architecture Decisions
+```
+Query: "Microservices vs monolith for our startup?"
+Context: "5-person team, early stage product"
+
+Expected Output:
+- Senior Engineer: "Start monolith, split when pain points emerge"
+- Product Engineer: "Monolith = faster shipping, focus on users"
+- AI Engineer: "Modern tools make monolith maintenance easier"
+- Recommendation: Monolith with clear module boundaries
+```
+
+#### 3. Technical Debt Assessment
+```
+Query: "We have 3 different authentication systems, should we consolidate?"
+Context: "Legacy system, new OAuth, and custom JWT implementation"
+
+Expected Output:
+- Senior Engineer: "Technical debt is killing velocity"
+- Product Engineer: "What's the user impact of consolidation?"
+- AI Engineer: "Use migration tools to automate the process"
+- Action Plan: Phased consolidation starting with highest-impact areas
+```
+
+### Usage Examples
+
+**🚀 Quick Consultation (1 perspective):**
+```
+vibe_check_mentor(
+    query="Custom auth vs Auth0?",
+    reasoning_depth="quick"
+)
+```
+
+**📋 Standard Review (2 perspectives):**
+```
+vibe_check_mentor(
+    query="Should we rewrite our Python API in Go?",
+    context="Performance issues with current system",
+    reasoning_depth="standard"
+)
+```
+
+**🔍 Comprehensive Analysis (3 perspectives):**
+```
+vibe_check_mentor(
+    query="GraphQL vs REST for our mobile app API?",
+    context="React Native app, complex data relationships",
+    reasoning_depth="comprehensive"
+)
+```
+
+**📝 Session Continuation:**
+```
+vibe_check_mentor(
+    query="What about caching strategies?",
+    session_id="mentor-session-12345",
+    continue_session=true,
+    reasoning_depth="standard"
+)
+```
+
+### Session Management
+
+The mentor tool maintains conversation context across multiple queries:
+
+- **Session ID**: Auto-generated or custom for tracking
+- **Reasoning Depth**: `quick` (1), `standard` (2), `comprehensive` (3)
+- **Continue Session**: Build on previous discussion
+- **Context**: Additional background information
+
+### Output Format
+
+The tool provides structured collaborative reasoning output:
+
+**Session Summary:**
+- Topic and current stage
+- Active persona and iteration count
+- Total contributions
+
+**Multi-Persona Contributions:**
+- Persona name and expertise
+- Contribution type (insight, concern, suggestion)
+- Confidence level and reasoning
+
+**Synthesis:**
+- Consensus points across personas
+- Key insights and recommendations
+- Immediate actions and things to avoid
+- Final recommendation
+
+### When to Use Vibe Check Mentor
+
+**Use Mentor When:**
+- Making significant technical decisions
+- Need multiple engineering perspectives
+- Want actionable, context-specific advice
+- Dealing with trade-offs between speed and quality
+- Evaluating technology choices
+
+**Use Traditional Coaching When:**
+- Learning about anti-patterns
+- Educational content about best practices
+- Generic guidance on engineering practices
+- Understanding why certain patterns are problematic
+
+### Integration with Pattern Detection
+
+The mentor tool leverages vibe-check's pattern detection engine (87.5% accuracy) to inform persona responses:
+
+- **Infrastructure Without Implementation**: Senior engineer warns about premature optimization
+- **Custom Solution First**: Product engineer suggests validating with official tools
+- **Analysis Paralysis**: AI engineer recommends rapid prototyping with modern tools
+
+Each persona responds based on detected patterns, providing contextually relevant advice that addresses the specific anti-patterns in your query.
+
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
 - `claude_cli_diagnostics` - Diagnose Claude CLI issues
