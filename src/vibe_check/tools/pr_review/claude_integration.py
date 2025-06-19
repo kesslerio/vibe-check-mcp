@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import tempfile
 import time
@@ -102,7 +103,7 @@ class ClaudeIntegration:
         model: str = "sonnet"
     ) -> Any:
         """
-        Execute Claude CLI with specific model support.
+        Execute Claude CLI with specific model support using secure subprocess execution.
         
         Args:
             prompt: The prompt to send to Claude
@@ -113,24 +114,19 @@ class ClaudeIntegration:
             ClaudeCliResult with execution details
         """
         self.logger.info(f"🔍 Running Claude analysis with model: {model}")
+        start_time = time.time()
         
-        # Create a temporary executable script that includes the model flag
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
-            # Write a bash script that calls claude with the model flag
-            f.write(f"""#!/bin/bash
-cd $HOME
-{self.external_claude.claude_cli_path} --model {model} -p "{prompt.replace('"', '\\"')}"
-""")
-            script_path = f.name
+        # Build command arguments securely - no shell execution needed
+        command_args = [
+            self.external_claude.claude_cli_path,
+            "--model", model,
+            "-p", prompt
+        ]
         
         try:
-            # Make the script executable
-            os.chmod(script_path, 0o755)
-            
-            # Execute the script
+            # Execute Claude CLI directly with argument list (no shell)
             process = await asyncio.create_subprocess_exec(
-                script_path,
+                *command_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=os.path.expanduser("~")
@@ -148,26 +144,36 @@ cd $HOME
                     success=False,
                     error=f"Claude CLI timed out after {self.external_claude.timeout_seconds} seconds",
                     exit_code=-1,
-                    command_used=f"claude --model {model}",
+                    execution_time=time.time() - start_time,
+                    command_used=f"claude --model {model} -p [PROMPT]",
                     task_type=task_type
                 )
             
             success = process.returncode == 0
             output = stdout.decode('utf-8', errors='replace') if stdout else ""
             error = stderr.decode('utf-8', errors='replace') if stderr else ""
+            execution_time = time.time() - start_time
             
             return ClaudeCliResult(
                 success=success,
                 output=output,
                 error=error,
                 exit_code=process.returncode,
-                command_used=f"claude --model {model}",
+                execution_time=execution_time,
+                command_used=f"claude --model {model} -p [PROMPT]",
                 task_type=task_type
             )
-        finally:
-            # Clean up the temporary script
-            if os.path.exists(script_path):
-                os.unlink(script_path)
+            
+        except Exception as e:
+            self.logger.error(f"❌ Claude CLI execution failed: {e}")
+            return ClaudeCliResult(
+                success=False,
+                error=f"Execution failed: {str(e)}",
+                exit_code=-1,
+                execution_time=time.time() - start_time,
+                command_used=f"claude --model {model} -p [PROMPT]",
+                task_type=task_type
+            )
     
     async def run_claude_analysis(
         self, 

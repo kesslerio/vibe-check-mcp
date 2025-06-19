@@ -161,6 +161,66 @@ class TestEnhancedPRReview:
             assert 'common_issues' in guidelines
             assert len(guidelines['focus_areas']) > 0
             assert len(guidelines['common_issues']) > 0
+    
+    def test_file_type_detection_edge_cases(self):
+        """Test file type detection with edge cases."""
+        analyzer = FileTypeAnalyzer()
+        
+        # Test edge cases
+        assert analyzer._detect_file_type("file.") == "other"  # Empty extension
+        assert analyzer._detect_file_type("file") == "other"  # No extension
+        assert analyzer._detect_file_type("file.unknown") == "other"  # Unknown extension
+        assert analyzer._detect_file_type("test.spec.js") == "test"  # Multiple dots
+        assert analyzer._detect_file_type("src/api/routes.py") == "api"  # Path-based detection
+        
+    @pytest.mark.asyncio
+    async def test_claude_integration_error_handling(self):
+        """Test Claude integration error handling."""
+        with patch('src.vibe_check.tools.pr_review.claude_integration.ClaudeCliExecutor') as mock_executor:
+            # Setup mock to simulate failure
+            mock_instance = Mock()
+            mock_instance.claude_cli_path = "claude"
+            mock_instance.timeout_seconds = 60
+            mock_executor.return_value = mock_instance
+            
+            from src.vibe_check.tools.pr_review.claude_integration import ClaudeIntegration
+            integration = ClaudeIntegration()
+            
+            # Test timeout scenario
+            with patch('asyncio.create_subprocess_exec') as mock_subprocess:
+                mock_process = Mock()
+                mock_process.communicate = AsyncMock(side_effect=asyncio.TimeoutError())
+                mock_process.kill = Mock()
+                mock_process.wait = AsyncMock()
+                mock_subprocess.return_value = mock_process
+                
+                result = await integration._execute_with_model("test prompt", "pr_review", "sonnet")
+                
+                assert not result.success
+                assert "timed out" in result.error
+                assert result.exit_code == -1
+    
+    def test_security_priority_detection(self):
+        """Test that security-sensitive files are properly prioritized."""
+        analyzer = FileTypeAnalyzer()
+        
+        security_files = [
+            {"filename": "src/api/auth.py"},
+            {"filename": "config/database.json"},
+            {"filename": "migrations/create_users.sql"},
+            {"filename": ".env"},
+            {"filename": "secrets.yaml"}
+        ]
+        
+        result = analyzer.analyze_files(security_files)
+        
+        # Should have priority checks for security-sensitive files
+        assert len(result['priority_checks']) > 0
+        
+        priority_types = [check['type'] for check in result['priority_checks']]
+        assert 'api' in priority_types
+        assert 'config' in priority_types
+        assert 'sql' in priority_types
 
 
 if __name__ == "__main__":

@@ -155,7 +155,7 @@ class FileTypeAnalyzer:
         }
     }
     
-    def analyze_files(self, files: List[Dict[str, any]]) -> Dict[str, any]:
+    def analyze_files(self, files: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Analyze files and group by type with specific guidelines.
         
@@ -201,7 +201,7 @@ class FileTypeAnalyzer:
         
         return analysis
     
-    def _group_files_by_type(self, files: List[Dict[str, any]]) -> Dict[str, List[Dict]]:
+    def _group_files_by_type(self, files: List[Dict[str, Any]]) -> Dict[str, List[Dict]]:
         """Group files by their detected type."""
         file_groups = {}
         
@@ -236,18 +236,10 @@ class FileTypeAnalyzer:
                     if pattern in path.name.lower():
                         return file_type
         
-        # Default to general based on extension
-        ext = path.suffix.lower()
-        if ext in ['.py']:
-            return 'python'
-        elif ext in ['.js', '.jsx']:
-            return 'javascript'
-        elif ext in ['.ts', '.tsx']:
-            return 'typescript'
-        
+        # No match found in patterns, return 'other'
         return 'other'
     
-    def generate_file_type_prompt(self, file_type_analysis: Dict[str, any]) -> str:
+    def generate_file_type_prompt(self, file_type_analysis: Dict[str, Any]) -> str:
         """Generate file type-specific review prompt section."""
         if not file_type_analysis['type_specific_analysis']:
             return ""
