@@ -16,9 +16,14 @@ from .vibe_mentor import (
     ConfidenceScores, CollaborativeReasoningSession
 )
 
+# Import strategy pattern components
+from ..strategies.response_strategies import get_strategy_manager, TechnicalContext
+
 # Constants for improved maintainability
 MIN_FEATURE_LENGTH = 3
 MAX_QUERY_LENGTH = 10000  # Prevent ReDoS attacks
+MAX_FEATURES = 5  # Maximum features to extract
+MAX_DECISION_POINTS = 3  # Maximum decision points to track
 EXCLUDED_ENDINGS = [' for', ' with', ' by', ' in', ' on']
 REGEX_TIMEOUT = 1.0  # seconds
 
@@ -232,8 +237,8 @@ class ContextExtractor:
             frameworks=list(dict.fromkeys(frameworks)),
             patterns=architectural_patterns,
             problem_type=problem_type,
-            specific_features=list(dict.fromkeys(features))[:5],  # Limit to top 5
-            decision_points=list(dict.fromkeys(decisions))[:3]    # Limit to top 3
+            specific_features=list(dict.fromkeys(features))[:MAX_FEATURES],
+            decision_points=list(dict.fromkeys(decisions))[:MAX_DECISION_POINTS]
         )
 
 
@@ -241,491 +246,30 @@ class EnhancedPersonaReasoning:
     """Generate context-aware responses for each persona"""
     
     @staticmethod
-    def _generate_budget_llm_advice() -> Tuple[str, str, float]:
-        """Generate budget LLM comparison advice - extracted to avoid duplication"""
-        return (
-            "insight",
-            "Budget LLMs for 2025 (research-backed pricing): "
-            "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest current model, great for simple tasks. "
-            "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: Latest reasoning model at massive cost savings, open-source. "
-            "Claude 3.5 Haiku: $1/$5 per 1M tokens - Anthropic's budget option but 4x more expensive than competitors. "
-            "Llama 4: FREE (self-hosted) - Meta's 2025 release, excellent performance with zero API costs. "
-            "Gemini 2.5 Flash: $0.075/$0.30 per 1M tokens - Google's speed-optimized budget model. "
-            "Winner: DeepSeek R1 for complex reasoning, GPT-4.1 nano for OpenAI ecosystem, Llama 4 for self-hosting.",
-            ConfidenceScores.VERY_HIGH
-        )
-    
-    @staticmethod
-    def _generate_premium_llm_advice() -> Tuple[str, str, float]:
-        """Generate premium LLM comparison advice"""
-        return (
-            "insight",
-            "For LLM model choice in 2025 (latest benchmarks + pricing): "
-            "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
-            "OpenAI o3 Pro: Top reasoning model, $200/$600 per 1M tokens - premium pricing for complex tasks. "
-            "GPT-4.1: Improved coding, 1M context, $5/$20 per 1M tokens - solid mainstream choice. "
-            "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
-            "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
-            "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3 Pro, Balanced→Claude 4 Sonnet. "
-            "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, GPT-4.1 for OpenAI ecosystem.",
-            ConfidenceScores.VERY_HIGH
-        )
-    
-    @staticmethod
-    def _handle_llm_comparisons(
-        tech_context: TechnicalContext, 
-        query: str
-    ) -> Optional[Tuple[str, str, float]]:
-        """Handle LLM model comparison queries"""
-        llm_in_query = any(model in query.lower() for model in [
-            'gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'
-        ])
-        budget_in_query = any(term in query.lower() for term in [
-            'mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'
-        ])
-        
-        decision_points_match = any(
-            term in dp.lower() for dp in tech_context.decision_points 
-            for term in ['gpt', 'claude', 'gemini', 'deepseek']
-        )
-        
-        if not (llm_in_query or decision_points_match):
-            return None
-            
-        # Check if this is specifically about budget models
-        if budget_in_query or any(budget_model in tech_context.technologies for budget_model in [
-            'gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1'
-        ]):
-            return EnhancedPersonaReasoning._generate_budget_llm_advice()
-        else:
-            return EnhancedPersonaReasoning._generate_premium_llm_advice()
-    
-    @staticmethod  
-    def _handle_framework_comparisons(
-        tech_context: TechnicalContext
-    ) -> Optional[Tuple[str, str, float]]:
-        """Handle framework comparison queries"""
-        if not (tech_context.decision_points and tech_context.frameworks):
-            return None
-            
-        # Astro vs Next.js comparison
-        if any('astro' in dp.lower() for dp in tech_context.decision_points):
-            if 'next.js' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
-                return (
-                    "insight",
-                    "For Astro vs Next.js decision: Consider your content strategy. "
-                    "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
-                    "Next.js is better for interactive apps with complex state management. "
-                    "Astro's Islands Architecture means faster load times but less interactivity. "
-                    "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
-                    ConfidenceScores.VERY_HIGH
-                )
-        
-        # Bun vs Node.js comparison  
-        if any('bun' in dp.lower() for dp in tech_context.decision_points):
-            if any('node' in tech.lower() for tech in tech_context.technologies):
-                return (
-                    "suggestion",
-                    "For Bun vs Node.js: Bun is production-ready in 2025 with impressive performance gains. "
-                    "Choose Bun for new TypeScript projects - 3x faster installs, built-in bundler/test runner. "
-                    "Stick with Node.js for existing apps unless you're hitting performance bottlenecks. "
-                    "Both have excellent ecosystem support now.",
-                    ConfidenceScores.HIGH
-                )
-        
-        return None
-    
-    @staticmethod
     def generate_senior_engineer_response(
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
         query: str
     ) -> Tuple[str, str, float]:
-        """Generate specific senior engineer advice based on context - REFACTORED"""
+        """Generate specific senior engineer advice using strategy pattern - FULLY REFACTORED"""
         
-        # PRIORITY 1: LLM model comparisons (highest user value)
-        llm_result = EnhancedPersonaReasoning._handle_llm_comparisons(tech_context, query)
-        if llm_result:
-            return llm_result
-
-        # PRIORITY 2: Framework comparisons (highest specificity)
-        framework_result = EnhancedPersonaReasoning._handle_framework_comparisons(tech_context)
-        if framework_result:
-            return framework_result
-        if tech_context.decision_points and tech_context.frameworks:
-            # Astro vs Next.js comparison
-            if any('astro' in dp.lower() for dp in tech_context.decision_points):
-                if 'next.js' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
-                    return (
-                        "insight",
-                        "For Astro vs Next.js decision: Consider your content strategy. "
-                        "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
-                        "Next.js is better for interactive apps with complex state management. "
-                        "Astro's Islands Architecture means faster load times but less interactivity. "
-                        "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
-                        ConfidenceScores.VERY_HIGH
-                    )
-            
-            # Bun vs Node.js comparison  
-            if any('bun' in dp.lower() for dp in tech_context.decision_points):
-                if any('node' in tech.lower() for tech in tech_context.technologies):
-                    return (
-                        "suggestion",
-                        "For Bun vs Node.js: Bun is production-ready in 2025 with impressive performance gains. "
-                        "Choose Bun for new TypeScript projects - 3x faster installs, built-in bundler/test runner. "
-                        "Stick with Node.js for existing apps unless you're hitting performance bottlenecks. "
-                        "Both have excellent ecosystem support now.",
-                        ConfidenceScores.HIGH
-                    )
-            
-            # AI Framework comparisons (based on 2025 research)
-            ai_frameworks_mentioned = [t for t in tech_context.technologies if t in ['langchain', 'llamaindex', 'crewai', 'autogen', 'semantic kernel', 'langgraph']]
-            ai_in_decisions = any(fw in query.lower() for fw in ['langchain', 'llamaindex', 'crewai', 'autogen'])
-            
-            if len(ai_frameworks_mentioned) >= 2 or ai_in_decisions:
-                return (
-                    "insight",
-                    f"For AI framework choice in 2025 (based on current research): "
-                    f"LlamaIndex wins for RAG - cleaner APIs, purpose-built for search/retrieval. "
-                    f"CrewAI is best for multi-agent systems but built on LangChain (inherits complexity). "
-                    f"LangGraph offers fine-grained control over agent workflows, well-designed for production. "
-                    f"AutoGen excels at autonomous code generation and agent-to-agent communication. "
-                    f"LangChain has massive ecosystem but heavily abstracted, difficult for simple tasks. "
-                    f"My 2025 advice: LlamaIndex for RAG, LangGraph for complex workflows, avoid LangChain for new projects.",
-                    ConfidenceScores.VERY_HIGH
-                )
-            
-            # LLM model comparisons (2025 models and pricing - premium & budget)
-            llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'])
-            budget_in_query = any(term in query.lower() for term in ['mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'])
-            
-            if llm_in_query or any('gpt' in dp.lower() or 'claude' in dp.lower() or 'gemini' in dp.lower() for dp in tech_context.decision_points):
-                # Check if this is specifically about budget models
-                if budget_in_query or any(budget_model in tech_context.technologies for budget_model in ['gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1']):
-                    return (
-                        "insight",
-                        "Budget LLMs for 2025 (research-backed pricing): "
-                        "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest, great for simple tasks. "
-                        "GPT-4o mini: $0.15/$0.60 per 1M tokens - solid general purpose, 60% cheaper than GPT-3.5 Turbo. "
-                        "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: GPT-4 level reasoning at 1/10th cost, open-source. "
-                        "Claude 3.5 Haiku: $1/$5 per 1M tokens - 4x price increase from 3.0, expensive 'budget' option. "
-                        "Llama 4: FREE (self-hosted) - Meta's latest, multiple 2025 releases, excellent local option. "
-                        "Winner: DeepSeek R1 for reasoning tasks, GPT-4.1 nano for simple API calls, Llama 4 for self-hosting.",
-                        ConfidenceScores.VERY_HIGH
-                    )
-                else:
-                    return (
-                        "insight",
-                        "For LLM model choice in 2025 (latest benchmarks + pricing): "
-                        "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
-                        "OpenAI o3: Strong reasoning, native tool use, $10/$40 per 1M tokens (80% cheaper than before). "
-                        "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
-                        "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
-                        "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3, Balanced→Claude 4 Sonnet. "
-                        "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, o3 for complex reasoning.",
-                        ConfidenceScores.VERY_HIGH
-                    )
+        # Use strategy manager for all response generation
+        strategy_manager = get_strategy_manager()
         
-        # PRIORITY 2: Technology-specific advice
-        if tech_context.technologies:
-            tech = tech_context.technologies[0]
-            
-            # Check for infrastructure pattern with specific tech context
-            if PatternHandler.has_pattern(patterns, "infrastructure_without_implementation"):
-                return (
-                    "concern",
-                    f"I see you're planning infrastructure for {tech}. In my 15 years of experience, "
-                    f"I've learned to always start with {tech}'s official SDK or container first. "
-                    f"For example, {tech} likely provides official Docker images or client libraries that "
-                    f"handle authentication, retries, and edge cases we'd miss in custom implementations. "
-                    f"Have you checked {tech}'s official documentation for their recommended integration approach?",
-                    ConfidenceScores.VERY_HIGH
-                )
-            
-            # NEW: Technology-specific advice even without patterns
-            if tech in ['stripe', 'paypal', 'square']:
-                return (
-                    "suggestion",
-                    f"For {tech} integration, never build your own HTTP client. Use their official SDK - "
-                    f"it handles webhooks, idempotency, retry logic, and PCI compliance automatically. "
-                    f"I've seen teams spend months debugging payment edge cases that the SDK handles in one line. "
-                    f"Check their quickstart docs first, then their testing sandbox environment.",
-                    ConfidenceScores.VERY_HIGH
-                )
-            
-            elif tech in ['openai', 'claude', 'gpt']:
-                return (
-                    "insight",
-                    f"Working with {tech}? Three things I learned the hard way: "
-                    f"1) Use their official Python/JS SDK, not raw HTTP calls, "
-                    f"2) Implement exponential backoff for rate limiting, "
-                    f"3) Stream responses for better UX. Also, set up proper prompt versioning from day 1 - "
-                    f"you'll be iterating prompts constantly and need to track what works.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif tech in ['postgres', 'postgresql', 'mysql', 'mongodb']:
-                return (
-                    "concern",
-                    f"Before building custom {tech} infrastructure, have you considered: "
-                    f"1) Managed services like RDS/PlanetScale for {tech}? "
-                    f"2) Connection pooling and read replicas from day 1? "
-                    f"3) Migration strategy and backup automation? "
-                    f"I've seen too many teams lose data because they skipped the boring infrastructure work.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif tech in ['auth0', 'clerk', 'nextauth', 'oauth', 'oauth2']:
-                return (
-                    "suggestion",
-                    f"For {tech} authentication: This is exactly the right approach - don't build auth from scratch. "
-                    f"{tech} handles password resets, social logins, MFA, and security compliance for you. "
-                    f"I've debugged more custom auth systems than I care to remember. "
-                    f"Use their quickstart guide, set up proper redirect URLs, and you'll save months of security headaches.",
-                    ConfidenceScores.VERY_HIGH
-                )
-            
-            elif tech in ['docker', 'kubernetes', 'k8s']:
-                return (
-                    "concern",
-                    f"Are you sure you need {tech} complexity right now? "
-                    f"For startups: Use managed platforms like Railway/Render/Fly.io first. "
-                    f"For enterprises: {tech} is great, but start with their managed versions (EKS/GKE/AKS). "
-                    f"I've seen teams spend 6 months on {tech} setup when they should've been building features.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif tech in ['bun']:
-                return (
-                    "insight",
-                    f"Bun is impressive in 2025 - it's become production-ready: "
-                    f"1) Drop-in Node.js replacement with 3x faster package installs, "
-                    f"2) Built-in bundler, test runner, and TypeScript support, "
-                    f"3) Much faster startup times than Node.js, "
-                    f"4) Great for new projects, but check library compatibility first. "
-                    f"I'd use it for new TypeScript projects, but migrate existing Node apps carefully.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif tech in ['deno']:
-                return (
-                    "suggestion",
-                    f"Deno has matured significantly: "
-                    f"1) Built-in TypeScript, testing, formatting - no config needed, "
-                    f"2) Web-standard APIs instead of Node.js quirks, "
-                    f"3) Excellent security model with permissions, "
-                    f"4) Deno Deploy for edge computing. "
-                    f"Perfect for new projects that want modern standards. The npm compatibility makes migration easier now.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif tech in ['vite', 'esbuild', 'swc', 'turbo']:
-                return (
-                    "observation",
-                    f"{tech} is an excellent choice for build tooling in 2025: "
-                    f"Vite: Amazing dev experience with HMR, great for React/Vue. "
-                    f"ESBuild: Blazing fast bundling, good for libraries. "
-                    f"SWC: Rust-based, faster than Babel, Next.js uses it. "
-                    f"Turbo: Incremental builds, perfect for monorepos. "
-                    f"All are significantly faster than webpack for most use cases.",
-                    ConfidenceScores.HIGH
-                )
-            else:
-                return (
-                    "concern", 
-                    "This looks like premature infrastructure design. Start with working API calls first, "
-                    "then extract patterns only when you have 3+ similar use cases. Most 'future flexibility' "
-                    "never gets used but adds maintenance burden forever.",
-                    ConfidenceScores.HIGH
-                )
-        
-        # Framework-specific advice (prioritize frameworks over other technologies)
-        if tech_context.frameworks:
-            framework = tech_context.frameworks[0]
-            
-            # Handle specific framework comparisons first
-            if tech_context.decision_points and any('astro' in dp.lower() for dp in tech_context.decision_points):
-                if 'next' in tech_context.frameworks or any('next' in f for f in tech_context.frameworks):
-                    return (
-                        "insight",
-                        "For Astro vs Next.js decision: Consider your content strategy. "
-                        "Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default. "
-                        "Next.js is better for interactive apps with complex state management. "
-                        "Astro's Islands Architecture means faster load times but less interactivity. "
-                        "I'd choose Astro for marketing sites and Next.js for SaaS dashboards.",
-                        ConfidenceScores.VERY_HIGH
-                    )
-            
-            if framework in ['react', 'vue', 'angular']:
-                return (
-                    "suggestion",
-                    f"For {framework} architecture: Keep components small and focused. "
-                    f"I follow the rule: If a component does more than one thing, split it. "
-                    f"Use TypeScript from day 1 - you'll thank me when refactoring. "
-                    f"For state: Start with built-in state, add Zustand/Redux only when you feel the pain. "
-                    f"Test user flows, not implementation details.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['nextjs', 'next.js']:
-                return (
-                    "insight",
-                    f"Next.js is excellent for full-stack React. Use these patterns: "
-                    f"1) App Router for new projects (better than Pages Router), "
-                    f"2) Server Components by default, Client Components only when needed, "
-                    f"3) Vercel for deployment - it's made by the Next.js team, "
-                    f"4) Use their built-in optimizations: Image, Font, Link components. "
-                    f"Start with the T3 stack template if you need DB + auth.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['django', 'fastapi']:
-                return (
-                    "suggestion",
-                    f"For {framework} APIs: Follow their conventions religiously. "
-                    f"Django: Use Django REST Framework for APIs, don't reinvent serialization. "
-                    f"FastAPI: Use Pydantic models for everything - they generate docs automatically. "
-                    f"Both: Set up automated testing with pytest from day 1. "
-                    f"Deploy with Docker to avoid environment issues.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['astro']:
-                return (
-                    "insight",
-                    f"Astro is perfect for content-heavy sites! Use these 2025 patterns: "
-                    f"1) Islands architecture - ship minimal JS, hydrate only what needs interactivity, "
-                    f"2) View Transitions API for smooth page transitions, "
-                    f"3) Content Collections for type-safe markdown/MDX, "
-                    f"4) Astro DB for simple data needs. Perfect for blogs, marketing sites, docs. "
-                    f"Deploy to Vercel/Netlify with zero config.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['remix']:
-                return (
-                    "suggestion",
-                    f"Remix is excellent for full-stack React apps that prioritize web standards: "
-                    f"1) Use loaders for data fetching - they run on the server, "
-                    f"2) Actions for mutations - built-in progressive enhancement, "
-                    f"3) Nested routing for complex layouts, "
-                    f"4) Deploy to Fly.io or Railway for best performance. "
-                    f"Remix shines for apps that need to work without JS.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['svelte', 'sveltekit']:
-                return (
-                    "observation",
-                    f"Svelte/SvelteKit is gaining serious momentum in 2025: "
-                    f"1) No virtual DOM means smaller bundles and faster runtime, "
-                    f"2) Runes (new reactivity system) are more intuitive than React hooks, "
-                    f"3) SvelteKit handles SSR, routing, and deployment out of the box, "
-                    f"4) TypeScript support is excellent. Great for performance-critical apps.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['solid', 'solid.js']:
-                return (
-                    "insight",
-                    f"Solid.js offers React-like syntax with Vue-like performance: "
-                    f"1) Fine-grained reactivity - no re-renders, only updates what changed, "
-                    f"2) JSX without virtual DOM overhead, "
-                    f"3) Excellent TypeScript support, "
-                    f"4) SolidStart for full-stack apps. Perfect if you want React DX with better performance.",
-                    ConfidenceScores.HIGH
-                )
-            
-            elif framework in ['qwik']:
-                return (
-                    "challenge",
-                    f"Qwik is interesting but still experimental. Consider: "
-                    f"1) Resumability means 0ms JavaScript startup - revolutionary for performance, "
-                    f"2) But ecosystem is tiny compared to React/Vue, "
-                    f"3) Learning curve is steep - it thinks differently about reactivity, "
-                    f"4) Great for content sites, questionable for complex apps. "
-                    f"Wait for 1.0 unless you're building a simple marketing site.",
-                    ConfidenceScores.MODERATE
-                )
-        
-        # Integration-specific advice
-        if tech_context.problem_type == "integration":
-            if tech_context.technologies:
-                tech = tech_context.technologies[0]
-                return (
-                    "insight",
-                    f"For {tech} integration, I strongly recommend their official SDK. I've seen teams "
-                    f"waste months on custom HTTP clients only to discover the SDK handles rate limiting, "
-                    f"retries, auth refresh, and error mapping already. Check if {tech} provides: "
-                    f"1) Official SDK in your language ({tech_context.frameworks[0] if tech_context.frameworks else 'your stack'}), "
-                    f"2) OpenAPI spec for code generation, "
-                    f"3) Webhook support for real-time updates. "
-                    f"Only go custom if you have specific requirements the SDK truly can't meet.",
-                    ConfidenceScores.VERY_HIGH
-                )
-        
-        # Architecture decisions with specific context
-        if tech_context.problem_type == "architecture":
-            if tech_context.patterns:
-                pattern = tech_context.patterns[0]
-                return (
-                    "suggestion",
-                    f"For {pattern} architecture with {tech_context.technologies[0] if tech_context.technologies else 'your stack'}: "
-                    f"Start with a modular monolith first. I've migrated 5 systems from microservices back to monoliths "
-                    f"because the complexity wasn't justified. You can always extract services later when you have: "
-                    f"1) Clear bounded contexts from real usage, "
-                    f"2) Team size requiring independent deployments, "
-                    f"3) Proven scaling bottlenecks. "
-                    f"Focus on clean module boundaries now - they'll make future splits trivial.",
-                    ConfidenceScores.HIGH
-                )
-        
-        # Feature implementation advice
-        if tech_context.specific_features:
-            feature = tech_context.specific_features[0]
-            return (
-                "suggestion",
-                f"For implementing {feature}: Check if there's a battle-tested library first. "
-                f"I maintain a rule: 'Never write auth, payments, or file uploads from scratch.' "
-                f"These solved problems have edge cases you'll discover painfully. "
-                f"For {feature}, look for libraries with 1000+ GitHub stars, recent updates, "
-                f"and good documentation. Custom code should be your business logic, not infrastructure.",
-                ConfidenceScores.GOOD
+        try:
+            response_type, content, confidence = strategy_manager.generate_response(
+                tech_context, patterns, query
             )
-        
-        # Decision-making advice
-        if tech_context.decision_points:
-            decision = tech_context.decision_points[0]
-            return (
-                "insight",
-                f"Regarding '{decision}': Apply the 'Boring Technology' principle. "
-                f"Choose the option that: 1) Your team already knows, "
-                f"2) Has mature tooling and documentation, "
-                f"3) Won't surprise you at 3 AM. "
-                f"New tech is expensive - not in learning, but in discovering edge cases. "
-                f"I'd need to see 10x improvement to justify the switch.",
-                ConfidenceScores.HIGH
-            )
-        
-        # Default but still specific based on query keywords
-        if "custom" in query.lower():
+            return (response_type, content, confidence)
+        except Exception as e:
+            # Fallback to safe generic advice if strategy fails
             return (
                 "concern",
-                "Before building custom solutions, have you explored: "
-                "1) Existing libraries in your ecosystem? "
-                "2) Whether this is core to your business? "
-                "3) The total cost including maintenance? "
-                "Remember: today's clever abstraction is tomorrow's legacy nightmare.",
-                ConfidenceScores.GOOD
+                "This looks like premature infrastructure design. Start with working API calls first, "
+                "then extract patterns only when you have 3+ similar use cases. Most 'future flexibility' "
+                "never gets used but adds maintenance burden forever.",
+                ConfidenceScores.MEDIUM
             )
-        
-        return (
-            "observation",
-            "Let's think about long-term maintainability here. Whatever you build, "
-            "optimize for the next developer (probably you in 6 months) to understand quickly. "
-            "Clear code with good tests beats clever abstractions every time.",
-            ConfidenceScores.MODERATE
-        )
     
     @staticmethod
     def generate_product_engineer_response(
