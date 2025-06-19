@@ -20,7 +20,8 @@ async def analyze_pr_llm(
     pr_diff: str,
     pr_description: str = "",
     file_changes: Optional[List[str]] = None,
-    timeout_seconds: int = 90
+    timeout_seconds: int = 90,
+    model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
     🧠 Comprehensive PR review using Claude CLI reasoning.
@@ -34,6 +35,7 @@ async def analyze_pr_llm(
         pr_description: Description/title of the pull request
         file_changes: List of changed files for context
         timeout_seconds: Maximum time to wait for analysis
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Comprehensive Claude CLI PR review results
@@ -53,7 +55,8 @@ async def analyze_pr_llm(
         content=pr_diff,
         task_type="pr_review",
         additional_context=additional_context,
-        timeout_seconds=timeout_seconds
+        timeout_seconds=timeout_seconds,
+        model=model
     )
 
 
@@ -61,7 +64,8 @@ async def analyze_code_llm(
     code_content: str,
     file_path: Optional[str] = None,
     language: Optional[str] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
     🧠 Deep code analysis using Claude CLI reasoning.
@@ -74,6 +78,7 @@ async def analyze_code_llm(
         file_path: Optional file path for context
         language: Programming language for specialized analysis
         timeout_seconds: Maximum time to wait for analysis
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Detailed Claude CLI code analysis results
@@ -93,7 +98,8 @@ async def analyze_code_llm(
         content=code_content,
         task_type="code_analysis",
         additional_context=additional_context,
-        timeout_seconds=timeout_seconds
+        timeout_seconds=timeout_seconds,
+        model=model
     )
 
 
@@ -101,7 +107,8 @@ async def analyze_issue_llm(
     issue_content: str,
     issue_title: str = "",
     issue_labels: Optional[List[str]] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
     🧠 Deep GitHub issue analysis using Claude CLI reasoning.
@@ -115,6 +122,7 @@ async def analyze_issue_llm(
         issue_title: Title of the issue
         issue_labels: List of issue labels for context
         timeout_seconds: Maximum time to wait for analysis
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Comprehensive Claude CLI issue analysis with anti-pattern prevention guidance
@@ -134,7 +142,8 @@ async def analyze_issue_llm(
         content=issue_content,
         task_type="issue_analysis",
         additional_context=additional_context,
-        timeout_seconds=timeout_seconds
+        timeout_seconds=timeout_seconds,
+        model=model
     )
 
 
@@ -144,7 +153,8 @@ async def analyze_github_issue_llm(
     post_comment: bool = True,
     analysis_mode: str = "comprehensive",
     detail_level: str = "standard",
-    timeout_seconds: int = 90
+    timeout_seconds: int = 90,
+    model: str = "sonnet"
 ) -> Dict[str, Any]:
     """
     🧠 Comprehensive GitHub issue vibe check using Claude CLI reasoning.
@@ -164,6 +174,7 @@ async def analyze_github_issue_llm(
         analysis_mode: "quick" or "comprehensive" analysis (default: "comprehensive")
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         timeout_seconds: Maximum time to wait for analysis (default: 90)
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Comprehensive Claude CLI vibe check analysis with GitHub integration
@@ -289,7 +300,8 @@ Use friendly, coaching language that helps developers learn rather than intimida
             content=vibe_prompt,
             task_type="issue_analysis",
             additional_context=f"Vibe check for GitHub issue {repository}#{issue_number}",
-            timeout_seconds=timeout_seconds
+            timeout_seconds=timeout_seconds,
+            model=model
         )
         
         # Build response
@@ -343,7 +355,8 @@ async def analyze_github_pr_llm(
     post_comment: bool = True,
     analysis_mode: str = "comprehensive",
     detail_level: str = "standard",
-    timeout_seconds: int = 120
+    timeout_seconds: int = 120,
+    model: str = "sonnet"
 ) -> Dict[str, Any]:
     """
     🧠 Comprehensive GitHub PR vibe check using Claude CLI reasoning.
@@ -368,6 +381,7 @@ async def analyze_github_pr_llm(
         analysis_mode: "quick" or "comprehensive" analysis (default: "comprehensive")
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         timeout_seconds: Maximum time to wait for analysis (default: 120)
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Comprehensive Claude CLI vibe check analysis with GitHub integration
@@ -550,7 +564,8 @@ Use friendly, coaching language that helps developers learn rather than intimida
                 content=vibe_prompt,
                 task_type="pr_review",
                 additional_context=f"Vibe check for GitHub PR {repository}#{pr_number}",
-                timeout_seconds=timeout_seconds
+                timeout_seconds=timeout_seconds,
+                model=model
             )
             
             if result.success:

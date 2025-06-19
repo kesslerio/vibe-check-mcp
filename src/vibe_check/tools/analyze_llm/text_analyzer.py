@@ -21,7 +21,8 @@ async def analyze_text_llm(
     content: str,
     task_type: str = "general",
     additional_context: Optional[str] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
     🧠 Deep text analysis using Claude CLI reasoning.
@@ -35,6 +36,7 @@ async def analyze_text_llm(
         task_type: Type of analysis (general, pr_review, code_analysis, issue_analysis)
         additional_context: Optional additional context for the analysis
         timeout_seconds: Maximum time to wait for response
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         Comprehensive Claude CLI analysis results
@@ -58,7 +60,8 @@ async def analyze_text_llm(
             result = await analyze_content_async(
                 content=full_content,
                 task_type=task_type,
-                timeout_seconds=timeout_seconds
+                timeout_seconds=timeout_seconds,
+                model=model
             )
             
             # Convert ClaudeCliResult to ExternalClaudeResponse
