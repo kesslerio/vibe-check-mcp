@@ -1137,9 +1137,36 @@ def vibe_check_mentor(
         # Get mentor engine instance
         engine = get_mentor_engine()
         
-        # Step 1: Run vibe-check pattern detection
+        # Step 1: Enhanced vibe-check pattern detection with PR diff support
         combined_text = f"{query}\n\n{context}" if context else query
-        vibe_analysis = analyze_text_demo(combined_text, detail_level="standard")
+        
+        # FIX FOR ISSUE #151: Detect PR analysis and fetch actual diff
+        pr_diff_content = ""
+        import re
+        pr_match = re.search(r'(?:PR|pull request).*?#?(\d+)', query, re.IGNORECASE)
+        repo_match = re.search(r'(?:repo|repository)[:=\s]+([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)', combined_text, re.IGNORECASE)
+        
+        if pr_match:
+            pr_number = int(pr_match.group(1))
+            repository = repo_match.group(1) if repo_match else "kesslerio/vibe-check-mcp"
+            
+            try:
+                # Use GitHub abstraction layer to fetch PR diff
+                from .tools.shared.github_abstraction import get_default_github_operations
+                github_ops = get_default_github_operations()
+                diff_result = github_ops.get_pull_request_diff(repository, pr_number)
+                
+                if diff_result.success:
+                    pr_diff_content = f"\n\n**ACTUAL PR DIFF (ISSUE #151 FIX):**\n{diff_result.data}"
+                    logger.info(f"Successfully fetched diff for PR #{pr_number} in {repository}")
+                else:
+                    logger.warning(f"Failed to fetch PR diff: {diff_result.error}")
+            except Exception as e:
+                logger.warning(f"Error fetching PR diff: {e}")
+        
+        # Include PR diff in analysis if found
+        enhanced_text = combined_text + pr_diff_content
+        vibe_analysis = analyze_text_demo(enhanced_text, detail_level="standard")
         
         detected_patterns = vibe_analysis.get("detected_patterns", [])
         vibe_level = vibe_analysis.get("vibe_assessment", {}).get("vibe_level", "unknown")
