@@ -83,6 +83,17 @@ class ContextExtractor:
                     else:
                         technologies.append(term)
         
+        # ENHANCEMENT: Semantic pattern detection (from Claude's suggestion)
+        # Add budget model keywords to technologies if budget terms detected
+        budget_terms = ['mini', 'nano', 'cheap', 'budget', 'cost-effective', 'affordable']
+        if any(term in combined_text for term in budget_terms):
+            if 'gpt' in combined_text or 'openai' in combined_text:
+                technologies.extend(['gpt-4.1-nano', 'gpt-4o-mini'])
+            if 'claude' in combined_text:
+                technologies.append('claude-3.5-haiku')
+            if 'deepseek' in combined_text:
+                technologies.append('deepseek-r1')
+        
         # Determine problem type
         problem_type = 'general'
         for ptype, indicators in cls.PROBLEM_INDICATORS.items():
@@ -146,7 +157,39 @@ class EnhancedPersonaReasoning:
     ) -> Tuple[str, str, float]:
         """Generate specific senior engineer advice based on context"""
         
-        # PRIORITY 1: Handle framework comparisons first (highest specificity)
+        # PRIORITY 1: LLM model comparisons first (highest user value)
+        llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'])
+        budget_in_query = any(term in query.lower() for term in ['mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'])
+        
+        if llm_in_query or any('gpt' in dp.lower() or 'claude' in dp.lower() or 'gemini' in dp.lower() or 'deepseek' in dp.lower() for dp in tech_context.decision_points):
+            # Check if this is specifically about budget models
+            if budget_in_query or any(budget_model in tech_context.technologies for budget_model in ['gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1']):
+                return (
+                    "insight",
+                    "Budget LLMs for 2025 (research-backed pricing): "
+                    "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest current model, great for simple tasks. "
+                    "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: Latest reasoning model at massive cost savings, open-source. "
+                    "Claude 3.5 Haiku: $1/$5 per 1M tokens - Anthropic's budget option but 4x more expensive than competitors. "
+                    "Llama 4: FREE (self-hosted) - Meta's 2025 release, excellent performance with zero API costs. "
+                    "Gemini 2.5 Flash: $0.075/$0.30 per 1M tokens - Google's speed-optimized budget model. "
+                    "Winner: DeepSeek R1 for complex reasoning, GPT-4.1 nano for OpenAI ecosystem, Llama 4 for self-hosting.",
+                    ConfidenceScores.VERY_HIGH
+                )
+            else:
+                return (
+                    "insight",
+                    "For LLM model choice in 2025 (latest benchmarks + pricing): "
+                    "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
+                    "OpenAI o3 Pro: Top reasoning model, $200/$600 per 1M tokens - premium pricing for complex tasks. "
+                    "GPT-4.1: Improved coding, 1M context, $5/$20 per 1M tokens - solid mainstream choice. "
+                    "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
+                    "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
+                    "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3 Pro, Balanced→Claude 4 Sonnet. "
+                    "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, GPT-4.1 for OpenAI ecosystem.",
+                    ConfidenceScores.VERY_HIGH
+                )
+
+        # PRIORITY 2: Handle framework comparisons (highest specificity)
         if tech_context.decision_points and tech_context.frameworks:
             # Astro vs Next.js comparison
             if any('astro' in dp.lower() for dp in tech_context.decision_points):
@@ -190,20 +233,36 @@ class EnhancedPersonaReasoning:
                     ConfidenceScores.VERY_HIGH
                 )
             
-            # LLM model comparisons (latest 2025 models and pricing)
-            llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3'])
+            # LLM model comparisons (2025 models and pricing - premium & budget)
+            llm_in_query = any(model in query.lower() for model in ['gpt', 'claude', 'gemini', 'gpt-4', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek'])
+            budget_in_query = any(term in query.lower() for term in ['mini', 'nano', 'haiku', 'cheap', 'budget', 'cost-effective', 'deepseek'])
+            
             if llm_in_query or any('gpt' in dp.lower() or 'claude' in dp.lower() or 'gemini' in dp.lower() for dp in tech_context.decision_points):
-                return (
-                    "insight",
-                    "For LLM model choice in 2025 (latest benchmarks + pricing): "
-                    "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
-                    "OpenAI o3: Strong reasoning, native tool use, $10/$40 per 1M tokens (80% cheaper than before). "
-                    "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
-                    "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
-                    "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3, Balanced→Claude 4 Sonnet. "
-                    "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, o3 for complex reasoning.",
-                    ConfidenceScores.VERY_HIGH
-                )
+                # Check if this is specifically about budget models
+                if budget_in_query or any(budget_model in tech_context.technologies for budget_model in ['gpt-4.1-nano', 'gpt-4o-mini', 'claude-3.5-haiku', 'deepseek-r1']):
+                    return (
+                        "insight",
+                        "Budget LLMs for 2025 (research-backed pricing): "
+                        "GPT-4.1 nano: $0.075/$0.30 per 1M tokens - OpenAI's cheapest, great for simple tasks. "
+                        "GPT-4o mini: $0.15/$0.60 per 1M tokens - solid general purpose, 60% cheaper than GPT-3.5 Turbo. "
+                        "DeepSeek R1: $0.14/$2.19 per 1M tokens - BEST VALUE: GPT-4 level reasoning at 1/10th cost, open-source. "
+                        "Claude 3.5 Haiku: $1/$5 per 1M tokens - 4x price increase from 3.0, expensive 'budget' option. "
+                        "Llama 4: FREE (self-hosted) - Meta's latest, multiple 2025 releases, excellent local option. "
+                        "Winner: DeepSeek R1 for reasoning tasks, GPT-4.1 nano for simple API calls, Llama 4 for self-hosting.",
+                        ConfidenceScores.VERY_HIGH
+                    )
+                else:
+                    return (
+                        "insight",
+                        "For LLM model choice in 2025 (latest benchmarks + pricing): "
+                        "Claude 4 Opus: WINS coding (72.5% SWE-bench), math (90% AIME), but expensive $15/$75 per 1M tokens. "
+                        "OpenAI o3: Strong reasoning, native tool use, $10/$40 per 1M tokens (80% cheaper than before). "
+                        "Gemini 2.5 Pro: Best performance/price ratio, 1M context, $1.25/$10 per 1M tokens. "
+                        "Claude 4 Sonnet: Good balance, hybrid fast/thinking modes, $3/$15 per 1M tokens. "
+                        "Ranking: Coding→Claude 4 Opus, Cost-effective→Gemini 2.5 Pro, Reasoning→o3, Balanced→Claude 4 Sonnet. "
+                        "My advice: Gemini 2.5 Pro for most use cases, Claude 4 for serious coding, o3 for complex reasoning.",
+                        ConfidenceScores.VERY_HIGH
+                    )
         
         # PRIORITY 2: Technology-specific advice
         if tech_context.technologies:
