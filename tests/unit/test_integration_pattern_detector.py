@@ -373,37 +373,36 @@ class TestPerformanceAndRealTimeUsage:
     def test_quick_scan_performance(self):
         """Test that quick technology scan is truly fast"""
         import time
-        import signal
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
         
         content = "We're using Cognee, Supabase, OpenAI, and Claude in our application"
         
-        # Add timeout protection to prevent hanging
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Quick scan test timed out - possible hang")
-        
-        # Set a 2-second timeout for the entire test
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(2)
-        
-        try:
+        # Cross-platform timeout protection using concurrent.futures
+        with ThreadPoolExecutor(max_workers=1) as executor:
             start_time = time.time()
-            result = quick_technology_scan(content)
-            end_time = time.time()
+            future = executor.submit(quick_technology_scan, content)
             
-            # Should complete in under 100ms for real-time usage (relaxed to 200ms for CI)
-            execution_time = end_time - start_time
-            assert execution_time < 0.2  # 200ms threshold (relaxed for CI stability)
-            
-            # Should still provide useful results
-            assert "status" in result
-        finally:
-            # Clear the alarm
-            signal.alarm(0)
+            try:
+                result = future.result(timeout=2.0)  # 2-second timeout
+                end_time = time.time()
+                
+                # Should complete in under 100ms for real-time usage (relaxed to 200ms for CI)
+                execution_time = end_time - start_time
+                assert execution_time < 0.2  # 200ms threshold (relaxed for CI stability)
+                
+                # Should still provide useful results
+                assert "status" in result
+            except FutureTimeoutError:
+                raise TimeoutError("Quick scan test timed out - possible hang")
     
     def test_concurrent_analysis(self):
         """Test behavior under concurrent usage (simulating multiple MCP calls)"""
         import threading
         import time
+        import logging
+        
+        # Set up logger for debugging
+        logger = logging.getLogger(__name__)
         
         contents = [
             "Building custom Cognee integration",
@@ -420,7 +419,9 @@ class TestPerformanceAndRealTimeUsage:
                 result = analyze_integration_patterns_fast(content, detail_level="brief")
                 with results_lock:
                     results.append(result)
+                logger.debug(f"Successfully analyzed: {content[:30]}...")
             except Exception as e:
+                logger.error(f"Analysis failed for '{content[:30]}...': {e}", exc_info=True)
                 with results_lock:
                     results.append({"status": "error", "error": str(e)})
         
