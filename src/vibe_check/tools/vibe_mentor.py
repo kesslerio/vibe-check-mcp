@@ -21,8 +21,13 @@ import secrets
 from ..core.pattern_detector import PatternDetector
 from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
 from ..tools.analyze_text_nollm import analyze_text_demo
+from ..utils.logging_framework import get_vibe_logger
 
 logger = logging.getLogger(__name__)
+vibe_logger = get_vibe_logger("vibe_mentor")
+
+# Cache interrupt logger to avoid creating new instances on every call
+_interrupt_logger = get_vibe_logger("mentor_interrupt")
 
 
 # Confidence score constants
@@ -638,7 +643,10 @@ class VibeMentorEngine:
         Generate a focused interrupt intervention based on detected patterns and phase.
         Returns a single question/suggestion for quick decision guidance.
         """
+        _interrupt_logger.progress("Generating quick intervention", "⚡")
+        
         pattern_type = primary_pattern.get("pattern_type", "unknown")
+        _interrupt_logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {
@@ -716,13 +724,16 @@ class VibeMentorEngine:
         elif "abstract" in query.lower() or "layer" in query.lower():
             suggestion = "Start concrete, abstract only when patterns emerge"
         
-        return {
+        result = {
             "question": question,
             "severity": severity,
             "suggestion": suggestion,
             "pattern_type": pattern_type,
             "confidence": pattern_confidence
         }
+        
+        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type}")
+        return result
 
 
 def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]]) -> str:
