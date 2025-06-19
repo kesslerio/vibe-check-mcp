@@ -1,0 +1,21 @@
+version: 1
+runtime: "container"
+description: "AI coding safety net - anti-pattern detection for engineering decisions with real-time feedback"
+start: "python -m vibe_check.server"
+port: null
+env:
+  PYTHONPATH: "/app/src"
+  LOG_LEVEL: "INFO"
+configSchema:
+  type: object
+  properties:
+    GITHUB_TOKEN:
+      type: string
+      description: "GitHub Personal Access Token for repository access (required for GitHub integration)"
+      pattern: "^ghp_[a-zA-Z0-9]{36}$"
+    LOG_LEVEL:
+      type: string
+      description: "Logging level for the MCP server"
+      enum: ["DEBUG", "INFO", "WARNING", "ERROR"]
+      default: "INFO"
+  required: []
