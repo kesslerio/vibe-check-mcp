@@ -37,6 +37,7 @@ from .tools.integration_pattern_analysis import (
     analyze_effort_complexity,
     enhance_text_analysis_with_integration_patterns
 )
+from .tools.pr_review import review_pull_request
 
 # Configure logging
 logging.basicConfig(
@@ -201,6 +202,49 @@ def analyze_pr_nollm(
         repository=repository,
         analysis_mode=analysis_mode,
         detail_level=detail_level
+    )
+
+@mcp.tool()
+async def review_pr_comprehensive(
+    pr_number: int,
+    repository: str = "kesslerio/vibe-check-mcp",
+    force_re_review: bool = False,
+    analysis_mode: str = "comprehensive",
+    detail_level: str = "standard",
+    model: str = "sonnet"
+) -> Dict[str, Any]:
+    """
+    🧠 Advanced PR review with file type analysis and model selection.
+    
+    Enhanced PR review tool with:
+    - 📁 File type-specific analysis (TypeScript, Python, API endpoints, tests)
+    - ⭐ First-time contributor awareness for encouraging feedback
+    - 🔍 Security-focused review sections
+    - 🧪 Test coverage analysis
+    - 🎯 Model selection (sonnet/opus/haiku) for performance vs capability
+    
+    This is the enhanced modular PR review replacing the monolithic tool.
+    
+    Args:
+        pr_number: PR number to review
+        repository: Repository in format "owner/repo"
+        force_re_review: Force re-review mode even if not auto-detected
+        analysis_mode: "comprehensive" or "quick" analysis
+        detail_level: "brief", "standard", or "comprehensive"
+        model: Claude model - "sonnet" (default), "opus" (best), or "haiku" (fast)
+        
+    Returns:
+        Comprehensive PR analysis with file type breakdown and recommendations
+    """
+    logger.info(f"🔍 Starting enhanced PR review for PR #{pr_number} with model: {model}")
+    
+    return await review_pull_request(
+        pr_number=pr_number,
+        repository=repository,
+        force_re_review=force_re_review,
+        analysis_mode=analysis_mode,
+        detail_level=detail_level,
+        model=model
     )
 
 @mcp.tool()

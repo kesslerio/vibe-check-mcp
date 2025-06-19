@@ -5,17 +5,19 @@ Handles external Claude CLI integration for PR analysis.
 This module extracts Claude CLI functionality from the monolithic PRReviewTool.
 """
 
+import asyncio
 import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 import tempfile
 import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from ..shared.claude_integration import analyze_content_async
+from ..shared.claude_integration import analyze_content_async, ClaudeCliExecutor, ClaudeCliResult
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +44,9 @@ class ClaudeIntegration:
         Args:
             timeout_seconds: Default timeout for Claude CLI operations
         """
-        self.external_claude = ExternalClaudeCli(timeout_seconds=timeout_seconds)
+        self.external_claude = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
         self.logger = logger
+        self.model = None  # Will be set per analysis
     
     def check_claude_availability(self) -> bool:
         """
@@ -93,13 +96,93 @@ class ClaudeIntegration:
             self.logger.debug(f"Stack trace: {traceback.format_exc()}")
             return False
     
+    async def _execute_with_model(
+        self,
+        prompt: str,
+        task_type: str = "pr_review",
+        model: str = "sonnet"
+    ) -> Any:
+        """
+        Execute Claude CLI with specific model support using secure subprocess execution.
+        
+        Args:
+            prompt: The prompt to send to Claude
+            task_type: Type of task for specialized handling
+            model: Claude model to use
+            
+        Returns:
+            ClaudeCliResult with execution details
+        """
+        self.logger.info(f"🔍 Running Claude analysis with model: {model}")
+        start_time = time.time()
+        
+        # Build command arguments securely - no shell execution needed
+        command_args = [
+            self.external_claude.claude_cli_path,
+            "--model", model,
+            "-p", prompt
+        ]
+        
+        try:
+            # Execute Claude CLI directly with argument list (no shell)
+            process = await asyncio.create_subprocess_exec(
+                *command_args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=os.path.expanduser("~")
+            )
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.external_claude.timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                return ClaudeCliResult(
+                    success=False,
+                    error=f"Claude CLI timed out after {self.external_claude.timeout_seconds} seconds",
+                    exit_code=-1,
+                    execution_time=time.time() - start_time,
+                    command_used=f"claude --model {model} -p [PROMPT]",
+                    task_type=task_type
+                )
+            
+            success = process.returncode == 0
+            output = stdout.decode('utf-8', errors='replace') if stdout else ""
+            error = stderr.decode('utf-8', errors='replace') if stderr else ""
+            execution_time = time.time() - start_time
+            
+            return ClaudeCliResult(
+                success=success,
+                output=output,
+                error=error,
+                exit_code=process.returncode,
+                execution_time=execution_time,
+                command_used=f"claude --model {model} -p [PROMPT]",
+                task_type=task_type
+            )
+            
+        except Exception as e:
+            self.logger.error(f"❌ Claude CLI execution failed: {e}")
+            return ClaudeCliResult(
+                success=False,
+                error=f"Execution failed: {str(e)}",
+                exit_code=-1,
+                execution_time=time.time() - start_time,
+                command_used=f"claude --model {model} -p [PROMPT]",
+                task_type=task_type
+            )
+    
     async def run_claude_analysis(
         self, 
         prompt_content: str, 
         data_content: str, 
         pr_number: int,
         pr_data: Dict[str, Any],
-        summary_content_generator = None
+        summary_content_generator = None,
+        model: str = "sonnet"
     ) -> Optional[Dict[str, Any]]:
         """
         Run Claude analysis using external Claude CLI with adaptive prompt sizing.
@@ -110,6 +193,7 @@ class ClaudeIntegration:
             pr_number: PR number for logging
             pr_data: Full PR data for summary generation
             summary_content_generator: Function to generate summary content for large PRs
+            model: Claude model to use - "sonnet" (default), "opus", or "haiku"
             
         Returns:
             Structured analysis results or None if failed
@@ -152,11 +236,11 @@ class ClaudeIntegration:
             
             self.logger.info(f"🔍 Using external Claude CLI integration with {timeout_seconds}s timeout...")
             
-            # Use external Claude CLI for PR review analysis
-            result = await self.external_claude.analyze_content(
-                content=combined_content,
+            # Use external Claude CLI for PR review analysis with model support
+            result = await self._execute_with_model(
+                prompt=combined_content,
                 task_type="pr_review",
-                additional_context=f"PR #{pr_number} Analysis"
+                model=model
             )
             
             # Log execution details

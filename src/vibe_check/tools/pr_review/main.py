@@ -14,6 +14,7 @@ from .context_analyzer import ReviewContextAnalyzer
 from .claude_integration import ClaudeIntegration
 from .feedback_categorizer import FeedbackCategorizer
 from .chunked_analyzer import ChunkedAnalyzer, analyze_pr_with_chunking
+from .file_type_analyzer import FileTypeAnalyzer
 from ..shared.pr_classifier import classify_pr_size, PrSizeCategory, should_use_chunked_analysis
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,8 @@ async def review_pull_request(
     repository: str = "kesslerio/vibe-check-mcp",
     force_re_review: bool = False,
     analysis_mode: str = "comprehensive",
-    detail_level: str = "standard"
+    detail_level: str = "standard",
+    model: str = "sonnet"  # New parameter for model selection
 ) -> Dict[str, Any]:
     """
     Comprehensive PR review with modular architecture.
@@ -37,6 +39,7 @@ async def review_pull_request(
         force_re_review: Force re-review mode even if not auto-detected
         analysis_mode: "comprehensive" or "quick" analysis
         detail_level: "brief", "standard", or "comprehensive"
+        model: Claude model to use - "sonnet" (default), "opus", or "haiku"
         
     Returns:
         Complete analysis results with GitHub integration status
@@ -49,6 +52,7 @@ async def review_pull_request(
         size_classifier = PRSizeClassifier()
         context_analyzer = ReviewContextAnalyzer()
         claude_integration = ClaudeIntegration()
+        file_type_analyzer = FileTypeAnalyzer()
         
         # Phase 1: Data Collection
         logger.info("📊 Phase 1: Collecting PR data...")
@@ -63,6 +67,10 @@ async def review_pull_request(
         # Phase 3: Context Analysis
         logger.info("🔄 Phase 3: Analyzing review context...")
         review_context = context_analyzer.detect_re_review(pr_data, force_re_review)
+        
+        # Phase 3.5: File Type Analysis
+        logger.info("📁 Phase 3.5: Analyzing file types...")
+        file_type_analysis = file_type_analyzer.analyze_files(pr_data.get('files', []))
         
         # Phase 4: Intelligent Analysis Strategy Selection
         logger.info(f"🔍 Phase 4: Selecting analysis strategy (Mode: {analysis_mode}, Size: {size_analysis.get('overall_size', 'Unknown')})")
@@ -83,7 +91,8 @@ async def review_pull_request(
             elif enhanced_pr_metrics.size_category == PrSizeCategory.SMALL:
                 logger.info("🎯 Using full LLM analysis for small PR")
                 analysis_result = await _generate_claude_analysis(
-                    claude_integration, pr_data, size_analysis, review_context, detail_level, pr_number
+                    claude_integration, pr_data, size_analysis, review_context, 
+                    detail_level, pr_number, model, file_type_analysis
                 )
             else:  # LARGE
                 logger.info("⚡ Using pattern detection for large PR")
@@ -102,8 +111,10 @@ async def review_pull_request(
             "pr_number": pr_number,
             "repository": repository,
             "analysis_mode": analysis_mode,
+            "model_used": model,
             "size_analysis": size_analysis,
             "review_context": review_context,
+            "file_type_analysis": file_type_analysis,
             "analysis_result": analysis_result,
             "enhanced_pr_metrics": {
                 "size_category": enhanced_pr_metrics.size_category.value,
@@ -141,15 +152,30 @@ async def _generate_claude_analysis(
     size_analysis: Dict[str, Any], 
     review_context: Dict[str, Any],
     detail_level: str,
-    pr_number: int
+    pr_number: int,
+    model: str = "sonnet",
+    file_type_analysis: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """Generate analysis using Claude integration."""
+    # Check if author is a first-time contributor
+    author_association = pr_data.get('metadata', {}).get('author_association', 'NONE')
+    is_first_time_contributor = author_association in ['FIRST_TIME_CONTRIBUTOR', 'NONE']
+    
+    # Generate file type-specific prompt section
+    file_type_prompt = ""
+    if file_type_analysis:
+        file_type_prompt = file_type_analyzer.generate_file_type_prompt(file_type_analysis)
+    
     # Enhanced prompt following CLAUDE.md PR review guidelines
-    prompt_content = f"""Analyze this pull request following structured feedback categorization.
-
+    author_context = ""
+    if is_first_time_contributor:
+        author_context = "\n⭐ FIRST-TIME CONTRIBUTOR: Please be encouraging and provide detailed explanations for any suggestions. Welcome them to the project!\n"
+    
+    prompt_content = f"""Analyze this pull request with focus on code quality, security, performance, and test coverage.
+{author_context}
 PR Details:
 - Title: {pr_data['metadata']['title']}
-- Author: {pr_data['metadata']['author']}
+- Author: {pr_data['metadata']['author']} ({author_association})
 - Size: {size_analysis['overall_size']}
 - Files: {size_analysis['size_reasons']}
 - Re-review: {review_context['is_re_review']}
@@ -158,6 +184,20 @@ Please provide analysis with categorized feedback:
 
 ## Overview
 Brief summary of changes and overall assessment.
+
+## Code Quality and Best Practices
+Review code structure, patterns, and adherence to project standards.
+
+## Security Analysis
+Identify any security vulnerabilities, exposed secrets, or unsafe practices.
+
+## Performance Considerations
+Analyze performance implications and optimization opportunities.
+
+## Test Coverage
+Evaluate test completeness, edge cases, and test quality.
+
+{file_type_prompt}
 
 ## Strengths  
 Positive aspects of the implementation.
@@ -215,7 +255,8 @@ APPROVE/REQUEST_CHANGES/REJECT with clear rationale.
         prompt_content=prompt_content,
         data_content=data_content,
         pr_number=pr_number,
-        pr_data=pr_data
+        pr_data=pr_data,
+        model=model
     )
     
     return result or {"analysis": "Claude analysis failed", "recommendation": "MANUAL_REVIEW"}
