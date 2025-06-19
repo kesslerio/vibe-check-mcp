@@ -229,13 +229,14 @@ Please apply these guidelines throughout your analysis and recommendations."""
             logger.warning(f"MCP config not found at: {config_path}")
             return ""
     
-    def _get_claude_args(self, prompt: str, task_type: str) -> List[str]:
+    def _get_claude_args(self, prompt: str, task_type: str, model: str = "sonnet") -> List[str]:
         """
         Build Claude CLI arguments following SDK best practices.
         
         Args:
             prompt: The prompt to send to Claude
             task_type: Type of task for specialized handling
+            model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
             
         Returns:
             List of command line arguments
@@ -354,6 +355,9 @@ Please apply these guidelines throughout your analysis and recommendations."""
             # The JSON format was returning session metadata instead of analysis content
         ]
         
+        # Add model parameter for Claude model selection
+        args.extend(['--model', model])
+        
         # Add max turns only if specified (None = no limit)
         if max_turns is not None:
             args.extend(['--max-turns', str(max_turns)])
@@ -438,7 +442,8 @@ Please apply these guidelines throughout your analysis and recommendations."""
     def execute_sync(
         self,
         prompt: str,
-        task_type: str = "general"
+        task_type: str = "general",
+        model: str = "sonnet"
     ) -> ClaudeCliResult:
         """
         Execute Claude CLI synchronously with directory isolation for recursion prevention.
@@ -446,6 +451,7 @@ Please apply these guidelines throughout your analysis and recommendations."""
         Args:
             prompt: The prompt to send to Claude CLI
             task_type: Type of task for specialized handling
+            model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
             
         Returns:
             ClaudeCliResult with execution details
@@ -459,7 +465,7 @@ Please apply these guidelines throughout your analysis and recommendations."""
         
         try:
             # Build command
-            claude_args = self._get_claude_args(prompt, task_type)
+            claude_args = self._get_claude_args(prompt, task_type, model)
             
             logger.debug(f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}')
             
@@ -565,7 +571,8 @@ Please apply these guidelines throughout your analysis and recommendations."""
     async def execute_async(
         self,
         prompt: str,
-        task_type: str = "general"
+        task_type: str = "general",
+        model: str = "sonnet"
     ) -> ClaudeCliResult:
         """
         Execute Claude CLI asynchronously with directory isolation for recursion prevention.
@@ -573,6 +580,7 @@ Please apply these guidelines throughout your analysis and recommendations."""
         Args:
             prompt: The prompt to send to Claude CLI
             task_type: Type of task for specialized handling
+            model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
             
         Returns:
             ClaudeCliResult with execution details
@@ -586,7 +594,7 @@ Please apply these guidelines throughout your analysis and recommendations."""
         
         try:
             # Build command
-            claude_args = self._get_claude_args(prompt, task_type)
+            claude_args = self._get_claude_args(prompt, task_type, model)
             command = [self.claude_cli_path] + claude_args
             
             logger.debug(f"Executing Claude CLI directly: {' '.join(command)}")
@@ -691,7 +699,8 @@ async def analyze_content_async_with_circuit_breaker(
     task_type: str = "general",
     additional_context: Optional[str] = None,
     timeout_seconds: int = 60,
-    max_retries: int = 2
+    max_retries: int = 2,
+    model: str = "sonnet"
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI with circuit breaker and retry logic.
@@ -708,6 +717,7 @@ async def analyze_content_async_with_circuit_breaker(
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
         max_retries: Maximum number of retry attempts
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         ClaudeCliResult with analysis
@@ -732,7 +742,7 @@ async def analyze_content_async_with_circuit_breaker(
     async def _execute_analysis():
         """Inner function to execute the analysis."""
         executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
-        return await executor.execute_async(prompt=prompt, task_type=task_type)
+        return await executor.execute_async(prompt=prompt, task_type=task_type, model=model)
     
     # Record the start time
     start_time = time.time()
@@ -839,7 +849,8 @@ async def analyze_content_async(
     content: str,
     task_type: str = "general",
     additional_context: Optional[str] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    model: str = "sonnet"
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI asynchronously.
@@ -853,6 +864,7 @@ async def analyze_content_async(
         task_type: Type of analysis (pr_review, code_analysis, etc.)
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         ClaudeCliResult with analysis
@@ -864,7 +876,8 @@ async def analyze_content_async(
         task_type=task_type,
         additional_context=additional_context,
         timeout_seconds=timeout_seconds,
-        max_retries=2  # Default retry behavior
+        max_retries=2,  # Default retry behavior
+        model=model
     )
 
 
@@ -872,7 +885,8 @@ def analyze_content_sync(
     content: str,
     task_type: str = "general",
     additional_context: Optional[str] = None,
-    timeout_seconds: int = 60
+    timeout_seconds: int = 60,
+    model: str = "sonnet"
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI synchronously.
@@ -882,6 +896,7 @@ def analyze_content_sync(
         task_type: Type of analysis (pr_review, code_analysis, etc.)
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
+        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
         
     Returns:
         ClaudeCliResult with analysis
@@ -897,4 +912,4 @@ def analyze_content_sync(
     prompt = "\n\n".join(prompt_parts)
     
     executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
-    return executor.execute_sync(prompt=prompt, task_type=task_type)
+    return executor.execute_sync(prompt=prompt, task_type=task_type, model=model)
