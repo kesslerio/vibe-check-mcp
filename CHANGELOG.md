@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-06-19
+
+### Added
+- Model parameter support for Claude model selection (#125)
+- Interrupt mode to vibe_check_mentor for quick interventions (#136)
+- Security enhancements with comprehensive testing
+- Enhanced PR review with file type analysis and model selection
+- Improved issue analysis framework with logging enhancements
+
+### Fixed
+- Syntax errors in analyze_issue_nollm module
+- String formatting issues in test files
+- Try-except block structure in analysis workflows
+
+### Security
+- Added model parameter validation and comprehensive testing
+- Enhanced security patterns in PR review workflows
+
 ## [0.2.0] - 2025-01-06
 
 ### Added
