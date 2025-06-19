@@ -1,20 +1,29 @@
-version: 1
-runtime: "container"
-description: "AI coding safety net - anti-pattern detection for engineering decisions with real-time feedback"
-start: "python -m vibe_check.server"
-env:
-  PYTHONPATH: "/app/src"
-  LOG_LEVEL: "INFO"
-configSchema:
-  type: object
-  properties:
-    GITHUB_TOKEN:
-      type: string
-      description: "GitHub Personal Access Token for repository access (required for GitHub integration)"
-      pattern: "^ghp_[a-zA-Z0-9]{36}$"
-    LOG_LEVEL:
-      type: string
-      description: "Logging level for the MCP server"
-      enum: ["DEBUG", "INFO", "WARNING", "ERROR"]
-      default: "INFO"
-  required: []
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+build:
+  dockerBuildPath: .
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP
+    type: object
+    properties:
+      GITHUB_TOKEN:
+        type: string
+        description: "GitHub Personal Access Token for repository access (required for GitHub integration)"
+      LOG_LEVEL:
+        type: string
+        description: "Logging level for the MCP server"
+        enum: ["DEBUG", "INFO", "WARNING", "ERROR"]
+        default: "INFO"
+    commandFunction: |
+      (config) => ({
+        command: 'python',
+        args: ['-m', 'vibe_check.server'],
+        env: {
+          PYTHONPATH: '/app/src',
+          GITHUB_TOKEN: config.GITHUB_TOKEN || '',
+          LOG_LEVEL: config.LOG_LEVEL || 'INFO'
+        }
+      })
