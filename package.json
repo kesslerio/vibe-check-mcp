@@ -1,0 +1,47 @@
+{
+  "name": "vibe-check-mcp",
+  "version": "0.3.0",
+  "description": "Vibe Check MCP - Anti-pattern detection and mentoring for better engineering decisions",
+  "main": "src/vibe_check/server.py",
+  "bin": {
+    "vibe-check-mcp": "./bin/vibe-check-mcp"
+  },
+  "scripts": {
+    "start": "python -m vibe_check.server",
+    "test": "pytest",
+    "lint": "black src/ tests/ && mypy src/",
+    "install-deps": "pip install -r requirements.txt"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "anti-patterns",
+    "engineering",
+    "mentoring",
+    "claude",
+    "ai",
+    "development",
+    "patterns"
+  ],
+  "author": "Kessler IO",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kesslerio/vibe-check-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kesslerio/vibe-check-mcp/issues"
+  },
+  "homepage": "https://github.com/kesslerio/vibe-check-mcp#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "requirements.txt",
+    "README.md",
+    "LICENSE",
+    "VERSION"
+  ]
+}

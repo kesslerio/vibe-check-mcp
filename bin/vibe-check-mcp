@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+
+# Vibe Check MCP - npx executable script
+# Automatically installs Python dependencies and runs the MCP server
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[vibe-check-mcp]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[vibe-check-mcp]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[vibe-check-mcp]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[vibe-check-mcp]${NC} $1"
+}
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Function to find project directory with requirements.txt
+find_project_dir() {
+    # Check common locations for requirements.txt
+    local search_dirs=(
+        "$(dirname "$SCRIPT_DIR")"                    # Local installation
+        "$SCRIPT_DIR/.."                              # Standard npx structure
+        "$SCRIPT_DIR/../.."                           # Deep npx structure
+        "$SCRIPT_DIR/../../node_modules/vibe-check-mcp" # npm global structure
+    )
+    
+    for dir in "${search_dirs[@]}"; do
+        if [ -f "$dir/requirements.txt" ]; then
+            echo "$dir"
+            return 0
+        fi
+    done
+    
+    # Try to find using find command within reasonable depth
+    local found_dir=$(find "$SCRIPT_DIR" -maxdepth 4 -name "requirements.txt" -exec dirname {} \; 2>/dev/null | head -1)
+    if [ -n "$found_dir" ]; then
+        echo "$found_dir"
+        return 0
+    fi
+    
+    # Check if we're in an npx temp directory - look for vibe-check-mcp package
+    if [[ "$SCRIPT_DIR" == *"/.npm/_npx/"* ]]; then
+        local npx_base=$(echo "$SCRIPT_DIR" | sed 's|/.npm/_npx/.*|/.npm/_npx|')
+        local vibe_dir=$(find "$npx_base" -name "vibe-check-mcp" -type d 2>/dev/null | head -1)
+        if [ -n "$vibe_dir" ] && [ -f "$vibe_dir/requirements.txt" ]; then
+            echo "$vibe_dir"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Find the project directory
+PROJECT_DIR=$(find_project_dir)
+if [ -z "$PROJECT_DIR" ]; then
+    print_error "❌ Could not locate vibe-check-mcp installation"
+    print_error "Searched from: $SCRIPT_DIR"
+    print_error "Please ensure requirements.txt is available in the package"
+    exit 1
+fi
+
+print_status "🚀 Starting Vibe Check MCP Server..."
+
+# Check if Python is available
+if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+    print_error "❌ Python is not installed or not in PATH"
+    print_error "Please install Python 3.8+ and try again"
+    exit 1
+fi
+
+# Use python3 if available, otherwise python
+PYTHON_CMD="python3"
+if ! command -v python3 &> /dev/null; then
+    PYTHON_CMD="python"
+fi
+
+print_status "📍 Project directory: $PROJECT_DIR"
+
+# Check if pip is available
+if ! command -v pip &> /dev/null && ! command -v pip3 &> /dev/null; then
+    print_error "❌ pip is not installed or not in PATH"
+    print_error "Please install pip and try again"
+    exit 1
+fi
+
+# Use pip3 if available, otherwise pip
+PIP_CMD="pip3"
+if ! command -v pip3 &> /dev/null; then
+    PIP_CMD="pip"
+fi
+
+# Check if requirements are already installed
+print_status "🔍 Checking Python dependencies..."
+
+# Install requirements if needed
+if ! $PYTHON_CMD -c "import fastmcp, mcp, uvicorn" &> /dev/null; then
+    print_status "📦 Installing Python dependencies..."
+    cd "$PROJECT_DIR"
+    $PIP_CMD install -r requirements.txt
+    print_success "✅ Dependencies installed successfully"
+else
+    print_success "✅ Dependencies already installed"
+fi
+
+# Add the source directory to PYTHONPATH
+export PYTHONPATH="$PROJECT_DIR/src:$PYTHONPATH"
+
+print_status "🎯 Starting MCP server..."
+
+# Change to project directory and run the server
+cd "$PROJECT_DIR"
+
+# Pass all arguments to the Python server
+exec $PYTHON_CMD -m vibe_check.server "$@"

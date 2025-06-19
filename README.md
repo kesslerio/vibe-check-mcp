@@ -108,30 +108,45 @@ Vibe Check MCP provides **three modes of analysis** to catch engineering anti-pa
 - Python 3.8+ with pip
 - GitHub token (optional, for GitHub integration)
 
-### 🎯 **Recommended: Smithery One-Line Installation**
+## 🚀 Installation Options
+
+Choose the installation method that works best for your setup:
+
+### 🎯 **Option 1: NPX (Instant Setup) - NEW!**
+
+```bash
+# Run directly without installation
+npx vibe-check-mcp --stdio
+
+# Or add to Claude Code MCP config
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"]
+}'
+```
+
+**Benefits:**
+- ✅ No local installation required
+- ✅ Always runs latest version
+- ✅ Automatic Python dependency management
+- ✅ Cross-platform compatibility
+
+### 🎯 **Option 2: Smithery (Recommended for Production)**
 
 ```bash
 npx -y @smithery/cli install vibe-check-mcp --client claude
 ```
 
-This automatically:
+**Benefits:**
 - ✅ Installs Vibe Check MCP with all dependencies
-- ✅ Configures Claude Code MCP integration
+- ✅ Configures Claude Code MCP integration automatically
 - ✅ Sets up proper environment variables
 - ✅ Verifies installation and server health
 - ✅ Enables automatic updates via Smithery
+- ✅ Production-ready configuration
 
-### 🔐 GitHub Configuration (Optional)
-
-For private repository support, configure your GitHub token:
-
-```bash
-# Set GitHub token for private repository access
-export GITHUB_TOKEN="ghp_your_token_here"
-# Add to your shell profile (~/.zshrc, ~/.bashrc) for persistence
-```
-
-### Alternative Installation Methods
+### 🎯 **Option 3: Manual Installation (Advanced)**
 
 <details>
 <summary>📦 Manual Installation (Click to expand)</summary>
@@ -159,29 +174,80 @@ claude mcp add-json vibe-check '{
 ```
 </details>
 
+### 🎯 **Option 4: Script-Based Installation**
+
 <details>
-<summary>🚀 Script-Based Installation (Click to expand)</summary>
+<summary>🚀 One-Line Script Installation (Click to expand)</summary>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
 ```
 
-This automatically:
+**What it does:**
 - ✅ Installs Vibe Check MCP
 - ✅ Configures Claude Code integration
 - ✅ Sets up GitHub token if provided
 - ✅ Verifies installation
 </details>
 
-### 🔍 Verify Installation
+## 🔧 Configuration
+
+### 🔐 GitHub Token Setup (Optional)
+
+For private repository support, configure your GitHub token:
 
 ```bash
+# Set GitHub token for private repository access
+export GITHUB_TOKEN="ghp_your_token_here"
+# Add to your shell profile (~/.zshrc, ~/.bashrc) for persistence
+```
+
+**Token Permissions Required:**
+- ✅ `repo` (for private repository access)  
+- ✅ `read:org` (for organization repositories)
+
+## 🚀 Quick Setup for Claude Code
+
+Since our project is specifically designed for Claude Code integration, here's the fastest setup:
+
+### Step 1: Add to Claude Code (Recommended)
+```bash
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"],
+  "env": {
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}'
+```
+
+### Step 2: Restart Claude Code
+```bash
+# Restart Claude Code to load the new MCP server
+# No installation, dependencies, or local setup required!
+```
+
+### Step 3: Test It Works
+```bash
 # Test that the MCP server is working
-claude --version
-# Should show Claude Code is running with vibe-check-mcp available
+claude "Show vibe check server status"
 
 # Test a quick analysis
 claude "Quick vibe check: analyze this text for any engineering anti-patterns"
+```
+
+### 🔍 Verify Installation
+
+```bash
+# Check Claude Code version and MCP integration
+claude --version
+
+# Test the mentor feature (NEW in v0.3.0)
+claude "Should I build a custom HTTP client for the Stripe API?"
+
+# Test fast pattern detection
+claude "Quick vibe check issue 42"
 ```
 
 **GitHub Token Permissions (for GitHub integration):**

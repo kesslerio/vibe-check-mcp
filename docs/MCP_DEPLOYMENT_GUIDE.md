@@ -8,19 +8,74 @@ This guide covers deployment options for the Vibe Check MCP anti-pattern detecti
 
 The Vibe Check MCP server supports multiple deployment modes to accommodate different use cases:
 
-1. **🥇 Native Host Deployment** (Recommended - Fast startup, minimal memory)
-2. **🐳 Docker HTTP Deployment** (Containerized isolation)
-3. **🌉 Docker with Socat Bridge** (Hybrid stdio + Docker)
+1. **⚡ NPX Deployment** (NEW - Instant setup, no installation)
+2. **🎯 Smithery Deployment** (Recommended - Production ready)
+3. **🥇 Native Host Deployment** (Advanced - Fast startup, minimal memory)
+4. **🐳 Docker HTTP Deployment** (Containerized isolation)
+5. **🌉 Docker with Socat Bridge** (Hybrid stdio + Docker)
 
-## Native Host Deployment (Recommended)
+## NPX Deployment (NEW - Instant Setup)
+
+### For Quick Setup and Testing
+
+This is the fastest way to get started with Vibe Check MCP. No local installation required, automatic dependency management, and always runs the latest version.
+
+#### Quick Start
+
+```bash
+# Run directly without installation
+npx vibe-check-mcp --stdio
+
+# Or run with HTTP transport
+npx vibe-check-mcp --transport streamable-http --port 8001
+```
+
+#### Claude Code Integration
+
+```bash
+# Add to Claude Code MCP configuration
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"]
+}'
+```
+
+#### Benefits
+- ✅ No local installation required
+- ✅ Always runs latest version
+- ✅ Automatic Python dependency management
+- ✅ Cross-platform compatibility
+- ✅ Perfect for testing and development
+
+## Smithery Deployment (Recommended for Production)
+
+### For Production Claude Code Integration
+
+Smithery provides automated installation, configuration, and updates for MCP servers.
+
+#### Installation
+
+```bash
+npx -y @smithery/cli install vibe-check-mcp --client claude
+```
+
+#### Benefits
+- ✅ Automated Claude Code configuration
+- ✅ Production-ready setup
+- ✅ Automatic updates
+- ✅ Health monitoring
+- ✅ Environment variable management
+
+## Native Host Deployment (Advanced)
 
 ### For Claude Desktop/Code Integration
 
-This is the optimal approach for Claude Desktop and Claude Code integration, providing direct stdio transport compatibility with fast startup (~2s) and minimal memory usage (~50MB).
+This is the optimal approach for advanced users who want direct control over the installation, providing direct stdio transport compatibility with fast startup (~2s) and minimal memory usage (~50MB).
 
 #### Quick Installation
 
-**Option 1: One-Command Setup (Recommended)**
+**Option 1: One-Command Setup**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/install.sh | bash
 ```
@@ -39,6 +94,23 @@ PYTHONPATH=src python -m vibe_check server --help
 #### Configuration
 
 **For Claude Desktop** (`~/.claude_desktop_config.json`):
+
+*NPX Setup (Recommended):*
+```json
+{
+  "mcpServers": {
+    "vibe-check": {
+      "command": "npx",
+      "args": ["vibe-check-mcp", "--stdio"],
+      "env": {
+        "GITHUB_TOKEN": "your_github_token_here"
+      }
+    }
+  }
+}
+```
+
+*Manual Installation Setup:*
 ```json
 {
   "mcpServers": {
@@ -55,6 +127,33 @@ PYTHONPATH=src python -m vibe_check server --help
 ```
 
 **For Claude Code** (using Claude CLI):
+
+*NPX Setup (Recommended - No Installation Required):*
+```bash
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"],
+  "env": {
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}'
+```
+
+*NPX with Local Development Package:*
+```bash
+# If testing local changes, use the packaged tarball
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["/path/to/vibe-check-mcp-0.3.0.tgz", "--stdio"],
+  "env": {
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}'
+```
+
+*Legacy Manual Installation Setup (Not Recommended):*
 ```bash
 claude mcp add-json vibe-check '{
   "type": "stdio",
@@ -64,14 +163,75 @@ claude mcp add-json vibe-check '{
     "PYTHONPATH": "'"$(pwd)"'/src",
     "GITHUB_TOKEN": "your_github_token_here"
   }
-}' -s user
+}'
 ```
 
-Or manually edit `~/.cursor/mcp.json`:
+### Why NPX is Better for Claude Code
+
+**Problems with the old approach:**
+- ❌ Required virtual environment management (`/path/to/.venv/bin/python`)
+- ❌ Manual PYTHONPATH configuration
+- ❌ Dependency installation and maintenance
+- ❌ Path-dependent configurations that break when moved
+- ❌ Complex troubleshooting for path/environment issues
+
+**Benefits of NPX approach:**
+- ✅ **Zero installation** - runs directly from npm registry
+- ✅ **Always latest version** - automatically pulls updates
+- ✅ **No path dependencies** - works from any directory
+- ✅ **Automatic dependency management** - handles Python requirements
+- ✅ **Cross-platform compatibility** - same command works everywhere
+- ✅ **Simplified troubleshooting** - fewer moving parts
+
+### Migration from Legacy Setup
+
+If you previously had a configuration like this:
+```bash
+# OLD - Don't use this anymore
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "/Users/username/.venv/bin/python",
+  "args": ["-m", "vibe_check.server"],
+  "env": {
+    "PYTHONPATH": "/Users/username/project/src",
+    "GITHUB_TOKEN": "your_token"
+  },
+  "cwd": "/Users/username/project"
+}'
+```
+
+**Replace it with:**
+```bash
+# NEW - Simple NPX approach
+claude mcp add-json vibe-check '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"],
+  "env": {
+    "GITHUB_TOKEN": "your_token"
+  }
+}'
+```
+
+**No need for:**
+- Virtual environment paths
+- PYTHONPATH configuration
+- Working directory specification
+- Manual dependency management
+
+*Manually edit `~/.cursor/mcp.json`:*
 ```json
 {
   "mcpServers": {
-    "vibe-check": {
+    "vibe-check-npx": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["vibe-check-mcp", "--stdio"],
+      "env": {
+        "GITHUB_TOKEN": "your_github_token_here"
+      }
+    },
+    "vibe-check-local": {
       "type": "stdio",
       "command": "python", 
       "args": ["-m", "vibe_check.server"],
