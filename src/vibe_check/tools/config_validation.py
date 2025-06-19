@@ -15,6 +15,7 @@ Implements the requirements from issue #98:
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -80,26 +81,19 @@ class ConfigurationValidator:
     def _validate_claude_cli_availability(self) -> None:
         """Validate Claude CLI installation and accessibility."""
         try:
-            # Check if claude command exists in PATH
-            which_result = subprocess.run(
-                ["which", "claude"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            # Check if claude command exists in PATH using cross-platform method
+            claude_path = shutil.which("claude")
             
-            if which_result.returncode != 0:
+            if not claude_path:
                 self.results.append(ValidationResult(
                     check_name="claude_cli_availability",
                     level=ValidationLevel.WARNING,
                     success=False,
                     message="Claude CLI not found in PATH",
-                    details={"which_stderr": which_result.stderr.strip()},
+                    details={"path_searched": os.environ.get("PATH", "")},
                     suggestion="Install Claude CLI or add it to your PATH for full functionality"
                 ))
                 return
-            
-            claude_path = which_result.stdout.strip()
             
             # Try to get version information
             version_result = subprocess.run(
@@ -321,8 +315,8 @@ class ConfigurationValidator:
                 # PYTHONPATH is critical for vibe-check
                 if env_var not in os.environ:
                     env_issues.append(f"{env_var} not set ({description})")
-                elif "vibe_check" not in os.environ[env_var]:
-                    env_issues.append(f"{env_var} may not include vibe_check path")
+                elif not any("vibe_check" in path_part for path_part in os.environ[env_var].split(os.pathsep)):
+                    env_issues.append(f"{env_var} does not include vibe_check in any path component")
         
         if env_issues:
             self.results.append(ValidationResult(
