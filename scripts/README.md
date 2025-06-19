@@ -20,23 +20,21 @@ These scripts serve as **proof-of-concept implementations** and **feature specif
 | Script | Purpose | Status |
 |--------|---------|--------|
 | `lint-code.sh` | Code quality validation | ✅ Stable |
-| `triage-issue.sh` | ✅ Prototype | `triage_issue` (planned) | 🔄 **NO MCP EQUIVALENT YET** |
+| `triage-issue.sh` | Issue classification | ✅ Prototype - **NO MCP EQUIVALENT YET** |
 | `shared/` | Common functions | ✅ Stable |
 
 ## 📋 Usage During Development
 
 While MCP tools are being developed, these scripts provide **full functionality** for systematic review and validation:
 
-### Issue Review (via MCP)
+### Issue Review
 ```bash
-# Use Claude Code with MCP tools:
-# "analyze issue 35" → analyze_github_issue_llm
+./scripts/review-issue.sh 35
 ```
 
-### PR Review (via MCP)
+### PR Review  
 ```bash
-# Use Claude Code with MCP tools:
-# "review PR 38" → review_pr_comprehensive
+./scripts/review-pr.sh 38
 ```
 
 ### Engineering Plan Review

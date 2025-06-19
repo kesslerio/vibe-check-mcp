@@ -1,8 +1,5 @@
 # Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
 
-build:
-  dockerBuildPath: .
-
 startCommand:
   type: stdio
   configSchema:
@@ -17,13 +14,13 @@ startCommand:
         description: "Logging level for the MCP server"
         enum: ["DEBUG", "INFO", "WARNING", "ERROR"]
         default: "INFO"
-    commandFunction: |
-      (config) => ({
-        command: 'python',
-        args: ['-m', 'vibe_check.server'],
-        env: {
-          PYTHONPATH: '/app/src',
-          GITHUB_TOKEN: config.GITHUB_TOKEN || '',
-          LOG_LEVEL: config.LOG_LEVEL || 'INFO'
-        }
-      })
+  commandFunction: |-
+    (config) => ({
+      command: 'python',
+      args: ['-m', 'vibe_check.server'],
+      env: {
+        PYTHONPATH: '/app/src',
+        GITHUB_TOKEN: config.GITHUB_TOKEN || '',
+        LOG_LEVEL: config.LOG_LEVEL || 'INFO'
+      }
+    })
