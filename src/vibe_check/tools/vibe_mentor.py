@@ -26,6 +26,9 @@ from ..utils.logging_framework import get_vibe_logger
 logger = logging.getLogger(__name__)
 vibe_logger = get_vibe_logger("vibe_mentor")
 
+# Cache interrupt logger to avoid creating new instances on every call
+_interrupt_logger = get_vibe_logger("mentor_interrupt")
+
 
 # Confidence score constants
 class ConfidenceScores:
@@ -640,11 +643,10 @@ class VibeMentorEngine:
         Generate a focused interrupt intervention based on detected patterns and phase.
         Returns a single question/suggestion for quick decision guidance.
         """
-        logger = get_vibe_logger("mentor_interrupt")
-        logger.progress("Generating quick intervention", "⚡")
+        _interrupt_logger.progress("Generating quick intervention", "⚡")
         
         pattern_type = primary_pattern.get("pattern_type", "unknown")
-        logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
+        _interrupt_logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {
@@ -730,7 +732,7 @@ class VibeMentorEngine:
             "confidence": pattern_confidence
         }
         
-        logger.success(f"Generated {severity} priority intervention for {pattern_type}")
+        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type}")
         return result
 
 

@@ -132,16 +132,26 @@ class GitHubIssueAnalyzer:
                 })
                 
                 if detected_patterns:
-                    max_confidence = max(p.confidence for p in detected_patterns)
-                    if max_confidence >= 0.8:
-                        vibe_emoji = "🚨"
-                        vibe_text = "Bad Vibes"
-                    elif max_confidence >= 0.6:
-                        vibe_emoji = "⚠️"
-                        vibe_text = "Mixed Vibes"
+                    # Validate confidence values before comparison
+                    valid_confidences = []
+                    for p in detected_patterns:
+                        if hasattr(p, 'confidence') and isinstance(p.confidence, (int, float)):
+                            valid_confidences.append(max(0.0, min(1.0, float(p.confidence))))
+                    
+                    if valid_confidences:
+                        max_confidence = max(valid_confidences)
+                        if max_confidence >= 0.8:
+                            vibe_emoji = "🚨"
+                            vibe_text = "Bad Vibes"
+                        elif max_confidence >= 0.6:
+                            vibe_emoji = "⚠️"
+                            vibe_text = "Mixed Vibes"
+                        else:
+                            vibe_emoji = "💡"
+                            vibe_text = "Minor Concerns"
                     else:
-                        vibe_emoji = "💡"
-                        vibe_text = "Minor Concerns"
+                        vibe_emoji = "❓"
+                        vibe_text = "Unknown Confidence"
                 else:
                     vibe_emoji = "✅"
                     vibe_text = "Good Vibes"

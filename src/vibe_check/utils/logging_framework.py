@@ -15,7 +15,24 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Callable
+import re
+
+
+def _default_sanitizer(message: str) -> str:
+    """Default sanitization for sensitive data patterns"""
+    # Pattern for API keys and tokens
+    message = re.sub(r'(api[_-]?key|token|secret|password)\s*[:=]\s*["\']?[\w\-]{8,}["\']?', 
+                     r'\1=***REDACTED***', message, flags=re.IGNORECASE)
+    
+    # Pattern for GitHub personal access tokens
+    message = re.sub(r'ghp_[\w]{36}', 'ghp_***REDACTED***', message)
+    
+    # Pattern for common secrets in environment variables
+    message = re.sub(r'(GITHUB_TOKEN|ANTHROPIC_API_KEY|OPENAI_API_KEY)\s*[:=]\s*["\']?[\w\-]{8,}["\']?',
+                     r'\1=***REDACTED***', message, flags=re.IGNORECASE)
+    
+    return message
 
 
 class LoggingMode(Enum):
@@ -36,6 +53,7 @@ class LoggingConfig:
     file_logging: bool = True
     structured_json: bool = False  # For monitoring systems
     mcp_server_mode: bool = field(default_factory=lambda: bool(os.environ.get('MCP_SERVER_MODE')))
+    sanitizer: Optional[Callable[[str], str]] = field(default_factory=lambda: _default_sanitizer)
     
     @classmethod
     def from_environment(cls) -> 'LoggingConfig':
@@ -49,6 +67,23 @@ class LoggingConfig:
             structured_json=bool(os.environ.get('VIBE_LOG_JSON')),
             mcp_server_mode=bool(os.environ.get('MCP_SERVER_MODE'))
         )
+    
+    def validate(self) -> None:
+        """Validate configuration settings"""
+        if not isinstance(self.console_enabled, bool):
+            raise ValueError("console_enabled must be a boolean")
+        if not isinstance(self.emoji_enabled, bool):
+            raise ValueError("emoji_enabled must be a boolean")
+        if not isinstance(self.progress_tracking, bool):
+            raise ValueError("progress_tracking must be a boolean")
+        if not isinstance(self.timing_enabled, bool):
+            raise ValueError("timing_enabled must be a boolean")
+        if not isinstance(self.file_logging, bool):
+            raise ValueError("file_logging must be a boolean")
+        if not isinstance(self.structured_json, bool):
+            raise ValueError("structured_json must be a boolean")
+        if not isinstance(self.mcp_server_mode, bool):
+            raise ValueError("mcp_server_mode must be a boolean")
 
 
 @dataclass
@@ -81,6 +116,14 @@ class VibeLogger:
     ):
         self.tool_name = tool_name
         self.config = config or LoggingConfig.from_environment()
+        
+        # Validate configuration
+        try:
+            self.config.validate()
+        except ValueError as e:
+            # Fall back to safe defaults if config is invalid
+            self.config = LoggingConfig()
+            
         self.logger = logger or logging.getLogger(f"vibe_check.{tool_name}")
         
         # Operation state
@@ -225,7 +268,11 @@ class VibeLogger:
         if not self.current_operation:
             return
         
-        operation_time = time.time() - self.current_operation.start_time
+        # Protect against clock adjustment vulnerabilities
+        try:
+            operation_time = max(0, time.time() - self.current_operation.start_time)
+        except (TypeError, ValueError):
+            operation_time = 0  # Fallback if time calculation fails
         
         if success_message:
             final_message = success_message
@@ -283,9 +330,21 @@ class VibeLogger:
         if not self.config.file_logging:
             return
         
-        # Add tool context and session timing
-        session_time = time.time() - self.session_start_time
-        context_msg = f"[{self.tool_name}:{session_time:.1f}s] {message}"
+        # Add tool context and session timing - protect against clock adjustment
+        try:
+            session_time = max(0, time.time() - self.session_start_time)
+        except (TypeError, ValueError):
+            session_time = 0  # Fallback if time calculation fails
+        # Apply sanitization if configured
+        sanitized_message = message
+        if self.config.sanitizer:
+            try:
+                sanitized_message = self.config.sanitizer(message)
+            except Exception:
+                # If sanitization fails, use original message
+                sanitized_message = message
+        
+        context_msg = f"[{self.tool_name}:{session_time:.1f}s] {sanitized_message}"
         
         # Use existing logger infrastructure
         log_method = getattr(self.logger, level.lower(), self.logger.info)
