@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-06-19
+
+### Added
+- **Complete Strategy Pattern Architecture**: Configuration-driven response system replacing 375+ lines of hardcoded logic
+- **Enhanced 2025 Technology Support**: Comprehensive LLM pricing, framework comparisons, and AI tool recommendations
+- **YAML Configuration System**: All technology patterns and pricing data externalized to `tech_patterns.yaml`
+- **Budget LLM Support**: DeepSeek R1 ($0.14/$2.19), GPT-4.1 nano ($0.075/$0.30), Claude 3.5 Haiku, Llama 4
+- **Framework Comparisons**: Astro vs Next.js, Bun vs Node.js, LangChain vs LlamaIndex with specific use case advice
+- **Database Rankings**: Vector DBs (Milvus > Weaviate ≈ Qdrant) and Graph DBs (FalkorDB vs Neo4j) with performance data
+- **Comprehensive Test Suite**: 18 pytest tests with performance regression detection
+
+### Changed  
+- **MAJOR REFACTORING**: 413-line `generate_senior_engineer_response` method reduced to 25 lines using strategy pattern
+- **File Size Reduction**: `vibe_mentor_enhanced.py` reduced from 1000+ lines to 588 lines (-40%)
+- **Architecture**: Response generation centralized in priority-based strategy pattern
+- **Configuration Management**: Singleton config loader with staleness detection and fallback handling
+- **Constants**: Added `MAX_FEATURES=5`, `MAX_DECISION_POINTS=3` replacing magic numbers
+
+### Fixed
+- **Performance**: O(n*m) → O(1) pattern matching with compiled regex patterns  
+- **Security**: ReDoS attack prevention with input validation and length limits
+- **Code Quality**: All of Claude's code review issues addressed (duplicate logic, magic numbers, method complexity)
+- **Error Handling**: Comprehensive try-catch blocks with meaningful fallback responses
+
+### Performance
+- **Context Extraction**: < 0.1s for large input processing
+- **Strategy Selection**: < 0.5s for 1000 response generations
+- **Pattern Matching**: LRU cache with compiled regex for O(1) lookup performance
+
+### Technical Debt Eliminated
+- Removed duplicate LLM comparison logic scattered across multiple methods
+- Eliminated hardcoded responses (lines 356-649) in favor of configuration
+- Consolidated helper methods (`_handle_llm_comparisons`, `_handle_framework_comparisons`) into strategy pattern
+- Fixed all magic numbers with proper constants
+
+### Testing
+- Added comprehensive unit tests for strategy pattern components
+- Performance regression tests to prevent O(n*m) issues
+- Integration tests for end-to-end query flows
+- Fallback configuration testing for error resilience
+
 ## [0.3.0] - 2025-06-19
 
 ### Added
