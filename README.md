@@ -1,9 +1,34 @@
 # 🧭 Vibe Check MCP
 
-**Your AI coding safety net - because getting 90% done and then stuck for weeks sucks.**
+**Your AI coding safety net with senior engineer collaborative reasoning - because getting 90% done and then stuck for weeks sucks.**
 
-Vibe Check MCP stops you from building yourself into a corner with AI-generated code. It's like having a senior developer looking over your shoulder, catching the expensive mistakes before you waste days on unfixable problems.
+Vibe Check MCP v0.3.0 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
 
+## 🧠 NEW in v0.3.0: Senior Engineer Collaborative Reasoning
+
+**The game-changing feature that actually prevents disasters before they happen:**
+
+### 🚨 **Interrupt Mode - Stop Bad Decisions Mid-Sentence**
+```bash
+❌ You: "I'll build a custom HTTP client for this API"
+✅ Mentor: "Have you checked if an official SDK exists?" (INTERRUPT!)
+```
+
+**This literally stops you when you're about to make expensive mistakes.** It's like having a senior engineer tap you on the shoulder and say "Hey, wait a minute..."
+
+### 🤝 **Multi-Persona Collaborative Reasoning**
+Get feedback from **multiple engineering perspectives simultaneously**:
+- 👨‍💻 **Senior Engineer**: "This looks like premature optimization"
+- 📋 **Product Manager**: "Does this actually solve the user problem?"
+- 🤖 **AI/ML Engineer**: "There's a simpler approach using existing models"
+
+### 🎯 **Real Disasters This Prevents:**
+- Building custom auth systems when Auth0 exists
+- Creating REST APIs when GraphQL endpoints are available
+- Writing complex parsers when libraries handle it
+- **The Cognee Case Study**: Prevented 2+ weeks of custom development when official Docker containers existed
+
+[![Version](https://img.shields.io/badge/Version-0.3.0-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)
 [![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
@@ -45,7 +70,13 @@ You're not alone. Vibe Check is specifically designed for **vibe coders** - peop
 
 ## 🎯 What It Does
 
-Vibe Check MCP provides **two modes of analysis** to catch engineering anti-patterns before they become expensive mistakes:
+Vibe Check MCP provides **three modes of analysis** to catch engineering anti-patterns before they become expensive mistakes:
+
+### **🧠 Senior Engineer Mentor** (NEW in v0.3.0)
+- **Collaborative reasoning** with multiple engineering personas
+- **Interrupt mode** that stops bad decisions in real-time
+- **Architecture guidance** for complex technical decisions
+- **Claude model selection** (Haiku/Sonnet/Opus) based on analysis needs
 
 ### **🚀 Fast Analysis** (Instant Feedback)
 - **Quick pattern detection** without external API calls
@@ -164,6 +195,22 @@ claude "Quick vibe check: analyze this text for any engineering anti-patterns"
 
 ## 🚀 Usage Examples
 
+### **🧠 Senior Engineer Mentor (NEW!)**
+
+```bash
+# Get architectural guidance
+"Should I build a custom auth system for this project?"
+→ 🤝 Multi-persona feedback from Senior Engineer, Security Expert, Product Manager
+
+# Interrupt mode for real-time prevention
+"I'm planning to build a custom HTTP client for the Stripe API"
+→ 🚨 INTERRUPT: "Have you checked if stripe-python SDK exists?"
+
+# Claude model selection for different analysis depths
+"Use Haiku to quickly validate this API design"
+"Use Opus for deep architectural review of this microservice"
+```
+
 ### **Natural Language Commands**
 
 ```bash
@@ -211,11 +258,18 @@ Unlike code analysis tools that just flag issues, Vibe Check explains:
 
 | Tool | Purpose | Mode | Response Time |
 |------|---------|------|---------------|
+| **`vibe_check_mentor`** | **Senior engineer collaborative reasoning** | **Mentor** | **<30s** |
 | `analyze_github_issue` | Issue analysis for planning anti-patterns | Fast/Deep | <10s / <60s |
 | `analyze_pull_request` | PR review with anti-pattern detection | Fast/Deep | <15s / <90s |
 | `analyze_text` | Text analysis for documents/plans | Fast/Deep | <5s / <30s |
 | `analyze_code` | Code analysis with educational coaching | Deep | <30s |
 | `validate_integration` | Integration approach validation | Fast | <10s |
+
+### **🧠 New Mentor Tool Features:**
+- **Multi-persona reasoning** with Senior Engineer, Product Manager, Security Expert perspectives
+- **Interrupt mode** for real-time bad decision prevention
+- **Claude model selection** (Haiku for speed, Sonnet for balance, Opus for depth)
+- **Collaborative sessions** that maintain context across multiple questions
 
 ## 📖 Documentation
 
@@ -241,6 +295,11 @@ Unlike code analysis tools that just flag issues, Vibe Check explains:
 See **[MCP Deployment Guide](docs/MCP_DEPLOYMENT_GUIDE.md)** for complete setup instructions.
 
 ## 🎯 Real-World Impact
+
+### **🧠 Senior Engineer Mentoring** (NEW in v0.3.0)
+- **Before**: Make expensive architectural decisions alone
+- **After**: Get multi-persona feedback before committing to approaches
+- **Impact**: Interrupt mode has already prevented multiple engineering disasters in our own development
 
 ### **Technical Debt Prevention**
 - **Before**: Teams spend months building custom solutions that don't work
@@ -282,4 +341,10 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed for seamles
 
 ---
 
-**Ready to prevent your next engineering failure?** Install Vibe Check MCP and start catching anti-patterns before they become technical debt.
+**Ready to prevent your next engineering failure?** 
+
+Install **Vibe Check MCP v0.3.0** and get your senior engineer mentor that actually prevents disasters before they happen.
+
+🚀 **[Get v0.3.0 Now](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)** | 📖 **[Release Notes](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)** | 🧠 **[Try the Mentor Feature](#-senior-engineer-mentor-new-in-v030)**
+
+**Stop building the wrong thing. Start building the right thing faster.**
