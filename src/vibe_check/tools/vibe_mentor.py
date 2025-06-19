@@ -8,16 +8,18 @@ Inspired by Clear-Thought's collaborative reasoning patterns with native impleme
 for vibe-check educational coaching.
 """
 
-from typing import Dict, Any, List, Optional, Literal, Union
+# Standard library
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
+from typing import Dict, Any, List, Optional, Literal, Union
 import json
 import logging
 import secrets
-from datetime import datetime
 
-from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
+# Local imports
 from ..core.pattern_detector import PatternDetector
+from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
 from ..tools.analyze_text_nollm import analyze_text_demo
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ class PatternHandler:
     def has_pattern(patterns: List[Dict[str, Any]], pattern_type: str) -> bool:
         """Check if a specific pattern type exists in the patterns list"""
         try:
-            return any(p.get("pattern_type") == pattern_type for p in patterns)
+            return any(p.get("pattern_type") == pattern_type for p in patterns if isinstance(p, dict))
         except (TypeError, AttributeError):
             return False
 
@@ -304,7 +306,7 @@ class VibeMentorEngine:
     ) -> CollaborativeReasoningSession:
         """Initialize a new collaborative reasoning session"""
 
-        session_id = session_id or f"mentor-session-{secrets.token_hex(8)}"
+        session_id = session_id or f"mentor-session-{int(datetime.now().timestamp())}-{secrets.token_hex(4)}"
 
         session = CollaborativeReasoningSession(
             topic=topic,
@@ -625,6 +627,103 @@ class VibeMentorEngine:
 
         return references
 
+    def generate_interrupt_intervention(
+        self,
+        query: str,
+        phase: str,
+        primary_pattern: Dict[str, Any],
+        pattern_confidence: float,
+    ) -> Dict[str, Any]:
+        """
+        Generate a focused interrupt intervention based on detected patterns and phase.
+        Returns a single question/suggestion for quick decision guidance.
+        """
+        pattern_type = primary_pattern.get("pattern_type", "unknown")
+        
+        # Phase-specific questions mapped to patterns
+        phase_questions = {
+            "planning": {
+                "infrastructure_without_implementation": 
+                    "Have you checked if an official SDK exists for this?",
+                "custom_solution_preferred": 
+                    "Would a simpler solution achieve the same user value?",
+                "documentation_neglect":
+                    "Have you reviewed the official documentation first?",
+                "complexity_escalation":
+                    "Is this complexity solving a real problem or a hypothetical one?",
+                "default":
+                    "Have you validated this approach with the simplest possible solution?"
+            },
+            "implementation": {
+                "infrastructure_without_implementation":
+                    "This abstraction adds complexity - is it solving a real problem?",
+                "custom_solution_preferred":
+                    "Consider using the standard library function instead",
+                "documentation_neglect":
+                    "The official docs show a simpler approach - have you tried it?",
+                "complexity_escalation":
+                    "Could this be done with half the code?",
+                "default":
+                    "Is there a more direct way to implement this?"
+            },
+            "review": {
+                "infrastructure_without_implementation":
+                    "Does this match the original requirements?",
+                "custom_solution_preferred":
+                    "What would happen if we removed this custom layer?",
+                "documentation_neglect":
+                    "How does this compare to the documented approach?",
+                "complexity_escalation":
+                    "Which parts of this could be simplified?",
+                "default":
+                    "Have we introduced unnecessary complexity?"
+            }
+        }
+        
+        # Get phase-specific question
+        questions = phase_questions.get(phase, phase_questions["planning"])
+        question = questions.get(pattern_type, questions["default"])
+        
+        # Determine severity based on pattern confidence and type
+        severity_map = {
+            "infrastructure_without_implementation": "high",
+            "custom_solution_preferred": "medium",
+            "documentation_neglect": "medium",
+            "complexity_escalation": "low",
+        }
+        severity = severity_map.get(pattern_type, "low")
+        
+        # Generate quick suggestion based on pattern
+        suggestions = {
+            "infrastructure_without_implementation": 
+                "Check docs.api.com/sdks first",
+            "custom_solution_preferred":
+                "Try the standard approach",
+            "documentation_neglect":
+                "Review official documentation",
+            "complexity_escalation":
+                "Consider YAGNI principle",
+            "default":
+                "Validate with simpler approach"
+        }
+        suggestion = suggestions.get(pattern_type, suggestions["default"])
+        
+        # Adjust suggestion based on specific keywords in query
+        if "http" in query.lower() or "client" in query.lower():
+            suggestion = "Check for official SDK with retry/auth handling"
+        elif "auth" in query.lower():
+            suggestion = "Use established auth library (OAuth2, JWT)"
+        elif "abstract" in query.lower() or "layer" in query.lower():
+            suggestion = "Start concrete, abstract only when patterns emerge"
+        
+        return {
+            "question": question,
+            "severity": severity,
+            "suggestion": suggestion,
+            "pattern_type": pattern_type,
+            "confidence": pattern_confidence
+        }
+
 
 def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]]) -> str:
     """Generate a quick summary based on vibe level and patterns"""
@@ -650,3 +749,9 @@ def get_mentor_engine() -> VibeMentorEngine:
     if _mentor_engine is None:
         _mentor_engine = VibeMentorEngine()
     return _mentor_engine
+
+
+def cleanup_mentor_engine() -> None:
+    """Clear global engine state for testing/cleanup"""
+    global _mentor_engine
+    _mentor_engine = None

@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import argparse
+import secrets
 from typing import Dict, Any, Optional
 
 try:
@@ -1045,6 +1046,249 @@ def reset_session_tracking() -> Dict[str, Any]:
             "status": "manual_reset",
             "message": "✅ Consider this a fresh start - track your own productivity",
             "guidance": "Focus on implementation over analysis for next session"
+        }
+
+def _get_phase_affirmation(phase: str, query: str) -> str:
+    """Generate phase-specific affirmation when no interrupt is needed"""
+    phase_affirmations = {
+        "planning": [
+            "Good choice - using standard tools",
+            "Solid approach - keep it simple",
+            "Great! Following established patterns"
+        ],
+        "implementation": [
+            "Clean implementation - well done",
+            "Following best practices - excellent",
+            "Standard approach confirmed - proceed"
+        ],
+        "review": [
+            "Implementation looks clean",
+            "Matches requirements well",
+            "Ready for next steps"
+        ]
+    }
+    
+    # Simple keyword matching for more specific affirmations
+    if "pandas" in query.lower() or "standard" in query.lower():
+        return phase_affirmations[phase][0]
+    elif "official" in query.lower() or "sdk" in query.lower():
+        return phase_affirmations[phase][1]
+    else:
+        return phase_affirmations[phase][2]
+
+@mcp.tool()
+def vibe_check_mentor(
+    query: str,
+    context: Optional[str] = None,
+    session_id: Optional[str] = None,
+    reasoning_depth: str = "standard",
+    continue_session: bool = False,
+    mode: str = "standard",
+    phase: str = "planning",
+    confidence_threshold: float = 0.7
+) -> Dict[str, Any]:
+    """
+    🧠 Senior engineer collaborative reasoning - Get multi-perspective feedback on technical decisions.
+
+    Interactive senior engineer mentor combining vibe-check pattern detection with collaborative reasoning.
+    Multiple engineering personas analyze your technical decisions and provide structured feedback.
+
+    Features:
+    - 🧠 Multi-persona collaborative reasoning (Senior, Product, AI/ML Engineer perspectives)
+    - 🎯 Automatic anti-pattern detection drives persona responses
+    - 💬 Session continuity for multi-turn conversations  
+    - 📊 Structured insights with consensus and disagreements
+    - 🎓 Educational coaching recommendations
+    - ⚡ NEW: Interrupt mode for quick focused interventions
+
+    Modes:
+    - interrupt: Quick focused intervention (<3 seconds) - single question/approval
+    - standard: Normal collaborative reasoning with selected personas
+    - comprehensive: Full analysis (legacy, same as reasoning_depth="comprehensive")
+
+    Reasoning Depths (when mode="standard"):
+    - quick: Senior engineer perspective only
+    - standard: Senior + Product engineer perspectives  
+    - comprehensive: All personas with full collaborative reasoning
+
+    Use this tool for: "Should I build a custom auth system?", "Planning microservices architecture", 
+    "What's the best approach for API integration?", "Continue previous discussion about caching"
+
+    Args:
+        query: Technical question or decision to discuss
+        context: Additional context (code, architecture, requirements)
+        session_id: Session ID to continue previous conversation
+        reasoning_depth: Analysis depth - quick/standard/comprehensive (default: standard)
+        continue_session: Whether to continue existing session (default: false)
+        mode: Interaction mode - interrupt/standard (default: standard)
+        phase: Development phase - planning/implementation/review (default: planning)
+        confidence_threshold: Minimum confidence to trigger interrupt (default: 0.7)
+        
+    Returns:
+        Collaborative reasoning analysis with multi-perspective insights or quick interrupt
+    """
+    logger.info(f"Vibe mentor activated: mode={mode}, depth={reasoning_depth}, phase={phase} for query: {query[:100]}...")
+    
+    try:
+        # Get mentor engine instance
+        engine = get_mentor_engine()
+        
+        # Step 1: Run vibe-check pattern detection
+        combined_text = f"{query}\n\n{context}" if context else query
+        vibe_analysis = analyze_text_demo(combined_text, detail_level="standard")
+        
+        detected_patterns = vibe_analysis.get("detected_patterns", [])
+        vibe_level = vibe_analysis.get("vibe_assessment", {}).get("vibe_level", "unknown")
+        pattern_confidence = vibe_analysis.get("vibe_assessment", {}).get("confidence", 0)
+        
+        # Step 2: Handle interrupt mode for quick interventions
+        if mode == "interrupt":
+            # Quick pattern analysis for interrupt decision
+            interrupt_needed = pattern_confidence > confidence_threshold
+            
+            if interrupt_needed and detected_patterns:
+                # Generate focused intervention based on highest confidence pattern
+                primary_pattern = detected_patterns[0]  # Already sorted by confidence
+                
+                # Get phase-aware question from mentor engine
+                interrupt_response = engine.generate_interrupt_intervention(
+                    query=query,
+                    phase=phase,
+                    primary_pattern=primary_pattern,
+                    pattern_confidence=pattern_confidence
+                )
+                
+                return {
+                    "status": "success",
+                    "mode": "interrupt",
+                    "interrupt": True,
+                    "question": interrupt_response["question"],
+                    "severity": interrupt_response["severity"],
+                    "suggestion": interrupt_response["suggestion"],
+                    "session_id": session_id or f"interrupt-{secrets.token_hex(4)}",
+                    "pattern_detected": primary_pattern.get("pattern_type", "unknown"),
+                    "confidence": pattern_confidence,
+                    "phase": phase,
+                    "can_escalate": True,
+                    "escalation_hint": "Use mode='standard' with same session_id for full analysis"
+                }
+            else:
+                # No intervention needed - proceed
+                return {
+                    "status": "success", 
+                    "mode": "interrupt",
+                    "interrupt": False,
+                    "proceed": True,
+                    "affirmation": _get_phase_affirmation(phase, query),
+                    "confidence": pattern_confidence,
+                    "phase": phase
+                }
+        
+        # Step 3: Standard mode - Create or retrieve session
+        if continue_session and session_id and session_id in engine.sessions:
+            session = engine.sessions[session_id]
+            # Update topic for continued conversation
+            session.topic = query
+        else:
+            session = engine.create_session(
+                topic=query,
+                session_id=session_id
+            )
+        
+        # Step 4: Determine number of contributions based on depth
+        contribution_counts = {
+            "quick": 1,  # Just senior engineer
+            "standard": 2,  # Senior + Product  
+            "comprehensive": 3  # All personas
+        }
+        
+        num_contributions = contribution_counts.get(reasoning_depth, 2)
+        
+        # Step 5: Generate contributions from personas
+        for i in range(num_contributions):
+            if i < len(session.personas):
+                persona = session.personas[i]
+                session.active_persona_id = persona.id
+                
+                contribution = engine.generate_contribution(
+                    session=session,
+                    persona=persona,
+                    detected_patterns=detected_patterns,
+                    context=context
+                )
+                
+                session.contributions.append(contribution)
+                
+                # Advance stage after each contribution in comprehensive mode
+                if reasoning_depth == "comprehensive" and i < num_contributions - 1:
+                    engine.advance_stage(session)
+        
+        # Step 6: Synthesize insights
+        synthesis = engine.synthesize_session(session)
+        
+        # Step 7: Get coaching recommendations
+        from .core.vibe_coaching import VibeCoachingFramework, CoachingTone
+        coaching_framework = VibeCoachingFramework()
+        coaching_recs = coaching_framework.generate_coaching_recommendations(
+            vibe_level=vibe_level,
+            detected_patterns=[],  # Already processed
+            issue_context={"query": query},
+            tone=CoachingTone.ENCOURAGING
+        )
+        
+        # Step 8: Build response
+        response = {
+            "status": "success",
+            "immediate_feedback": {
+                "summary": _generate_summary(vibe_level, detected_patterns),
+                "confidence": vibe_analysis.get("vibe_assessment", {}).get("confidence", 0),
+                "detected_patterns": [p["pattern_type"] for p in detected_patterns],
+                "vibe_level": vibe_level
+            },
+            "collaborative_insights": {
+                "consensus": synthesis["consensus_points"],
+                "perspectives": {
+                    contrib.persona_id: {
+                        "message": contrib.content,
+                        "type": contrib.type,
+                        "confidence": contrib.confidence
+                    }
+                    for contrib in session.contributions
+                },
+                "key_insights": synthesis["key_insights"],
+                "concerns": synthesis["primary_concerns"],
+                "recommendations": synthesis["recommendations"]
+            },
+            "coaching_guidance": {
+                "primary_recommendation": coaching_recs[0].title if coaching_recs else "Proceed with implementation",
+                "action_steps": coaching_recs[0].action_items[:3] if coaching_recs else [],
+                "prevention_checklist": coaching_recs[0].prevention_checklist[:3] if coaching_recs else []
+            },
+            "session_info": {
+                "session_id": session.session_id,
+                "stage": session.stage,
+                "iteration": session.iteration,
+                "can_continue": session.next_contribution_needed
+            },
+            "reasoning_depth": reasoning_depth,
+            "formatted_output": engine.format_session_output(session)
+        }
+        
+        # Log formatted output for debugging
+        logger.info(response["formatted_output"])
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Vibe mentor error: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": f"Mentoring session failed: {str(e)}",
+            "fallback_guidance": [
+                "Start with official documentation",
+                "Build a simple prototype first",
+                "Get feedback early and often"
+            ]
         }
 
 @mcp.tool()
