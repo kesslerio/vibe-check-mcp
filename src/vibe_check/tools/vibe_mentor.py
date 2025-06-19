@@ -302,6 +302,7 @@ class VibeMentorEngine:
     def __init__(self):
         self.sessions: Dict[str, CollaborativeReasoningSession] = {}
         self.pattern_detector = PatternDetector()
+        self._enhanced_mode = True  # Flag to enable enhanced reasoning
 
     def create_session(
         self,
@@ -339,7 +340,19 @@ class VibeMentorEngine:
         This is our enhancement over Clear-Thought - actual reasoning generation.
         """
 
-        # Analyze context for persona-specific insights
+        # Use enhanced reasoning if available
+        if self._enhanced_mode:
+            try:
+                from .vibe_mentor_enhanced import EnhancedVibeMentorEngine
+                enhanced_engine = EnhancedVibeMentorEngine(self)
+                return enhanced_engine.generate_contribution(
+                    session, persona, detected_patterns, context
+                )
+            except ImportError:
+                logger.warning("Enhanced reasoning not available, falling back to basic mode")
+                self._enhanced_mode = False
+
+        # Fallback to original reasoning
         contribution_type, content, confidence = self._reason_as_persona(
             persona, session.topic, detected_patterns, session.contributions, context
         )
@@ -647,6 +660,46 @@ class VibeMentorEngine:
         
         pattern_type = primary_pattern.get("pattern_type", "unknown")
         _interrupt_logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
+        
+        # Try to use enhanced interrupt generation
+        if self._enhanced_mode:
+            try:
+                from .vibe_mentor_enhanced import ContextExtractor, TechnicalContext
+                tech_context = ContextExtractor.extract_context(query)
+                
+                # Generate more specific interrupts based on technical context
+                if tech_context.technologies:
+                    tech = tech_context.technologies[0]
+                    if pattern_type == "infrastructure_without_implementation":
+                        return {
+                            "question": f"Have you checked if {tech} provides an official SDK or Docker image?",
+                            "severity": "high",
+                            "suggestion": f"Check {tech}'s official docs/GitHub for SDK",
+                            "pattern_type": pattern_type,
+                            "confidence": pattern_confidence
+                        }
+                    elif pattern_type == "custom_solution_preferred":
+                        return {
+                            "question": f"Is there a {tech} library that already handles this?",
+                            "severity": "medium", 
+                            "suggestion": f"Search '{tech} {tech_context.specific_features[0] if tech_context.specific_features else 'library'}' on GitHub",
+                            "pattern_type": pattern_type,
+                            "confidence": pattern_confidence
+                        }
+                
+                # Specific feature-based interrupts
+                if tech_context.specific_features:
+                    feature = tech_context.specific_features[0]
+                    return {
+                        "question": f"Have you validated that users actually need {feature}?",
+                        "severity": "medium",
+                        "suggestion": f"Build minimal {feature} MVP first",
+                        "pattern_type": pattern_type,
+                        "confidence": pattern_confidence
+                    }
+                
+            except Exception as e:
+                logger.debug(f"Enhanced interrupt generation failed: {e}, using basic mode")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {

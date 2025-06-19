@@ -1,0 +1,297 @@
+# Technology Patterns and Responses Configuration
+# Last Updated: 2025-06-19
+# Version: 1.0.0
+
+metadata:
+  last_updated: "2025-06-19"
+  version: "1.0.0"
+  schema_version: "1.0"
+
+# Technology categorization patterns
+tech_patterns:
+  databases:
+    - postgres
+    - postgresql
+    - mysql
+    - mongodb
+    - redis
+    - dynamodb
+    - supabase
+    - firebase
+    - planetscale
+    - cockroachdb
+    - turso
+    - neon
+
+  frameworks:
+    - react
+    - vue
+    - angular
+    - nextjs
+    - next.js
+    - django
+    - fastapi
+    - express
+    - rails
+    - svelte
+    - solid
+    - solid.js
+    - astro
+    - remix
+    - qwik
+    - fresh
+    - nuxt
+
+  backend_frameworks:
+    - fastapi
+    - django
+    - express
+    - nestjs
+    - flask
+    - rails
+    - spring boot
+    - asp.net
+    - gin
+    - fiber
+    - echo
+    - koa
+    - hapi
+    - laravel
+
+  languages:
+    - python
+    - javascript
+    - typescript
+    - java
+    - go
+    - rust
+    - c++
+    - c#
+    - php
+    - ruby
+    - kotlin
+    - swift
+    - dart
+    - zig
+
+  runtimes:
+    - node.js
+    - deno
+    - bun
+    - cloudflare workers
+    - edge runtime
+
+  cloud:
+    - aws
+    - gcp
+    - azure
+    - vercel
+    - netlify
+    - cloudflare
+    - railway
+    - render
+    - fly.io
+    - supabase
+    - planetscale
+
+  ai_frameworks:
+    - langchain
+    - llamaindex
+    - crewai
+    - autogen
+    - semantic kernel
+    - langgraph
+    - openai swarm
+    - haystack
+    - dspy
+    - guidance
+
+  llm_models:
+    - gpt-4
+    - gpt-4o
+    - claude-3.5
+    - claude
+    - gemini
+    - llama
+    - mistral
+    - anthropic
+    - openai
+    - deepseek
+    - qwen
+
+  vector_dbs:
+    - pinecone
+    - weaviate
+    - qdrant
+    - chroma
+    - milvus
+    - pgvector
+    - zilliz
+    - faiss
+
+  graph_dbs:
+    - neo4j
+    - falkordb
+    - neptune
+    - arangodb
+    - tigergraph
+    - orientdb
+    - nebula
+    - dgraph
+
+# Problem type indicators
+problem_indicators:
+  integration:
+    - integrate
+    - connect
+    - api
+    - sdk
+    - client
+    - wrapper
+
+  architecture:
+    - design
+    - structure
+    - pattern
+    - architect
+    - system
+    - scale
+
+  implementation:
+    - implement
+    - build
+    - create
+    - develop
+    - code
+    - write
+
+  debugging:
+    - debug
+    - fix
+    - error
+    - issue
+    - problem
+    - troubleshoot
+
+  decision:
+    - should i
+    - vs
+    - or
+    - choose
+    - decide
+    - which
+    - better
+
+# LLM Pricing Data (with staleness tracking)
+llm_pricing:
+  last_updated: "2025-06-19"
+  budget_models:
+    gpt_4_1_nano:
+      name: "GPT-4.1 nano"
+      input_price: 0.075
+      output_price: 0.30
+      currency: "USD per 1M tokens"
+      description: "OpenAI's cheapest current model, great for simple tasks"
+      last_verified: "2025-06-19"
+
+    deepseek_r1:
+      name: "DeepSeek R1"
+      input_price: 0.14
+      output_price: 2.19
+      currency: "USD per 1M tokens"
+      description: "BEST VALUE: Latest reasoning model at massive cost savings, open-source"
+      last_verified: "2025-06-19"
+      highlight: true
+
+    claude_3_5_haiku:
+      name: "Claude 3.5 Haiku"
+      input_price: 1.0
+      output_price: 5.0
+      currency: "USD per 1M tokens"
+      description: "Anthropic's budget option but 4x more expensive than competitors"
+      last_verified: "2025-06-19"
+
+    llama_4:
+      name: "Llama 4"
+      input_price: 0.0
+      output_price: 0.0
+      currency: "FREE (self-hosted)"
+      description: "Meta's 2025 release, excellent performance with zero API costs"
+      last_verified: "2025-06-19"
+
+    gemini_2_5_flash:
+      name: "Gemini 2.5 Flash"
+      input_price: 0.075
+      output_price: 0.30
+      currency: "USD per 1M tokens"
+      description: "Google's speed-optimized budget model"
+      last_verified: "2025-06-19"
+
+  premium_models:
+    claude_4_opus:
+      name: "Claude 4 Opus"
+      input_price: 15.0
+      output_price: 75.0
+      currency: "USD per 1M tokens"
+      description: "WINS coding (72.5% SWE-bench), math (90% AIME), but expensive"
+      last_verified: "2025-06-19"
+      highlight: true
+
+    openai_o3_pro:
+      name: "OpenAI o3 Pro"
+      input_price: 200.0
+      output_price: 600.0
+      currency: "USD per 1M tokens"
+      description: "Top reasoning model, premium pricing for complex tasks"
+      last_verified: "2025-06-19"
+
+    gpt_4_1:
+      name: "GPT-4.1"
+      input_price: 5.0
+      output_price: 20.0
+      currency: "USD per 1M tokens"
+      description: "Improved coding, 1M context, solid mainstream choice"
+      last_verified: "2025-06-19"
+
+    gemini_2_5_pro:
+      name: "Gemini 2.5 Pro"
+      input_price: 1.25
+      output_price: 10.0
+      currency: "USD per 1M tokens"
+      description: "Best performance/price ratio, 1M context"
+      last_verified: "2025-06-19"
+
+    claude_4_sonnet:
+      name: "Claude 4 Sonnet"
+      input_price: 3.0
+      output_price: 15.0
+      currency: "USD per 1M tokens"
+      description: "Good balance, hybrid fast/thinking modes"
+      last_verified: "2025-06-19"
+
+# Framework comparison templates
+framework_comparisons:
+  astro_vs_nextjs:
+    pattern: ["astro.*next", "next.*astro"]
+    frameworks: ["astro", "next.js", "nextjs"]
+    response:
+      type: "insight"
+      content: |
+        For Astro vs Next.js decision: Consider your content strategy.
+        Astro excels for content-heavy sites (blogs, marketing, docs) - ships minimal JS by default.
+        Next.js is better for interactive apps with complex state management.
+        Astro's Islands Architecture means faster load times but less interactivity.
+        I'd choose Astro for marketing sites and Next.js for SaaS dashboards.
+      confidence: 0.95
+
+  bun_vs_nodejs:
+    pattern: ["bun.*node", "node.*bun"]
+    frameworks: ["bun", "node.js", "nodejs"]
+    response:
+      type: "suggestion"
+      content: |
+        For Bun vs Node.js: Bun is production-ready in 2025 with impressive performance gains.
+        Choose Bun for new TypeScript projects - 3x faster installs, built-in bundler/test runner.
+        Stick with Node.js for existing apps unless you're hitting performance bottlenecks.
+        Both have excellent ecosystem support now.
+      confidence: 0.85
