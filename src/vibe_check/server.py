@@ -1143,12 +1143,28 @@ def vibe_check_mentor(
         # FIX FOR ISSUE #151: Detect PR analysis and fetch actual diff
         pr_diff_content = ""
         import re
-        pr_match = re.search(r'(?:PR|pull request).*?#?(\d+)', query, re.IGNORECASE)
-        repo_match = re.search(r'(?:repo|repository)[:=\s]+([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)', combined_text, re.IGNORECASE)
+        import os
         
-        if pr_match:
-            pr_number = int(pr_match.group(1))
-            repository = repo_match.group(1) if repo_match else "kesslerio/vibe-check-mcp"
+        # Enhanced PR detection regex to handle edge cases from Claude review
+        pr_patterns = [
+            r'(?:PR|pull request)\s*#?(\d+)',  # "PR #123" or "pull request 123"
+            r'#(\d+)(?:\s|$)',                 # "#123" at word boundary
+            r'PR(\d+)(?:\s|$)',                # "PR123" without space
+            r'pr/(\d+)',                       # "pr/123" slash notation
+        ]
+        
+        pr_number = None
+        for pattern in pr_patterns:
+            pr_match = re.search(pattern, query, re.IGNORECASE)
+            if pr_match:
+                pr_number = int(pr_match.group(1))
+                break
+        
+        if pr_number:
+            # Configurable repository fallback from environment or default
+            default_repo = os.getenv('VIBE_CHECK_DEFAULT_REPO', 'kesslerio/vibe-check-mcp')
+            repo_match = re.search(r'(?:repo|repository)[:=\s]+([a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+)', combined_text, re.IGNORECASE)
+            repository = repo_match.group(1) if repo_match else default_repo
             
             try:
                 # Use GitHub abstraction layer to fetch PR diff
@@ -1157,7 +1173,15 @@ def vibe_check_mentor(
                 diff_result = github_ops.get_pull_request_diff(repository, pr_number)
                 
                 if diff_result.success:
-                    pr_diff_content = f"\n\n**ACTUAL PR DIFF (ISSUE #151 FIX):**\n{diff_result.data}"
+                    # Performance limit: Truncate very large diffs to prevent timeout
+                    max_diff_size = int(os.getenv('VIBE_CHECK_MAX_DIFF_SIZE', '50000'))  # 50KB default
+                    diff_data = diff_result.data
+                    
+                    if len(diff_data) > max_diff_size:
+                        diff_data = diff_data[:max_diff_size] + f"\n\n[TRUNCATED: Diff too large ({len(diff_result.data)} chars). Showing first {max_diff_size} characters for performance.]"
+                        logger.info(f"Truncated large diff for PR #{pr_number} ({len(diff_result.data)} chars -> {max_diff_size} chars)")
+                    
+                    pr_diff_content = f"\n\n**ACTUAL PR DIFF (ISSUE #151 FIX):**\n{diff_data}"
                     logger.info(f"Successfully fetched diff for PR #{pr_number} in {repository}")
                 else:
                     logger.warning(f"Failed to fetch PR diff: {diff_result.error}")
