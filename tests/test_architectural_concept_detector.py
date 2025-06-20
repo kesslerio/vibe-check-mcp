@@ -258,3 +258,34 @@ class TestArchitecturalConceptIntegration:
             
             # Should provide search guidance
             assert len(result.github_search_queries) > 0, f"No search guidance for: {test_case}"
+
+    def test_improved_keyword_matching_precision(self):
+        """Test that improved keyword matching prevents false positives while maintaining accuracy"""
+        detector = ArchitecturalConceptDetector()
+        
+        # Test cases that should still detect concepts (true positives)
+        positive_cases = [
+            ("User authentication failed", "authentication"),
+            ("Payment gateway timeout", "payment"),
+            ("API endpoint not responding", "api"),  
+            ("Database query slow", "database"),
+            ("Cache invalidation needed", "caching")
+        ]
+        
+        for text, expected_concept in positive_cases:
+            result = detector.detect_concepts(text)
+            concept_names = [c.concept_name for c in result.detected_concepts]
+            assert expected_concept in concept_names, f"Should detect {expected_concept} in: {text}"
+        
+        # Test edge cases that use word boundaries correctly
+        boundary_cases = [
+            ("authentication system", "authentication"),  # Word boundary match
+            ("auth middleware", "authentication"),  # Substring match for short keyword
+            ("payment processing", "payment"),  # Word boundary match
+            ("api design", "api"),  # Word boundary match (short keyword)
+        ]
+        
+        for text, expected_concept in boundary_cases:
+            result = detector.detect_concepts(text)
+            concept_names = [c.concept_name for c in result.detected_concepts]
+            assert expected_concept in concept_names, f"Should detect {expected_concept} in: {text}"

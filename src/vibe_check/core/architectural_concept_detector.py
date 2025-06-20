@@ -91,10 +91,17 @@ class ArchitecturalConceptDetector:
             keywords = concept_config.get("keywords", [])
             keywords_found = []
             
-            # Find matching keywords
+            # Find matching keywords with improved precision
             for keyword in keywords:
-                # Use flexible matching - keyword can be part of a larger word
-                if keyword.lower() in text_lower:
+                # Use word boundary matching to prevent false positives
+                # but allow partial matches for compound words (e.g., "authentication" contains "auth")
+                keyword_lower = keyword.lower()
+                
+                # Try exact word boundary match first (most precise)
+                if re.search(r'\b' + re.escape(keyword_lower) + r'\b', text_lower):
+                    keywords_found.append(keyword)
+                # Fall back to substring match for shorter keywords that are commonly parts of larger words
+                elif len(keyword_lower) <= 4 and keyword_lower in text_lower:
                     keywords_found.append(keyword)
             
             # Calculate confidence based on keyword matches
