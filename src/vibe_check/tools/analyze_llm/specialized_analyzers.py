@@ -16,6 +16,34 @@ from .text_analyzer import analyze_text_llm
 logger = logging.getLogger(__name__)
 
 
+def _extract_code_context(file_content: str, target_line: int, context_lines: int = 5) -> str:
+    """
+    Extract code context around a specific line number.
+    
+    Args:
+        file_content: Full file content as string
+        target_line: Line number to center on (1-indexed)
+        context_lines: Number of lines before and after to include
+        
+    Returns:
+        Code snippet with line numbers
+    """
+    try:
+        lines = file_content.split('\n')
+        start_line = max(0, target_line - context_lines - 1)
+        end_line = min(len(lines), target_line + context_lines)
+        
+        context_snippet = []
+        for i in range(start_line, end_line):
+            line_num = i + 1
+            prefix = ">>> " if line_num == target_line else "    "
+            context_snippet.append(f"{prefix}{line_num:3d}: {lines[i]}")
+        
+        return '\n'.join(context_snippet)
+    except Exception:
+        return ""
+
+
 async def analyze_pr_llm(
     pr_diff: str,
     pr_description: str = "",
@@ -206,7 +234,67 @@ async def analyze_github_issue_llm(
         
         issue = issue_result.data
         
-        # Build comprehensive issue context
+        # ENHANCEMENT #152: Extract code references from issue content
+        code_context = ""
+        referenced_files = []
+        try:
+            from ...core.code_reference_extractor import extract_code_references_from_issue
+            issue_text = f"{issue.title}\n\n{issue.body or ''}"
+            code_refs = extract_code_references_from_issue(issue_text)
+            
+            if code_refs['file_paths']:
+                logger.info(f"Found {len(code_refs['file_paths'])} file references in issue #{issue_number}")
+                
+                # Fetch actual code content for referenced files
+                code_snippets = []
+                for file_path in code_refs['file_paths'][:3]:  # Limit to first 3 files
+                    try:
+                        file_result = github_ops.get_file_contents(repository, file_path)
+                        if file_result.success:
+                            file_content = file_result.data.get('content', '')
+                            
+                            # If specific lines are referenced, extract context around them
+                            if file_path in code_refs['file_lines']:
+                                line_numbers = code_refs['file_lines'][file_path]
+                                for line_num in line_numbers[:2]:  # Max 2 line references per file
+                                    context_lines = _extract_code_context(file_content, line_num)
+                                    if context_lines:
+                                        code_snippets.append(f"""
+**File: {file_path}** (lines around {line_num})
+```
+{context_lines}
+```""")
+                            else:
+                                # Show first 20 lines for context
+                                lines = file_content.split('\n')[:20]
+                                code_snippets.append(f"""
+**File: {file_path}** (first 20 lines)
+```
+{chr(10).join(lines)}
+```""")
+                            
+                            referenced_files.append(file_path)
+                        else:
+                            logger.warning(f"Could not fetch {file_path}: {file_result.error}")
+                    except Exception as e:
+                        logger.warning(f"Error fetching {file_path}: {e}")
+                
+                if code_snippets:
+                    code_context = f"""
+
+## 📄 Referenced Code Analysis
+
+{chr(10).join(code_snippets)}
+
+**Code References Detected:**
+- File paths: {', '.join(code_refs['file_paths'])}
+- Function names: {', '.join(code_refs['function_names'])}
+- Files with line references: {', '.join(code_refs['file_lines'].keys())}
+"""
+        except Exception as e:
+            logger.warning(f"Code reference extraction failed: {e}")
+        
+        # Build comprehensive issue context with code
         issue_context = f"""# GitHub Issue Analysis
         
 **Issue:** {issue.title}
@@ -217,6 +305,7 @@ async def analyze_github_issue_llm(
 
 **Issue Content:**
 {issue.body or 'No content provided'}
+{code_context}
 """
         
         # Create vibe check prompt based on detail level
@@ -257,6 +346,19 @@ async def analyze_github_issue_llm(
         except Exception:
             pass  # Continue without doom loop context if it fails
 
+        # Add code analysis guidance if we have code context
+        code_analysis_guidance = ""
+        if referenced_files:
+            code_analysis_guidance = f"""
+
+CODE-AWARE ANALYSIS: This issue references actual code files. Provide specific technical guidance:
+- Analyze the actual code shown for the reported problems
+- Give line-specific recommendations where applicable
+- Identify root causes based on the actual implementation
+- Suggest specific fixes rather than generic advice
+- Files analyzed: {', '.join(referenced_files)}
+"""
+
         vibe_prompt = f"""You are a friendly engineering coach providing a "vibe check" on this GitHub issue. Focus on preventing common engineering anti-patterns while encouraging good practices.
 
 SPECIAL ATTENTION: This issue mentions integration technologies. Pay special attention to:
@@ -269,6 +371,8 @@ PRODUCTIVITY FOCUS: If doom loop patterns are detected, emphasize:
 - Setting time limits for decisions
 - Implementing simplest working solution first
 - Avoiding perfectionist paralysis
+
+{code_analysis_guidance}
 
 {detail_instruction}
 
@@ -286,6 +390,7 @@ Please provide a vibe check analysis in this format:
 - POC Needs: [Do we need to prove basic functionality first? Test standard approaches?]
 - Complexity Check: [Is the proposed complexity justified? Could official solutions work?]
 - Integration Check: [If integrating with third-party services, are we using official approaches?]
+- Code Analysis: [If code was provided, what specific issues were found? Line-specific recommendations?]
 
 ## 💡 Friendly Recommendations
 [3-5 practical, encouraging recommendations - prioritize checking official solutions for any detected technologies]
@@ -313,7 +418,13 @@ Use friendly, coaching language that helps developers learn rather than intimida
             "claude_analysis": result.output if result.success else None,
             "analysis_error": result.error if not result.success else None,
             "comment_posted": False,
-            "github_implementation": issue_result.implementation
+            "github_implementation": issue_result.implementation,
+            # ENHANCEMENT #152: Code-aware analysis metadata
+            "code_analysis": {
+                "files_analyzed": referenced_files,
+                "code_references_found": len(code_refs.get('file_paths', [])) if 'code_refs' in locals() else 0,
+                "enhancement_active": len(referenced_files) > 0
+            }
         }
         
         # Post comment if requested and analysis succeeded
