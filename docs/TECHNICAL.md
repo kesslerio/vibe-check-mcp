@@ -355,6 +355,265 @@ def _get_system_prompt(self, task_type: str) -> str:
 
 ---
 
+## Adaptive Prompt Sizing for PR Analysis
+
+### Overview
+
+The Adaptive Prompt Sizing system provides intelligent handling of Pull Request analysis based on content size, ensuring optimal performance and quality regardless of PR scale. This feature automatically adjusts analysis strategies when PRs exceed Claude's prompt limits, maintaining comprehensive coverage while respecting resource constraints.
+
+### Multi-Dimensional Size Classification
+
+```python
+class PRSizeClassifier:
+    """Multi-dimensional PR size classification system"""
+    
+    # Character thresholds for prompt sizing
+    CHAR_THRESHOLDS = {
+        "REGULAR": {"LARGE": 50000, "VERY_LARGE": 100000},
+        "TEST": {"LARGE": 100000, "VERY_LARGE": 300000}  # More lenient for test PRs
+    }
+    
+    # Line change thresholds
+    LINE_THRESHOLDS = {
+        "SMALL": 500,
+        "MEDIUM": 1500, 
+        "LARGE": 5000
+    }
+    
+    # File count thresholds
+    FILE_THRESHOLDS = {
+        "SMALL": 3,
+        "MEDIUM": 8,
+        "LARGE": 20
+    }
+```
+
+#### Classification Dimensions
+
+1. **Character Count**: Primary dimension for prompt sizing decisions
+   - **50k threshold**: Switches to summary mode for regular PRs
+   - **100k threshold**: Maximum content size before degraded analysis
+   - **Test PR Detection**: Automatically applies more lenient thresholds (100k/300k) for PRs with >50% test files
+
+2. **Line Changes**: Secondary dimension for review strategy
+   - Includes additions + deletions across all files
+   - Used to determine analysis complexity and timeout adjustments
+
+3. **File Count**: Tertiary dimension for chunking decisions
+   - Influences chunk creation and analysis parallelization
+   - Large file counts may trigger chunked analysis approach
+
+### Analysis Strategy Selection
+
+```python
+def determine_analysis_strategy(pr_metrics: PrSizeMetrics) -> str:
+    """Select optimal analysis strategy based on PR characteristics"""
+    
+    if pr_metrics.size_category == PrSizeCategory.SMALL:
+        return "FULL_ANALYSIS"
+    elif pr_metrics.size_category == PrSizeCategory.MEDIUM:
+        return "CHUNKED_ANALYSIS" 
+    else:  # LARGE or VERY_LARGE
+        return "SUMMARY_ANALYSIS"
+```
+
+#### Strategy Types
+
+1. **FULL_ANALYSIS**: Complete analysis with full diff content
+   - **Trigger**: PRs under 50k characters
+   - **Approach**: Send complete PR data to Claude
+   - **Timeout**: Standard (60-120 seconds)
+   - **Quality**: Highest - full context analysis
+
+2. **SUMMARY_ANALYSIS**: Condensed analysis with essential data only
+   - **Trigger**: PRs over 50k characters
+   - **Approach**: Extract key patterns, file summaries, and diff samples
+   - **Timeout**: Adaptive (60-300 seconds based on content)
+   - **Quality**: High - focused on critical patterns
+
+3. **CHUNKED_ANALYSIS**: Parallel analysis of file groups
+   - **Trigger**: Medium PRs (500-2000 lines, 8-20 files)
+   - **Approach**: Split files into logical chunks, analyze separately, merge results
+   - **Timeout**: Per-chunk (60 seconds) + merging time
+   - **Quality**: Very high - detailed per-file analysis
+
+### Summary Mode Implementation
+
+When PRs exceed the 50k character threshold, the system automatically switches to summary mode:
+
+```python
+def _create_summary_data_content(self, pr_data: Dict[str, Any], review_context: Dict[str, Any]) -> str:
+    """Create condensed PR data for large PR analysis"""
+    
+    # Essential metadata (always included)
+    summary_parts = [
+        f"PR #{pr_data['metadata']['number']} Review Data (Large PR - Summary Analysis)",
+        f"Title: {pr_data['metadata']['title']}",
+        f"Author: {pr_data['metadata']['author']}",
+        f"Files Changed: {pr_data['statistics']['files_count']}",
+        f"Lines: +{pr_data['statistics']['additions']}/-{pr_data['statistics']['deletions']}"
+    ]
+    
+    # File change summaries (condensed)
+    file_summaries = []
+    for file_data in pr_data.get('files', [])[:20]:  # Limit to 20 files
+        file_summaries.append(
+            f"{file_data.get('path', 'unknown')}: "
+            f"+{file_data.get('additions', 0)}/-{file_data.get('deletions', 0)}"
+        )
+    
+    # Diff pattern extraction (smart sampling)
+    diff_patterns = self._extract_diff_patterns(pr_data.get('diff', ''), max_lines=100)
+    
+    # Large PR analysis notice
+    summary_parts.append(
+        "Large PR Analysis Note: This PR exceeds the 50k character prompt limit. "
+        "Analysis focuses on high-level patterns and critical changes. "
+        "Consider breaking large PRs into smaller, focused changes for detailed review."
+    )
+    
+    return "\n".join(summary_parts)
+```
+
+#### Summary Mode Features
+
+- **Intelligent Diff Sampling**: Extracts representative diff patterns rather than full content
+- **File Change Summarization**: Provides addition/deletion counts without full file content
+- **Pattern-Based Analysis**: Focuses on detecting anti-patterns in the condensed data
+- **User Transparency**: Clearly indicates when summary mode is active and why
+
+### Adaptive Timeout Calculation
+
+```python
+def _calculate_adaptive_timeout(self, content_size: int, pr_number: int) -> int:
+    """Calculate timeout based on content size and complexity"""
+    
+    # Base timeout
+    base_timeout = 60
+    
+    # Size-based adjustment
+    if content_size > 75000:
+        size_multiplier = 3.0  # Large content needs more time
+    elif content_size > 50000:
+        size_multiplier = 2.0  # Medium-large content
+    elif content_size > 25000:
+        size_multiplier = 1.5  # Medium content
+    else:
+        size_multiplier = 1.0  # Standard content
+    
+    # Calculate final timeout with caps
+    timeout = int(base_timeout * size_multiplier)
+    return max(60, min(timeout, 300))  # 1-5 minute range
+```
+
+### Test PR Detection
+
+The system automatically detects test-heavy PRs and applies more lenient thresholds:
+
+```python
+def _is_test_pr(self, files: list) -> bool:
+    """Determine if this is primarily a test PR"""
+    if not files:
+        return False
+        
+    test_files = [f for f in files if "test" in f.get("path", "").lower()]
+    return len(test_files) / len(files) > 0.5
+```
+
+**Test PR Benefits:**
+- 2x higher character thresholds (100k instead of 50k for LARGE)
+- 3x higher threshold for VERY_LARGE (300k instead of 100k)
+- Recognition that test files are generally safer and more predictable
+
+### Chunked Analysis Architecture
+
+For medium-sized PRs, the system uses intelligent chunking:
+
+```python
+class FileChunker:
+    """Intelligent file chunking for optimal analysis"""
+    
+    def create_chunks(self, pr_files: List[Dict[str, Any]]) -> List[FileChunk]:
+        """Group files into logical chunks based on type and size"""
+        
+        # Sort by priority: complexity, size, type
+        sorted_files = self._sort_files_by_priority(pr_files)
+        
+        # Group into chunks respecting size limits
+        chunks = []
+        current_chunk = []
+        current_size = 0
+        
+        for file_data in sorted_files:
+            file_size = file_data.get('total_changes', 0)
+            
+            # Create new chunk if size limit reached
+            if current_size + file_size > self.max_lines_per_chunk and current_chunk:
+                chunks.append(self._create_chunk(current_chunk))
+                current_chunk = [file_data]
+                current_size = file_size
+            else:
+                current_chunk.append(file_data)
+                current_size += file_size
+        
+        return chunks
+```
+
+#### Chunking Strategy
+
+- **File Type Grouping**: Groups related files (e.g., tests, configs, core code)
+- **Size Balancing**: Keeps chunks under 500 lines of changes
+- **Priority Ordering**: Analyzes high-complexity files first
+- **Parallel Processing**: Analyzes up to 3 chunks concurrently
+
+### Performance Characteristics
+
+| PR Size Category | Character Limit | Analysis Strategy | Typical Timeout | Expected Quality |
+|------------------|----------------|-------------------|-----------------|------------------|
+| Small | < 50k | Full Analysis | 60-120s | Highest |
+| Medium | 50k-100k | Chunked Analysis | 120-240s | Very High |
+| Large | 100k+ | Summary Analysis | 180-300s | High |
+| Test PR Large | 100k-300k | Full/Summary Analysis | 120-240s | High |
+
+### Troubleshooting Large PRs
+
+When PRs trigger summary mode, users receive guidance:
+
+1. **Automatic Detection**: Clear notification when summary mode is active
+2. **Size Breakdown**: Shows character count, file count, and line changes
+3. **Optimization Suggestions**: 
+   - Break into smaller, focused PRs
+   - Use chunked analysis for medium PRs
+   - Consider file-by-file review for very large changes
+4. **Quality Assurance**: Summary mode still detects critical patterns and security issues
+
+### Error Handling and Degradation
+
+```python
+class AdaptiveSizingErrorHandler:
+    """Graceful degradation for oversized content"""
+    
+    def handle_oversized_pr(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle PRs that exceed even summary mode limits"""
+        
+        if self._exceeds_maximum_limits(pr_data):
+            return {
+                "analysis_method": "pattern_detection_only",
+                "limitation_notice": (
+                    "This PR is too large for detailed LLM analysis. "
+                    "Using pattern detection only. Consider breaking into smaller PRs."
+                ),
+                "patterns_detected": self._run_pattern_detection(pr_data),
+                "recommendation": "MANUAL_REVIEW"
+            }
+        
+        return self._run_summary_analysis(pr_data)
+```
+
+The adaptive sizing system ensures reliable analysis across all PR sizes while maintaining quality and providing clear feedback to users about analysis limitations and optimization opportunities.
+
+---
+
 ## Performance & Scalability
 
 ### Caching Strategy

@@ -269,6 +269,68 @@ Each persona responds based on detected patterns, providing contextually relevan
 "Deep vibe check PR 18 with Claude reasoning"
 ```
 
+#### Adaptive Sizing for Large PRs
+
+The PR analysis tools automatically adjust their approach based on PR size to ensure optimal performance and quality:
+
+**📏 Automatic Size Detection**:
+- **Character count analysis**: Primary factor for analysis strategy selection
+- **Multi-dimensional classification**: Considers lines changed, files modified, and content type
+- **Test PR detection**: Automatically applies more lenient thresholds for test-heavy PRs
+
+**🔄 Analysis Strategies**:
+
+**Small PRs (< 50k characters)**:
+- **Strategy**: Full Analysis with complete diff content
+- **Behavior**: Sends entire PR data to Claude for comprehensive review
+- **Quality**: Highest - complete context analysis
+- **Typical timeout**: 60-120 seconds
+
+**Medium PRs (50k-100k characters)**:
+- **Strategy**: Chunked Analysis with parallel processing
+- **Behavior**: Splits files into logical chunks, analyzes separately, merges results
+- **Quality**: Very high - detailed per-file analysis
+- **Typical timeout**: 120-240 seconds
+
+**Large PRs (100k+ characters)**:
+- **Strategy**: Summary Analysis with condensed content
+- **Behavior**: Extracts key patterns, file summaries, and representative diff samples
+- **Quality**: High - focuses on critical patterns and anti-patterns
+- **Typical timeout**: 180-300 seconds
+
+**Test PRs (Special handling)**:
+- **Detection**: Automatically identified when >50% of files contain "test" in filename
+- **Thresholds**: 2x more lenient (100k for Large, 300k for Very Large)
+- **Rationale**: Test files are generally safer and more predictable
+
+**📊 User Feedback**:
+When adaptive sizing is active, you'll see clear indicators:
+```
+"PR #123 Analysis (Large PR - Summary Mode)"
+"Analysis focuses on high-level patterns due to 50k character limit"
+"Consider breaking into smaller PRs for detailed review"
+```
+
+**🛠️ Optimization Recommendations**:
+- **Large PRs**: Break into smaller, focused changes for detailed analysis
+- **Medium PRs**: Chunked analysis provides comprehensive coverage
+- **Very Large PRs**: May fall back to pattern detection only
+
+**Example Adaptive Behavior**:
+```
+# Small PR (< 50k chars) - Full Analysis
+"Full Claude review of PR 44"  
+→ Complete diff sent to Claude, full context analysis
+
+# Medium PR (50k-100k chars) - Chunked Analysis  
+"Full Claude review of PR 88"
+→ Files split into chunks, parallel analysis, merged results
+
+# Large PR (100k+ chars) - Summary Analysis
+"Full Claude review of PR 156"
+→ Key patterns extracted, condensed analysis with clear sizing notice
+```
+
 ### Code Analysis
 
 **🧠 Deep Code Analysis** (LLM-only):
@@ -1401,6 +1463,96 @@ The AI Doom Loop Detection tools represent a fundamental shift from manual produ
 - Run `claude_cli_status` to check Claude CLI
 - Run `claude_cli_diagnostics` for timeout issues
 - Ensure Claude CLI is in PATH or set CLAUDE_CLI_NAME
+
+### Import Errors
+- Check PYTHONPATH includes src directory
+- Verify all dependencies installed: `pip install -r requirements.txt`
+
+### Large PR Analysis Issues
+
+**📊 Problem: PR analysis taking too long or timing out**
+
+*Symptoms*:
+- Analysis timeouts after 5+ minutes
+- "Prompt too large" errors
+- Incomplete analysis results
+
+*Solutions*:
+1. **Check PR size**: PRs over 100k characters automatically use summary mode
+2. **Verify adaptive sizing is working**: Look for "Large PR - Summary Analysis" messages
+3. **Consider breaking PR into smaller pieces**: Target < 50k characters for full analysis
+4. **Use chunked analysis**: Medium PRs (50k-100k) automatically use chunking
+
+**📏 Problem: Summary mode not providing enough detail**
+
+*Symptoms*:
+- Analysis feels too high-level
+- Missing detailed code review feedback
+- Important patterns not detected
+
+*Solutions*:
+1. **Break PR into focused chunks**: Create smaller PRs for each feature/fix
+2. **Manual file-by-file review**: Use code analysis tools on individual files
+3. **Focus on critical files**: Analyze core changes separately with full context
+4. **Use integration tools**: Run pattern detection on individual components
+
+**🔍 Problem: Test PRs being treated as regular PRs**
+
+*Symptoms*:
+- Test PRs triggering summary mode at 50k characters
+- Test file changes being over-analyzed
+
+*Solutions*:
+1. **Verify test detection**: Ensure >50% of files contain "test" in filename
+2. **Use conventional test naming**: `test_*.py`, `*_test.py`, `tests/` directories
+3. **Manual mode override**: Specify analysis mode if auto-detection fails
+4. **Split test and code changes**: Separate PRs for test additions vs code changes
+
+**⚡ Problem: Chunked analysis producing inconsistent results**
+
+*Symptoms*:
+- Different analysis quality across file chunks
+- Missing cross-file pattern detection
+- Incomplete recommendations
+
+*Solutions*:
+1. **Review chunk boundaries**: Check if related files are split across chunks
+2. **Use full analysis**: Consider breaking PR smaller to get under 50k threshold
+3. **Manual cross-file review**: Supplement with manual review of file relationships
+4. **Check chunk success rate**: Look for failed chunks in analysis results
+
+**🛠️ Problem: Very large PRs (300k+ characters) getting minimal analysis**
+
+*Symptoms*:
+- "Pattern detection only" messages
+- Limited analysis depth
+- Manual review recommendations
+
+*Solutions*:
+1. **Break into multiple PRs**: Aim for logical, reviewable chunks
+2. **Use staging approach**: Submit preliminary PR for early feedback
+3. **Component-based review**: Analyze major components separately
+4. **Accept limitations**: Very large changes inherently require manual review
+
+**📋 Best Practices for Large PR Scenarios**:
+
+*Prevention*:
+- Monitor PR size during development
+- Use incremental commits and PRs
+- Plan breaking points before implementation
+- Consider feature flags for large changes
+
+*Optimization*:
+- Target 20-40k characters for optimal analysis quality
+- Group related files in the same PR
+- Separate refactoring from new features
+- Use conventional file naming for better auto-detection
+
+*When Summary Mode is Unavoidable*:
+- Focus on security and critical pattern detection
+- Use additional static analysis tools
+- Plan extra manual review time
+- Document large PR rationale in description
 
 ### Import Errors
 - Check PYTHONPATH includes src directory
