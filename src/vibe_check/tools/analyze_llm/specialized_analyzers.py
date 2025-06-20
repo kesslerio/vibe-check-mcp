@@ -234,30 +234,44 @@ async def analyze_github_issue_llm(
         
         issue = issue_result.data
         
-        # ENHANCEMENT #152: Extract code references from issue content
+        # ENHANCEMENT #152: Extract code references from issue content with improved validation
         code_context = ""
         referenced_files = []
         try:
-            from ...core.code_reference_extractor import extract_code_references_from_issue
-            issue_text = f"{issue.title}\n\n{issue.body or ''}"
-            code_refs = extract_code_references_from_issue(issue_text)
+            from ...core.code_reference_extractor import CodeReferenceExtractor, ExtractionConfig
             
-            if code_refs['file_paths']:
-                logger.info(f"Found {len(code_refs['file_paths'])} file references in issue #{issue_number}")
+            # Use configurable extraction with review feedback improvements
+            config = ExtractionConfig(
+                max_context_lines=timeout_seconds // 10,  # Scale context with timeout
+                max_files_per_issue=3,
+                max_line_refs_per_file=2,
+                enable_metrics_logging=True
+            )
+            extractor = CodeReferenceExtractor(config)
+            
+            issue_text = f"{issue.title}\n\n{issue.body or ''}"
+            references = extractor.extract_references(issue_text)
+            
+            # Get unique files, respecting limits
+            unique_files = extractor.get_unique_files(references)
+            file_lines = extractor.get_file_with_lines(references)
+            
+            if unique_files:
+                logger.info(f"Found {len(unique_files)} validated file references in issue #{issue_number}")
                 
                 # Fetch actual code content for referenced files
                 code_snippets = []
-                for file_path in code_refs['file_paths'][:3]:  # Limit to first 3 files
+                for file_path in unique_files[:config.max_files_per_issue]:
                     try:
                         file_result = github_ops.get_file_contents(repository, file_path)
                         if file_result.success:
                             file_content = file_result.data.get('content', '')
                             
                             # If specific lines are referenced, extract context around them
-                            if file_path in code_refs['file_lines']:
-                                line_numbers = code_refs['file_lines'][file_path]
-                                for line_num in line_numbers[:2]:  # Max 2 line references per file
-                                    context_lines = _extract_code_context(file_content, line_num)
+                            if file_path in file_lines:
+                                line_numbers = file_lines[file_path]
+                                for line_num in line_numbers[:config.max_line_refs_per_file]:
+                                    context_lines = _extract_code_context(file_content, line_num, config.max_context_lines)
                                     if context_lines:
                                         code_snippets.append(f"""
 **File: {file_path}** (lines around {line_num})
@@ -280,6 +294,9 @@ async def analyze_github_issue_llm(
                         logger.warning(f"Error fetching {file_path}: {e}")
                 
                 if code_snippets:
+                    # Get function names for summary
+                    function_names = [ref.value for ref in references if ref.type == 'function_name']
+                    
                     code_context = f"""
 
 ## 📄 Referenced Code Analysis
@@ -287,12 +304,12 @@ async def analyze_github_issue_llm(
 {chr(10).join(code_snippets)}
 
 **Code References Detected:**
-- File paths: {', '.join(code_refs['file_paths'])}
-- Function names: {', '.join(code_refs['function_names'])}
-- Files with line references: {', '.join(code_refs['file_lines'].keys())}
+- File paths: {', '.join(unique_files)}
+- Function names: {', '.join(function_names)}
+- Files with line references: {', '.join(file_lines.keys())}
 """
         except Exception as e:
-            logger.warning(f"Code reference extraction failed: {e}")
+            logger.warning(f"Enhanced code reference extraction failed: {e}")
         
         # Build comprehensive issue context with code
         issue_context = f"""# GitHub Issue Analysis
@@ -419,11 +436,15 @@ Use friendly, coaching language that helps developers learn rather than intimida
             "analysis_error": result.error if not result.success else None,
             "comment_posted": False,
             "github_implementation": issue_result.implementation,
-            # ENHANCEMENT #152: Code-aware analysis metadata
+            # ENHANCEMENT #152: Enhanced code-aware analysis metadata
             "code_analysis": {
                 "files_analyzed": referenced_files,
-                "code_references_found": len(code_refs.get('file_paths', [])) if 'code_refs' in locals() else 0,
-                "enhancement_active": len(referenced_files) > 0
+                "references_extracted": len(references) if 'references' in locals() else 0,
+                "unique_files_found": len(unique_files) if 'unique_files' in locals() else 0,
+                "functions_detected": len([r for r in references if r.type == 'function_name']) if 'references' in locals() else 0,
+                "enhancement_active": len(referenced_files) > 0,
+                "validation_enabled": True,
+                "binary_filtering_enabled": True
             }
         }
         
