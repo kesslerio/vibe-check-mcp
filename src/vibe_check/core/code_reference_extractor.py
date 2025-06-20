@@ -93,24 +93,54 @@ class CodeReferenceExtractor:
         Returns:
             True if file path is valid and safe
         """
-        # Length check
-        if len(file_path) > self.config.max_file_path_length:
+        # Basic sanity checks
+        if not file_path or len(file_path) < 3:
+            if self.config.enable_metrics_logging:
+                logger.debug(f"File path too short: '{file_path}'")
             return False
             
-        # Path traversal check (allow absolute paths in stack traces but be restrictive for general files)
+        # Length check
+        if len(file_path) > self.config.max_file_path_length:
+            if self.config.enable_metrics_logging:
+                logger.debug(f"File path too long ({len(file_path)} chars): '{file_path[:50]}...'")
+            return False
+            
+        # Path traversal check (security critical)
         if '..' in file_path:
+            if self.config.enable_metrics_logging:
+                logger.warning(f"Path traversal attempt detected: '{file_path}'")
+            return False
+        
+        # System/sensitive file protection
+        sensitive_patterns = ['/etc/', '/proc/', '/sys/', '/dev/', '/tmp/', '/var/log/']
+        if any(pattern in file_path.lower() for pattern in sensitive_patterns):
+            if self.config.enable_metrics_logging:
+                logger.warning(f"Sensitive system path blocked: '{file_path}'")
             return False
         
         # Allow absolute paths for stack traces but be more restrictive for user input
-        if file_path.startswith('/') and not file_path.startswith(('/app/', '/src/', '/lib/', '/opt/')):
+        if file_path.startswith('/') and not file_path.startswith(('/app/', '/src/', '/lib/', '/opt/', '/home/', '/usr/local/')):
+            if self.config.enable_metrics_logging:
+                logger.debug(f"Absolute path outside allowed directories: '{file_path}'")
             return False
             
-        # Must have extension
-        if '.' not in file_path:
+        # Must have extension for most cases (allow some exceptions like Dockerfile, Makefile)
+        if '.' not in file_path and not any(name in file_path for name in ['Dockerfile', 'Makefile', 'README', 'LICENSE']):
+            if self.config.enable_metrics_logging:
+                logger.debug(f"File path missing extension: '{file_path}'")
             return False
             
-        # Check for reasonable file structure
-        if file_path.count('/') > 10:  # Arbitrary deep nesting limit
+        # Check for reasonable file structure (prevent deep nesting attacks)
+        if file_path.count('/') > 15:  # More generous limit but still reasonable
+            if self.config.enable_metrics_logging:
+                logger.debug(f"File path too deeply nested ({file_path.count('/')} levels): '{file_path}'")
+            return False
+            
+        # Check for invalid characters that could indicate injection attempts
+        invalid_chars = ['<', '>', '|', '&', ';', '`', '$']
+        if any(char in file_path for char in invalid_chars):
+            if self.config.enable_metrics_logging:
+                logger.warning(f"Invalid characters in file path: '{file_path}'")
             return False
             
         return True
@@ -209,9 +239,15 @@ class CodeReferenceExtractor:
                             confidence=confidence,
                             context=match.group(0)
                         ))
-                except (ValueError, IndexError) as e:
+                except ValueError as e:
                     if self.config.enable_metrics_logging:
-                        logger.debug(f"Failed to parse file reference '{match.group(0)}': {e}")
+                        logger.debug(f"Invalid line number in file reference '{match.group(0)}': {e}")
+                except IndexError as e:
+                    if self.config.enable_metrics_logging:
+                        logger.debug(f"Malformed file reference pattern '{match.group(0)}': {e}")
+                except Exception as e:
+                    if self.config.enable_metrics_logging:
+                        logger.warning(f"Unexpected error parsing file reference '{match.group(0)}': {e}")
         
         return references
     
@@ -236,9 +272,15 @@ class CodeReferenceExtractor:
                             confidence=confidence,
                             context=match.group(0)
                         ))
-                except (ValueError, IndexError) as e:
+                except ValueError as e:
                     if self.config.enable_metrics_logging:
-                        logger.debug(f"Failed to parse function reference '{match.group(0)}': {e}")
+                        logger.debug(f"Invalid function name in reference '{match.group(0)}': {e}")
+                except IndexError as e:
+                    if self.config.enable_metrics_logging:
+                        logger.debug(f"Malformed function reference pattern '{match.group(0)}': {e}")
+                except Exception as e:
+                    if self.config.enable_metrics_logging:
+                        logger.warning(f"Unexpected error parsing function reference '{match.group(0)}': {e}")
         
         return references
     
@@ -263,9 +305,15 @@ class CodeReferenceExtractor:
                                 confidence=0.95,  # Very high confidence for stack traces
                                 context=match.group(0)
                             ))
-                except (ValueError, IndexError) as e:
+                except ValueError as e:
                     if self.config.enable_metrics_logging:
-                        logger.debug(f"Failed to parse stack trace '{match.group(0)}': {e}")
+                        logger.debug(f"Invalid line number in stack trace '{match.group(0)}': {e}")
+                except IndexError as e:
+                    if self.config.enable_metrics_logging:
+                        logger.debug(f"Malformed stack trace pattern '{match.group(0)}': {e}")
+                except Exception as e:
+                    if self.config.enable_metrics_logging:
+                        logger.warning(f"Unexpected error parsing stack trace '{match.group(0)}': {e}")
         
         return references
     

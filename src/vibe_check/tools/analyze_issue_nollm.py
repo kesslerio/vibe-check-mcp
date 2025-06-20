@@ -18,6 +18,7 @@ from github.Issue import Issue
 from ..core.pattern_detector import PatternDetector, DetectionResult
 from ..core.educational_content import DetailLevel
 from ..core.vibe_config import get_vibe_config, vibe_message, vibe_error
+from ..core.architectural_concept_detector import ArchitecturalConceptDetector, ConceptDetectionResult
 from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
 from ..utils.logging_framework import get_vibe_logger, create_migration_logger
 
@@ -43,6 +44,7 @@ class GitHubIssueAnalyzer:
         """
         self.github_client = Github(github_token) if github_token else Github()
         self.pattern_detector = PatternDetector()
+        self.architectural_detector = ArchitecturalConceptDetector()
         self.vibe_logger = get_vibe_logger("issue_analyzer")
         
         # User-friendly initialization
@@ -102,11 +104,18 @@ class GitHubIssueAnalyzer:
                 self.vibe_logger.step("Fetching GitHub issue data")
                 issue_data = self._fetch_issue_data(issue_number, repository)
                 
-                # Step 3: Run pattern detection
-                self.vibe_logger.step("Running pattern detection")
+                # Step 3: Run architectural concept detection
+                self.vibe_logger.step("Detecting architectural concepts")
                 content = issue_data["body"] or ""
                 context = f"Title: {issue_data['title']}"
                 
+                architectural_concepts = self.architectural_detector.detect_concepts(
+                    text=content,
+                    context=context
+                )
+                
+                # Step 4: Run pattern detection
+                self.vibe_logger.step("Running pattern detection")
                 detected_patterns = self.pattern_detector.analyze_text_for_patterns(
                     content=content,
                     context=context,
@@ -114,11 +123,12 @@ class GitHubIssueAnalyzer:
                     detail_level=detail_enum
                 )
                 
-                # Step 4: Generate analysis response
+                # Step 5: Generate analysis response
                 self.vibe_logger.step("Generating analysis report")
                 analysis_result = self._generate_analysis_response(
                     issue_data=issue_data,
                     detected_patterns=detected_patterns,
+                    architectural_concepts=architectural_concepts,
                     detail_level=detail_enum
                 )
                 
@@ -220,14 +230,16 @@ class GitHubIssueAnalyzer:
         self,
         issue_data: Dict[str, Any],
         detected_patterns: List[DetectionResult],
+        architectural_concepts: ConceptDetectionResult,
         detail_level: DetailLevel
     ) -> Dict[str, Any]:
         """
-        Generate comprehensive analysis response with educational content.
+        Generate comprehensive analysis response with educational content and architectural concepts.
         
         Args:
             issue_data: GitHub issue information
             detected_patterns: List of detected anti-patterns
+            architectural_concepts: Detected architectural concepts
             detail_level: Educational detail level
             
         Returns:
@@ -258,8 +270,15 @@ class GitHubIssueAnalyzer:
                 "patterns_by_confidence": []
             }
         
-        # Generate recommended actions
-        recommended_actions = self._generate_recommended_actions(detected_patterns, detail_level)
+        # Generate recommended actions (enhanced with architectural context)
+        recommended_actions = self._generate_recommended_actions(
+            detected_patterns, 
+            detail_level,
+            architectural_concepts
+        )
+        
+        # Format architectural concepts for response
+        architectural_analysis = self._format_architectural_concepts(architectural_concepts, issue_data["repository"])
         
         # Format detected patterns for response
         patterns_detected = []
@@ -294,6 +313,9 @@ class GitHubIssueAnalyzer:
             "patterns_detected": patterns_detected,
             "confidence_summary": confidence_summary,
             
+            # Architectural concept analysis
+            "architectural_concepts": architectural_analysis,
+            
             # Educational and actionable content
             "recommended_actions": recommended_actions,
             
@@ -308,20 +330,84 @@ class GitHubIssueAnalyzer:
         
         return analysis_response
     
+    def _format_architectural_concepts(
+        self, 
+        concepts: ConceptDetectionResult, 
+        repository: str
+    ) -> Dict[str, Any]:
+        """Format architectural concepts for response"""
+        if not concepts.detected_concepts:
+            return {
+                "detected": False,
+                "concepts": [],
+                "search_guidance": [],
+                "analysis_mode": "general"
+            }
+        
+        # Sort concepts by confidence
+        sorted_concepts = sorted(
+            concepts.detected_concepts,
+            key=lambda x: x.confidence,
+            reverse=True
+        )
+        
+        formatted_concepts = []
+        for concept in sorted_concepts:
+            guidance = self.architectural_detector.get_file_discovery_guidance(concept, repository)
+            
+            formatted_concepts.append({
+                "name": concept.concept_name,
+                "confidence": round(concept.confidence, 3),
+                "keywords_found": concept.keywords_found,
+                "file_discovery": {
+                    "patterns": concept.file_patterns,
+                    "common_files": concept.common_files,
+                    "github_queries": guidance["github_search_queries"][:3]  # Limit to top 3
+                },
+                "recommendations": self.architectural_detector._get_concept_specific_recommendations(concept)
+            })
+        
+        # Generate analysis context
+        analysis_context = self.architectural_detector.generate_analysis_context(concepts)
+        
+        return {
+            "detected": True,
+            "primary_concept": analysis_context.get("primary_concept"),
+            "concepts": formatted_concepts,
+            "search_guidance": {
+                "github_queries": concepts.github_search_queries[:5],  # Top 5 queries
+                "file_patterns": analysis_context.get("search_guidance", {}).get("file_patterns", []),
+                "common_files": analysis_context.get("search_guidance", {}).get("common_files", [])
+            },
+            "analysis_mode": analysis_context.get("analysis_mode", "general"),
+            "architectural_recommendations": analysis_context.get("recommendations", [])
+        }
+    
     def _generate_recommended_actions(
         self,
         detected_patterns: List[DetectionResult],
-        detail_level: DetailLevel
+        detail_level: DetailLevel,
+        architectural_concepts: Optional[ConceptDetectionResult] = None
     ) -> List[str]:
-        """Generate prioritized recommended actions based on detected patterns"""
+        """Generate prioritized recommended actions based on detected patterns and architectural concepts"""
         
         if not detected_patterns:
             vibe_config = get_vibe_config()
-            return [
+            base_actions = [
                 vibe_message('no_patterns'),
                 "Keep those good vibes rolling with solid engineering",
                 "Consider using this vibe check for other issues or code reviews"
             ]
+            
+            # Add architectural guidance even if no patterns detected
+            if architectural_concepts and architectural_concepts.detected_concepts:
+                primary_concept = architectural_concepts.detected_concepts[0]
+                base_actions.insert(1, 
+                    f"🏗️ Detected {primary_concept.concept_name} architectural focus - "
+                    f"consider checking {', '.join(primary_concept.common_files[:2])} files"
+                )
+            
+            return base_actions
         
         actions = []
         
@@ -344,6 +430,14 @@ class GitHubIssueAnalyzer:
                 immediate_actions = pattern.educational_content["immediate_actions"]
                 if immediate_actions and isinstance(immediate_actions, list):
                     actions.extend(immediate_actions[:2])  # Add top 2 immediate actions
+        
+        # Add architectural guidance if concepts detected
+        if architectural_concepts and architectural_concepts.detected_concepts:
+            primary_concept = architectural_concepts.detected_concepts[0]
+            actions.append(
+                f"🏗️ Focus on {primary_concept.concept_name} architecture - "
+                f"search for files matching: {', '.join(primary_concept.file_patterns[:2])}"
+            )
         
         # Add general recommendations
         if len(detected_patterns) > 1:

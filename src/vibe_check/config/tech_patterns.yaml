@@ -182,6 +182,127 @@ problem_indicators:
     - which
     - better
 
+# Architectural concept indicators
+architectural_concepts:
+  authentication:
+    keywords:
+      - auth
+      - login
+      - password
+      - jwt
+      - session
+      - oauth
+      - signin
+      - signup
+      - token
+      - credential
+    file_patterns:
+      - "**/auth/**"
+      - "**/login/**"
+      - "**/users/**"
+      - "**/middleware/**"
+    common_files:
+      - middleware
+      - routes
+      - models
+      - config
+      - controllers
+    search_terms:
+      - "jwt OR token OR session OR auth OR login"
+
+  payment:
+    keywords:
+      - payment
+      - stripe
+      - billing
+      - checkout
+      - invoice
+      - subscription
+      - charge
+      - transaction
+      - paypal
+      - credit card
+    file_patterns:
+      - "**/payment/**"
+      - "**/billing/**"
+      - "**/checkout/**"
+      - "**/stripe/**"
+    common_files:
+      - controllers
+      - services
+      - webhooks
+      - models
+    search_terms:
+      - "payment OR stripe OR billing OR checkout OR subscription"
+
+  api:
+    keywords:
+      - api
+      - endpoint
+      - route
+      - rest
+      - graphql
+      - controller
+      - handler
+      - middleware
+    file_patterns:
+      - "**/api/**"
+      - "**/routes/**"
+      - "**/controllers/**"
+      - "**/handlers/**"
+    common_files:
+      - routes
+      - middleware
+      - validators
+      - controllers
+    search_terms:
+      - "api OR route OR endpoint OR controller OR handler"
+
+  database:
+    keywords:
+      - database
+      - db
+      - query
+      - schema
+      - migration
+      - model
+      - orm
+      - sql
+      - connection
+      - pool
+    file_patterns:
+      - "**/models/**"
+      - "**/migrations/**"
+      - "**/db/**"
+      - "**/database/**"
+    common_files:
+      - models
+      - migrations
+      - seeds
+      - config
+    search_terms:
+      - "database OR model OR migration OR query OR schema"
+
+  caching:
+    keywords:
+      - cache
+      - caching
+      - redis
+      - memcached
+      - cdn
+      - invalidation
+      - ttl
+      - expire
+    file_patterns:
+      - "**/cache/**"
+      - "**/redis/**"
+    common_files:
+      - config
+      - middleware
+      - services
+    search_terms:
+      - "cache OR redis OR memcached OR cdn"
+
 # LLM Pricing Data (with staleness tracking)
 llm_pricing:
   last_updated: "2025-06-19"
