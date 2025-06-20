@@ -7,7 +7,7 @@ validation, binary filtering, and performance improvements.
 """
 
 import pytest
-from src.vibe_check.core.code_reference_extractor import (
+from vibe_check.core.code_reference_extractor import (
     CodeReferenceExtractor,
     ExtractionConfig,
     extract_code_references_from_issue
@@ -244,3 +244,100 @@ class TestCodeReferenceExtractor:
         
         # Should find valid function
         assert 'validFunction' in [r.value for r in func_refs]
+    
+    def test_malformed_stack_traces(self):
+        """Test handling of malformed stack traces."""
+        config = ExtractionConfig(enable_metrics_logging=False)
+        extractor = CodeReferenceExtractor(config)
+        
+        text = """
+        Malformed traces - these should be ignored:
+        at functionName (incomplete.js:
+        File "broken_python.py", line abc
+        
+        Valid Node.js stack trace:
+        at processOrder (/app/orders/valid.js:25:10)
+        
+        Valid Python stack trace:
+        File "src/test.py", line 42
+        """
+        refs = extractor.extract_references(text)
+        
+        stack_refs = [r for r in refs if r.type == 'stack_trace']
+        # Should find valid stack traces, ignoring malformed ones
+        assert len(stack_refs) >= 1
+        
+        # Check for the Node.js stack trace
+        nodejs_trace = next((r for r in stack_refs if '/app/orders/valid.js' in r.value), None)
+        assert nodejs_trace is not None
+        assert nodejs_trace.line_number == 25
+        
+        # Check for the Python stack trace
+        python_trace = next((r for r in stack_refs if 'src/test.py' in r.value), None)
+        assert python_trace is not None
+        assert python_trace.line_number == 42
+    
+    def test_very_long_file_paths(self):
+        """Test handling of unreasonably long file paths."""
+        config = ExtractionConfig(max_file_path_length=100, enable_metrics_logging=False)
+        extractor = CodeReferenceExtractor(config)
+        
+        # Create a very long path that exceeds the limit
+        long_path = "src/" + "very_long_directory_name/" * 10 + "file.js"
+        text = f"Error in `{long_path}` on line 42"
+        
+        refs = extractor.extract_references(text)
+        file_refs = [r for r in refs if r.type == 'file_path']
+        
+        # Should filter out the overly long path
+        assert not any(r.value == long_path for r in file_refs)
+    
+    def test_sensitive_system_files(self):
+        """Test filtering of sensitive system file paths."""
+        config = ExtractionConfig(enable_metrics_logging=False)
+        extractor = CodeReferenceExtractor(config)
+        
+        text = """
+        System files that should be blocked:
+        Error in `/etc/passwd` 
+        Problem with `/proc/meminfo`
+        Issue in `/sys/kernel/debug`
+        
+        Valid file:
+        Error in `src/config.js`
+        """
+        refs = extractor.extract_references(text)
+        file_refs = [r for r in refs if r.type == 'file_path']
+        file_paths = [r.value for r in file_refs]
+        
+        # Should not include sensitive system files
+        assert '/etc/passwd' not in file_paths
+        assert '/proc/meminfo' not in file_paths
+        assert '/sys/kernel/debug' not in file_paths
+        
+        # Should include valid user files
+        assert 'src/config.js' in file_paths
+    
+    def test_injection_attempt_filtering(self):
+        """Test filtering of potential injection attempts in file paths."""
+        config = ExtractionConfig(enable_metrics_logging=False)
+        extractor = CodeReferenceExtractor(config)
+        
+        text = """
+        Potential injection attempts:
+        Error in `file.js; rm -rf /`
+        Problem with `app.py | cat /etc/passwd`
+        Issue in `script.sh && echo "hacked"`
+        
+        Valid file:
+        Error in `src/normal-file.js`
+        """
+        refs = extractor.extract_references(text)
+        file_refs = [r for r in refs if r.type == 'file_path']
+        file_paths = [r.value for r in file_refs]
+        
+        # Should filter out paths with injection characters
+        assert not any(';' in path or '|' in path or '&' in path for path in file_paths)
+        
+        # Should include valid files
+        assert 'src/normal-file.js' in file_paths
