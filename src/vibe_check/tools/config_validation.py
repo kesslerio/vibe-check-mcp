@@ -312,11 +312,17 @@ class ConfigurationValidator:
         env_issues = []
         for env_var, description in env_checks:
             if env_var == "PYTHONPATH":
-                # PYTHONPATH is critical for vibe-check
-                if env_var not in os.environ:
-                    env_issues.append(f"{env_var} not set ({description})")
-                elif not any("vibe_check" in path_part for path_part in os.environ[env_var].split(os.pathsep)):
-                    env_issues.append(f"{env_var} does not include vibe_check in any path component")
+                # Check if vibe_check module is importable, regardless of PYTHONPATH
+                try:
+                    import vibe_check
+                    # If we can import it, PYTHONPATH is effectively correct
+                    pass
+                except ImportError:
+                    # Only warn if we can't import AND PYTHONPATH is not set
+                    if env_var not in os.environ:
+                        env_issues.append(f"{env_var} not set and vibe_check module not in Python path ({description})")
+                    elif not any("vibe_check" in path_part for path_part in os.environ[env_var].split(os.pathsep)):
+                        env_issues.append(f"{env_var} does not include vibe_check in any path component")
         
         if env_issues:
             self.results.append(ValidationResult(

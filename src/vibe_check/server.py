@@ -79,16 +79,26 @@ if dev_mode_override:
         if str(tests_dir) not in sys.path:
             sys.path.insert(0, str(tests_dir))
         
-        # Clear any cached imports to avoid circular import issues
+        # Import dev tools with proper module handling
         import importlib
-        if 'integration.claude_cli_tests' in sys.modules:
-            importlib.reload(sys.modules['integration.claude_cli_tests'])
-            
-        from integration.claude_cli_tests import register_dev_tools
-        register_dev_tools(mcp)
-        logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
-        logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
-        logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
+        register_dev_tools = None
+        try:
+            # Check if module is already loaded to avoid warnings
+            if 'integration.claude_cli_tests' in sys.modules:
+                # Use the existing module instead of reloading
+                dev_tools_module = sys.modules['integration.claude_cli_tests']
+                register_dev_tools = dev_tools_module.register_dev_tools
+            else:
+                from integration.claude_cli_tests import register_dev_tools
+        except ImportError as e:
+            logger.warning(f"Dev tools not available: {e}")
+            # Skip dev tools registration if import fails
+        
+        if register_dev_tools:
+            register_dev_tools(mcp)
+            logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
+            logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
+            logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
     except ImportError as e:
         logger.warning(f"⚠️ Dev tools not available: {e}")
         logger.warning("   Set VIBE_CHECK_DEV_MODE=true and ensure tests/integration/claude_cli_tests.py exists")
@@ -1242,13 +1252,19 @@ def vibe_check_mentor(
         # Step 3: Standard mode - Create or retrieve session
         if continue_session and session_id and session_id in engine.sessions:
             session = engine.sessions[session_id]
-            # Update topic for continued conversation
+            # Update topic for continued conversation but preserve session continuity
             session.topic = query
+            logger.info(f"Continuing session {session_id} with new topic: {query}")
         else:
-            session = engine.create_session(
-                topic=query,
-                session_id=session_id
-            )
+            # For new sessions, preserve session_id if provided for continuity
+            if session_id and not continue_session:
+                # User provided session_id but not continuing - this maintains ID consistency
+                session = engine.create_session(topic=query, session_id=session_id)
+                logger.info(f"Created new session with provided ID: {session_id}")
+            else:
+                # Generate new session for fresh start
+                session = engine.create_session(topic=query)
+                logger.info(f"Created new session with generated ID: {session.session_id}")
         
         # Step 4: Determine number of contributions based on depth
         contribution_counts = {
@@ -1281,6 +1297,9 @@ def vibe_check_mentor(
         # Step 6: Synthesize insights
         synthesis = engine.synthesize_session(session)
         
+        # Cleanup old sessions to prevent memory leaks
+        engine.cleanup_old_sessions()
+        
         # Step 7: Get coaching recommendations
         from .core.vibe_coaching import VibeCoachingFramework, CoachingTone
         coaching_framework = VibeCoachingFramework()
@@ -1295,7 +1314,7 @@ def vibe_check_mentor(
         response = {
             "status": "success",
             "immediate_feedback": {
-                "summary": _generate_summary(vibe_level, detected_patterns),
+                "summary": _generate_summary(vibe_level, detected_patterns, synthesis),
                 "confidence": vibe_analysis.get("vibe_assessment", {}).get("confidence", 0),
                 "detected_patterns": [p["pattern_type"] for p in detected_patterns],
                 "vibe_level": vibe_level
