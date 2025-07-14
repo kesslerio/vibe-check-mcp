@@ -112,7 +112,7 @@ fi
 print_status "🔍 Checking Python dependencies..."
 
 # Install requirements if needed
-if ! $PYTHON_CMD -c "import fastmcp, mcp, uvicorn" &> /dev/null; then
+if ! $PYTHON_CMD -c "import fastmcp, mcp, uvicorn, yaml, regex, jsonschema, aiohttp" &> /dev/null; then
     print_status "📦 Installing Python dependencies..."
     cd "$PROJECT_DIR"
     $PIP_CMD install -r requirements.txt

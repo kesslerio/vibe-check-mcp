@@ -4,6 +4,7 @@
 fastmcp==2.8.1
 mcp==1.9.4
 uvicorn==0.34.3
+aiohttp>=3.10.0
 
 # Anthropic SDK for direct API calls
 # anthropic>=0.40.0 (No specific version found, keeping for reference)
@@ -11,6 +12,7 @@ uvicorn==0.34.3
 # Pattern Detection & Analysis  
 regex>=2023.12.25
 jsonschema>=4.20.0
+PyYAML>=6.0.1
 
 # GitHub Integration (for future tools)
 PyGithub==2.6.1
