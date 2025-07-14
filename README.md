@@ -2,9 +2,9 @@
 
 **Your AI coding safety net with senior engineer collaborative reasoning - because getting 90% done and then stuck for weeks sucks.**
 
-Vibe Check MCP v0.3.0 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
+Vibe Check MCP v0.4.4 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
 
-## 🧠 NEW in v0.3.0: Senior Engineer Collaborative Reasoning
+## 🧠 Senior Engineer Collaborative Reasoning
 
 **The game-changing feature that actually prevents disasters before they happen:**
 
@@ -28,7 +28,7 @@ Get feedback from **multiple engineering perspectives simultaneously**:
 - Writing complex parsers when libraries handle it
 - **The Cognee Case Study**: Prevented 2+ weeks of custom development when official Docker containers existed
 
-[![Version](https://img.shields.io/badge/Version-0.3.0-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/badge/Version-0.4.4-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.4)
 [![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
@@ -72,7 +72,7 @@ You're not alone. Vibe Check is specifically designed for **vibe coders** - peop
 
 Vibe Check MCP provides **three modes of analysis** to catch engineering anti-patterns before they become expensive mistakes:
 
-### **🧠 Senior Engineer Mentor** (NEW in v0.3.0)
+### **🧠 Senior Engineer Mentor**
 - **Collaborative reasoning** with multiple engineering personas
 - **Interrupt mode** that stops bad decisions in real-time
 - **Architecture guidance** for complex technical decisions
@@ -112,25 +112,24 @@ Vibe Check MCP provides **three modes of analysis** to catch engineering anti-pa
 
 Choose the installation method that works best for your setup:
 
-### 🎯 **Option 1: NPX (Instant Setup) - NEW!**
+### 🎯 **Option 1: NPX (Instant Setup) - Recommended!**
 
 ```bash
 # Run directly without installation
 npx vibe-check-mcp --stdio
 
 # Or add to Claude Code MCP config
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["vibe-check-mcp", "--stdio"]
-}'
+claude mcp add vibe-check-npm \
+  --command "npx" \
+  --args "vibe-check-mcp" "--stdio"
 ```
 
 **Benefits:**
 - ✅ No local installation required
-- ✅ Always runs latest version
-- ✅ Automatic Python dependency management
+- ✅ Always runs latest version (v0.4.4+)
+- ✅ Automatic Python dependency management (aiohttp, PyYAML, etc.)
 - ✅ Cross-platform compatibility
+- ✅ Reliable MCP server connection (fixed in v0.4.4)
 
 ### 🎯 **Option 2: Smithery (Recommended for Production)**
 
@@ -146,10 +145,38 @@ npx -y @smithery/cli install vibe-check-mcp --client claude
 - ✅ Enables automatic updates via Smithery
 - ✅ Production-ready configuration
 
-### 🎯 **Option 3: Manual Installation (Advanced)**
+### 🎯 **Option 3: Local Development Setup**
+
+Perfect for contributing to the project or customizing the server:
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/kesslerio/vibe-check-mcp.git
+cd vibe-check-mcp
+pip install -r requirements.txt
+
+# 2. Test server locally
+PYTHONPATH=src python -m vibe_check.server --help
+
+# 3. Add local development server to Claude Code
+claude mcp add vibe-check-local \
+  --command "python" \
+  --args "-m" "vibe_check.server" "--stdio" \
+  --env PYTHONPATH="$(pwd)/src" GITHUB_TOKEN="your_token_here"
+
+# 4. Restart Claude Code
+```
+
+**When to use local development:**
+- ✅ Contributing to the project
+- ✅ Customizing anti-pattern detection rules
+- ✅ Adding new tools or features
+- ✅ Testing unreleased changes
+
+### 🎯 **Option 4: Manual Installation (Advanced)**
 
 <details>
-<summary>📦 Manual Installation (Click to expand)</summary>
+<summary>📦 Manual Production Installation (Click to expand)</summary>
 
 ```bash
 # 1. Clone and install
@@ -174,7 +201,7 @@ claude mcp add-json vibe-check '{
 ```
 </details>
 
-### 🎯 **Option 4: Script-Based Installation**
+### 🎯 **Option 5: Script-Based Installation**
 
 <details>
 <summary>🚀 One-Line Script Installation (Click to expand)</summary>
