@@ -20,6 +20,13 @@ import secrets
 # Configuration Constants
 DEFAULT_MAX_SESSIONS = 50  # Maximum number of mentor sessions to keep in memory
 
+# Experience strings - centralized for consistency
+class ExperienceStrings:
+    """Constants for experience descriptions in persona responses"""
+    
+    SENIOR_ENGINEER_YEARS = "15 years"
+    PRODUCT_ENGINEER_FEATURES = "50+ features"
+
 # Local imports
 from ..core.pattern_detector import PatternDetector
 from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
@@ -69,7 +76,7 @@ class InfrastructurePatternHandler(PatternHandler):
     def get_senior_engineer_response() -> tuple[str, str, float]:
         return (
             "concern",
-            "This looks like infrastructure-first thinking. In my experience spanning 15 years, "
+            f"This looks like infrastructure-first thinking. In my experience spanning {ExperienceStrings.SENIOR_ENGINEER_YEARS}, "
             "we should always start with working API calls before building abstractions. "
             "I strongly recommend following the official SDK examples first - they handle edge cases "
             "we'll inevitably miss in custom implementations.",
@@ -121,7 +128,7 @@ class ProductEngineerHandler(PatternHandler):
             return (
                 "challenge",
                 "Are we solving a real user problem or just satisfying our engineering desires? "
-                "I've shipped 50+ features, and the ones that succeed focus on user value, not technical elegance. "
+                f"I've shipped {ExperienceStrings.PRODUCT_ENGINEER_FEATURES}, and the ones that succeed focus on user value, not technical elegance. "
                 "Can we validate this with users before investing heavily in the implementation?",
                 ConfidenceScores.HIGH,
             )
@@ -259,7 +266,7 @@ class VibeMentorEngine:
                 "Technical debt",
                 "Maintainability",
             ],
-            background="15 years building scalable systems, seen countless anti-patterns",
+            background=f"{ExperienceStrings.SENIOR_ENGINEER_YEARS} building scalable systems, seen countless anti-patterns",
             perspective="Maintainability and proven solutions over novel approaches",
             biases=[
                 "Prefers established patterns",
@@ -277,7 +284,7 @@ class VibeMentorEngine:
                 "Rapid iteration",
                 "Feature delivery",
             ],
-            background="Startup experience, shipped 50+ features under tight deadlines",
+            background=f"Startup experience, shipped {ExperienceStrings.PRODUCT_ENGINEER_FEATURES} under tight deadlines",
             perspective="Ship fast, iterate based on feedback, perfect is the enemy of done",
             biases=["Favors speed over perfection", "User-focused", "Pragmatic"],
             communication={"style": "Pragmatic", "tone": "Energetic"},
@@ -316,6 +323,8 @@ class VibeMentorEngine:
         """Initialize a new collaborative reasoning session"""
 
         session_id = session_id or f"mentor-session-{int(datetime.now().timestamp())}-{secrets.token_hex(4)}"
+        # Log session creation for debugging correlation
+        logger.info(f"Creating mentor session {session_id} for topic: {topic[:100]}")
 
         session = CollaborativeReasoningSession(
             topic=topic,
@@ -677,7 +686,9 @@ class VibeMentorEngine:
         Generate a focused interrupt intervention based on detected patterns and phase.
         Returns a single question/suggestion for quick decision guidance.
         """
-        _interrupt_logger.progress("Generating quick intervention", "⚡")
+        # Generate correlation ID for this interrupt
+        interrupt_id = f"interrupt-{secrets.token_hex(4)}"
+        _interrupt_logger.progress(f"Generating quick intervention [{interrupt_id}]", "⚡")
         
         pattern_type = primary_pattern.get("pattern_type", "unknown")
         _interrupt_logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
@@ -720,7 +731,7 @@ class VibeMentorEngine:
                     }
                 
             except Exception as e:
-                logger.debug(f"Enhanced interrupt generation failed for pattern {pattern_type} in {phase} phase: {e}, falling back to basic mode")
+                logger.debug(f"Enhanced interrupt generation failed for pattern {pattern_type} in {phase} phase [{interrupt_id}]: {e}, falling back to basic mode")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {
@@ -803,10 +814,11 @@ class VibeMentorEngine:
             "severity": severity,
             "suggestion": suggestion,
             "pattern_type": pattern_type,
-            "confidence": pattern_confidence
+            "confidence": pattern_confidence,
+            "interrupt_id": interrupt_id  # Include correlation ID
         }
         
-        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type}")
+        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type} [{interrupt_id}]")
         return result
 
     def cleanup_old_sessions(self, max_sessions: int = DEFAULT_MAX_SESSIONS) -> None:
