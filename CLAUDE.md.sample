@@ -96,6 +96,41 @@ BUILD/TEST COMMANDS:
 - Format: black src/ tests/
 - Imports: isort src/ tests/
 
+CLAUDE CODE MCP INTEGRATION:
+
+Method 1 - NPM Package (recommended - published package):
+claude mcp add-json vibe-check '{
+  "command": "npx",
+  "args": ["vibe-check-mcp", "--stdio"],
+  "env": {
+    "GITHUB_TOKEN": "your_github_token_here"
+  }
+}'
+
+Method 2 - Local Python (development):
+claude mcp add vibe-check -e PYTHONPATH=src -- python -m vibe_check server --stdio
+
+Method 3 - Direct JSON in .claude.json:
+{
+  "mcpServers": {
+    "vibe-check": {
+      "command": "npx",
+      "args": ["vibe-check-mcp", "--stdio"],
+      "env": {
+        "GITHUB_TOKEN": "your_github_token_here"
+      }
+    }
+  }
+}
+
+After adding, restart Claude Code to activate the server.
+Verify with /mcp command in Claude Code chat.
+
+NPM PACKAGE MANAGEMENT:
+- Published as: vibe-check-mcp@0.4.0
+- Publish updates: npm publish
+- The npm package includes a bash wrapper that handles Python dependencies automatically
+
 VERSIONING SYSTEM:
 - Semantic Versioning (MAJOR.MINOR.PATCH): https://semver.org/
 - Version source of truth: VERSION file in project root

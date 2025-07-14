@@ -21,10 +21,17 @@ import secrets
 from typing import Dict, Any, Optional
 
 try:
-    from fastmcp import FastMCP
+    # Use official MCP server FastMCP for better Claude Code compatibility
+    from mcp.server.fastmcp import FastMCP
+    print("Using official MCP server FastMCP implementation for Claude Code compatibility")
 except ImportError:
-    print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
-    sys.exit(1)
+    try:
+        # Fallback to standalone FastMCP
+        from fastmcp import FastMCP
+        print("Using standalone FastMCP - consider installing official MCP package")
+    except ImportError:
+        print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
+        sys.exit(1)
 
 from .tools.analyze_text_nollm import analyze_text_demo
 from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
@@ -53,8 +60,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastMCP server
-mcp = FastMCP("Vibe Check MCP")
+# Initialize FastMCP server with enhanced Claude Code compatibility
+# Use explicit initialization to better handle non-standard MCP clients
+mcp = FastMCP(
+    name="Vibe Check MCP",
+    version="2.2.0"
+)
 
 # Register user diagnostic tools (essential for all users)
 register_diagnostic_tools(mcp)
@@ -1525,7 +1536,18 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         
         if transport_mode == "stdio":
             logger.info("🔗 Using stdio transport for Claude Desktop/Code integration")
-            mcp.run()  # Uses stdio by default
+            # Set environment variables that might help with Claude Code compatibility
+            os.environ.setdefault("FASTMCP_SERVER_STRICT_INIT", "false")
+            os.environ.setdefault("FASTMCP_SERVER_PROTOCOL_COMPLIANCE", "relaxed")
+            
+            # Run with explicit stdio transport and enhanced error handling
+            try:
+                mcp.run(transport="stdio")
+            except Exception as e:
+                logger.error(f"Server failed to start with stdio transport: {e}")
+                # Try with minimal configuration as fallback
+                logger.info("Attempting fallback startup with minimal configuration...")
+                mcp.run()
         else:
             # HTTP transport for Docker/server deployment
             server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")
