@@ -118,7 +118,13 @@ Choose the installation method that works best for your setup:
 # Run directly without installation
 npx vibe-check-mcp --stdio
 
-# Or add to Claude Code MCP config
+# Add to Claude Code MCP config with GitHub token (for private repos)
+claude mcp add vibe-check-npm \
+  --command "npx" \
+  --args "vibe-check-mcp" "--stdio" \
+  --env GITHUB_TOKEN="your_github_token_here"
+
+# Or without GitHub token (public repos only)
 claude mcp add vibe-check-npm \
   --command "npx" \
   --args "vibe-check-mcp" "--stdio"
@@ -130,6 +136,7 @@ claude mcp add vibe-check-npm \
 - ✅ Automatic Python dependency management (aiohttp, PyYAML, etc.)
 - ✅ Cross-platform compatibility
 - ✅ Reliable MCP server connection (fixed in v0.4.4)
+- ✅ Optional GitHub token for private repository analysis
 
 ### 🎯 **Option 2: Smithery (Recommended for Production)**
 
@@ -158,11 +165,17 @@ pip install -r requirements.txt
 # 2. Test server locally
 PYTHONPATH=src python -m vibe_check.server --help
 
-# 3. Add local development server to Claude Code
+# 3. Add local development server to Claude Code (with GitHub token)
 claude mcp add vibe-check-local \
   --command "python" \
   --args "-m" "vibe_check.server" "--stdio" \
-  --env PYTHONPATH="$(pwd)/src" GITHUB_TOKEN="your_token_here"
+  --env PYTHONPATH="$(pwd)/src" GITHUB_TOKEN="your_github_token_here"
+
+# Or without GitHub token (public repos only)
+claude mcp add vibe-check-local \
+  --command "python" \
+  --args "-m" "vibe_check.server" "--stdio" \
+  --env PYTHONPATH="$(pwd)/src"
 
 # 4. Restart Claude Code
 ```
@@ -219,19 +232,36 @@ curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/insta
 
 ## 🔧 Configuration
 
-### 🔐 GitHub Token Setup (Optional)
+### 🔐 GitHub Token Setup
 
-For private repository support, configure your GitHub token:
+**Required for:** Private repositories, organization repos, increased rate limits
+
+**When you need it:**
+- ✅ Analyzing private GitHub repositories
+- ✅ Analyzing organization repositories 
+- ✅ Higher API rate limits (5000/hour vs 60/hour)
+- ❌ **Not needed** for public repository analysis
+
+**How to get a GitHub token:**
+
+1. **Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
+2. **Click "Generate new token (classic)"**
+3. **Select these permissions:**
+   - ✅ `repo` (for private repository access)  
+   - ✅ `read:org` (for organization repositories)
+4. **Copy the token (starts with `ghp_`)**
+
+**How to use the token:**
 
 ```bash
-# Set GitHub token for private repository access
+# Option A: Set as environment variable (recommended)
 export GITHUB_TOKEN="ghp_your_token_here"
-# Add to your shell profile (~/.zshrc, ~/.bashrc) for persistence
+# Add to ~/.zshrc or ~/.bashrc for persistence
+
+# Option B: Pass directly in MCP config (see installation options above)
 ```
 
-**Token Permissions Required:**
-- ✅ `repo` (for private repository access)  
-- ✅ `read:org` (for organization repositories)
+**Security Note:** Keep your token secure! Don't commit it to version control.
 
 ## 🚀 Quick Setup for Claude Code
 
@@ -239,14 +269,16 @@ Since our project is specifically designed for Claude Code integration, here's t
 
 ### Step 1: Add to Claude Code (Recommended)
 ```bash
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["vibe-check-mcp", "--stdio"],
-  "env": {
-    "GITHUB_TOKEN": "your_github_token_here"
-  }
-}'
+# With GitHub token (for private repositories)
+claude mcp add vibe-check \
+  --command "npx" \
+  --args "vibe-check-mcp" "--stdio" \
+  --env GITHUB_TOKEN="your_github_token_here"
+
+# Or without GitHub token (public repositories only)
+claude mcp add vibe-check \
+  --command "npx" \
+  --args "vibe-check-mcp" "--stdio"
 ```
 
 ### Step 2: Restart Claude Code
