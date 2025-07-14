@@ -119,15 +119,10 @@ Choose the installation method that works best for your setup:
 npx vibe-check-mcp --stdio
 
 # Add to Claude Code MCP config with GitHub token (for private repos)
-claude mcp add vibe-check-npm \
-  --command "npx" \
-  --args "vibe-check-mcp" "--stdio" \
-  --env GITHUB_TOKEN="your_github_token_here"
+claude mcp add vibe-check-npm -e GITHUB_TOKEN="your_github_token_here" -- npx vibe-check-mcp --stdio
 
 # Or without GitHub token (public repos only)
-claude mcp add vibe-check-npm \
-  --command "npx" \
-  --args "vibe-check-mcp" "--stdio"
+claude mcp add vibe-check-npm -- npx vibe-check-mcp --stdio
 ```
 
 **Benefits:**
@@ -166,16 +161,10 @@ pip install -r requirements.txt
 PYTHONPATH=src python -m vibe_check.server --help
 
 # 3. Add local development server to Claude Code (with GitHub token)
-claude mcp add vibe-check-local \
-  --command "python" \
-  --args "-m" "vibe_check.server" "--stdio" \
-  --env PYTHONPATH="$(pwd)/src" GITHUB_TOKEN="your_github_token_here"
+claude mcp add vibe-check-local -e PYTHONPATH="$(pwd)/src" -e GITHUB_TOKEN="your_github_token_here" -- python -m vibe_check.server --stdio
 
 # Or without GitHub token (public repos only)
-claude mcp add vibe-check-local \
-  --command "python" \
-  --args "-m" "vibe_check.server" "--stdio" \
-  --env PYTHONPATH="$(pwd)/src"
+claude mcp add vibe-check-local -e PYTHONPATH="$(pwd)/src" -- python -m vibe_check.server --stdio
 
 # 4. Restart Claude Code
 ```
@@ -197,20 +186,15 @@ git clone https://github.com/kesslerio/vibe-check-mcp.git
 cd vibe-check-mcp
 pip install -r requirements.txt
 
-# 2. Add to Claude Code (IMPORTANT: Do NOT use -s user flag - causes recursion!)
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "python", 
-  "args": ["-m", "vibe_check.server"],
-  "env": {
-    "PYTHONPATH": "'"$(pwd)"'/src",
-    "GITHUB_TOKEN": "your_github_token_here"
-  }
-}'
+# 2. Add to Claude Code with GitHub token
+claude mcp add vibe-check -e PYTHONPATH="$(pwd)/src" -e GITHUB_TOKEN="your_github_token_here" -- python -m vibe_check.server --stdio
+
+# Or without GitHub token (public repos only)
+claude mcp add vibe-check -e PYTHONPATH="$(pwd)/src" -- python -m vibe_check.server --stdio
 
 # 3. Restart Claude Code and start using!
 
-⚠️ **CRITICAL**: Never use `-s user` flag with MCP servers as it causes infinite recursion and Claude Code timeouts. This project only works in Claude Code SDK (non-interactive) mode. See [Claude Code SDK docs](https://docs.anthropic.com/en/docs/claude-code/sdk) for details.
+💡 **Tip**: Add `-s project` to share with your team via .mcp.json, or `-s user` to use across all your projects.
 ```
 </details>
 
@@ -270,15 +254,10 @@ Since our project is specifically designed for Claude Code integration, here's t
 ### Step 1: Add to Claude Code (Recommended)
 ```bash
 # With GitHub token (for private repositories)
-claude mcp add vibe-check \
-  --command "npx" \
-  --args "vibe-check-mcp" "--stdio" \
-  --env GITHUB_TOKEN="your_github_token_here"
+claude mcp add vibe-check -e GITHUB_TOKEN="your_github_token_here" -- npx vibe-check-mcp --stdio
 
 # Or without GitHub token (public repositories only)
-claude mcp add vibe-check \
-  --command "npx" \
-  --args "vibe-check-mcp" "--stdio"
+claude mcp add vibe-check -- npx vibe-check-mcp --stdio
 ```
 
 ### Step 2: Restart Claude Code
