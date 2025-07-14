@@ -17,6 +17,16 @@ import json
 import logging
 import secrets
 
+# Configuration Constants
+DEFAULT_MAX_SESSIONS = 50  # Maximum number of mentor sessions to keep in memory
+
+# Experience strings - centralized for consistency
+class ExperienceStrings:
+    """Constants for experience descriptions in persona responses"""
+    
+    SENIOR_ENGINEER_YEARS = "15 years"
+    PRODUCT_ENGINEER_FEATURES = "50+ features"
+
 # Local imports
 from ..core.pattern_detector import PatternDetector
 from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
@@ -66,7 +76,7 @@ class InfrastructurePatternHandler(PatternHandler):
     def get_senior_engineer_response() -> tuple[str, str, float]:
         return (
             "concern",
-            "This looks like infrastructure-first thinking. In my experience spanning 15 years, "
+            f"This looks like infrastructure-first thinking. In my experience spanning {ExperienceStrings.SENIOR_ENGINEER_YEARS}, "
             "we should always start with working API calls before building abstractions. "
             "I strongly recommend following the official SDK examples first - they handle edge cases "
             "we'll inevitably miss in custom implementations.",
@@ -118,7 +128,7 @@ class ProductEngineerHandler(PatternHandler):
             return (
                 "challenge",
                 "Are we solving a real user problem or just satisfying our engineering desires? "
-                "I've shipped 50+ features, and the ones that succeed focus on user value, not technical elegance. "
+                f"I've shipped {ExperienceStrings.PRODUCT_ENGINEER_FEATURES}, and the ones that succeed focus on user value, not technical elegance. "
                 "Can we validate this with users before investing heavily in the implementation?",
                 ConfidenceScores.HIGH,
             )
@@ -256,7 +266,7 @@ class VibeMentorEngine:
                 "Technical debt",
                 "Maintainability",
             ],
-            background="15 years building scalable systems, seen countless anti-patterns",
+            background=f"{ExperienceStrings.SENIOR_ENGINEER_YEARS} building scalable systems, seen countless anti-patterns",
             perspective="Maintainability and proven solutions over novel approaches",
             biases=[
                 "Prefers established patterns",
@@ -274,7 +284,7 @@ class VibeMentorEngine:
                 "Rapid iteration",
                 "Feature delivery",
             ],
-            background="Startup experience, shipped 50+ features under tight deadlines",
+            background=f"Startup experience, shipped {ExperienceStrings.PRODUCT_ENGINEER_FEATURES} under tight deadlines",
             perspective="Ship fast, iterate based on feedback, perfect is the enemy of done",
             biases=["Favors speed over perfection", "User-focused", "Pragmatic"],
             communication={"style": "Pragmatic", "tone": "Energetic"},
@@ -313,6 +323,8 @@ class VibeMentorEngine:
         """Initialize a new collaborative reasoning session"""
 
         session_id = session_id or f"mentor-session-{int(datetime.now().timestamp())}-{secrets.token_hex(4)}"
+        # Log session creation for debugging correlation
+        logger.info(f"Creating mentor session {session_id} for topic: {topic[:100]}")
 
         session = CollaborativeReasoningSession(
             topic=topic,
@@ -404,22 +416,40 @@ class VibeMentorEngine:
         if InfrastructurePatternHandler.has_pattern(
             patterns, "infrastructure_without_implementation"
         ):
-            return InfrastructurePatternHandler.get_senior_engineer_response()
+            base_response = InfrastructurePatternHandler.get_senior_engineer_response()
+            # Enhance with topic-specific context
+            enhanced_content = f"{base_response[1]} Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
+            return (base_response[0], enhanced_content, base_response[2])
 
-        # Handle custom solution patterns
-        return CustomSolutionHandler.get_senior_engineer_insight(topic)
+        # Handle custom solution patterns with topic context
+        base_response = CustomSolutionHandler.get_senior_engineer_insight(topic)
+        # Add specific technical concerns based on topic keywords
+        if any(keyword in topic.lower() for keyword in ["api", "integration", "service"]):
+            enhanced_content = f"{base_response[1]} For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
+            return (base_response[0], enhanced_content, base_response[2])
+        
+        return base_response
 
     def _reason_as_product_engineer(
         self, patterns: List[Dict[str, Any]], topic: str
     ) -> tuple[str, str, float]:
         """Generate product engineer perspective focused on rapid delivery"""
 
-        # If patterns detected, focus on rapid prototyping
+        # If patterns detected, focus on rapid prototyping with topic context
         if patterns:
-            return ProductEngineerHandler.get_rapid_delivery_response()
+            base_response = ProductEngineerHandler.get_rapid_delivery_response()
+            # Add topic-specific user value consideration
+            enhanced_content = f"{base_response[1]} For '{topic}', let's focus on what users actually need rather than what's technically interesting to build."
+            return (base_response[0], enhanced_content, base_response[2])
 
-        # Otherwise, handle based on topic
-        return ProductEngineerHandler.get_planning_challenge(topic)
+        # Otherwise, handle based on topic with specific context
+        base_response = ProductEngineerHandler.get_planning_challenge(topic)
+        # Add product-specific concerns based on topic
+        if any(keyword in topic.lower() for keyword in ["build", "create", "implement"]):
+            enhanced_content = f"{base_response[1]} Before building '{topic}', have we validated this solves a real user problem? I'd rather ship something imperfect that users love than something perfect they don't need."
+            return (base_response[0], enhanced_content, base_response[2])
+        
+        return base_response
 
     def _reason_as_ai_engineer(
         self,
@@ -656,7 +686,9 @@ class VibeMentorEngine:
         Generate a focused interrupt intervention based on detected patterns and phase.
         Returns a single question/suggestion for quick decision guidance.
         """
-        _interrupt_logger.progress("Generating quick intervention", "⚡")
+        # Generate correlation ID for this interrupt
+        interrupt_id = f"interrupt-{secrets.token_hex(4)}"
+        _interrupt_logger.progress(f"Generating quick intervention [{interrupt_id}]", "⚡")
         
         pattern_type = primary_pattern.get("pattern_type", "unknown")
         _interrupt_logger.info(f"Analyzing {pattern_type} pattern in {phase} phase", "🔍")
@@ -699,7 +731,7 @@ class VibeMentorEngine:
                     }
                 
             except Exception as e:
-                logger.debug(f"Enhanced interrupt generation failed: {e}, using basic mode")
+                logger.debug(f"Enhanced interrupt generation failed for pattern {pattern_type} in {phase} phase [{interrupt_id}]: {e}, falling back to basic mode")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {
@@ -782,15 +814,65 @@ class VibeMentorEngine:
             "severity": severity,
             "suggestion": suggestion,
             "pattern_type": pattern_type,
-            "confidence": pattern_confidence
+            "confidence": pattern_confidence,
+            "interrupt_id": interrupt_id  # Include correlation ID
         }
         
-        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type}")
+        _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type} [{interrupt_id}]")
         return result
 
+    def cleanup_old_sessions(self, max_sessions: int = DEFAULT_MAX_SESSIONS) -> None:
+        """
+        Clean up old sessions to prevent memory leaks.
+        
+        Args:
+            max_sessions: Maximum number of sessions to keep in memory
+        """
+        if len(self.sessions) > max_sessions:
+            # Sort sessions by last update time and keep the most recent
+            sorted_sessions = sorted(
+                self.sessions.items(),
+                key=lambda x: x[1].iteration,  # Use iteration as proxy for recency
+                reverse=True
+            )
+            
+            # Keep only the most recent sessions
+            sessions_to_keep = dict(sorted_sessions[:max_sessions])
+            removed_count = len(self.sessions) - len(sessions_to_keep)
+            
+            self.sessions = sessions_to_keep
+            logger.info(f"Cleaned up {removed_count} old mentor sessions")
 
-def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]]) -> str:
-    """Generate a quick summary based on vibe level and patterns"""
+
+def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]], 
+                     synthesis: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Generate a quick summary based on vibe level, patterns, and collaborative insights.
+    
+    Args:
+        vibe_level: Assessed vibe level from pattern detection
+        detected_patterns: List of detected anti-patterns
+        synthesis: Optional synthesis from collaborative reasoning
+        
+    Returns:
+        Summary that reflects both pattern detection and persona concerns
+    """
+    # Check if personas identified concerns even if patterns weren't detected
+    persona_concerns = []
+    if synthesis:
+        persona_concerns = synthesis.get("primary_concerns", [])
+        consensus_points = synthesis.get("consensus_points", [])
+        
+        # Check if consensus indicates concerns
+        concern_indicators = ["avoid", "concern", "risk", "problem", "issue", "anti-pattern"]
+        has_consensus_concerns = any(
+            any(indicator in point.lower() for indicator in concern_indicators)
+            for point in consensus_points
+        )
+    else:
+        has_consensus_concerns = False
+    
+    # Generate summary based on patterns AND persona feedback
     if detected_patterns:
         pattern_types = [p["pattern_type"] for p in detected_patterns]
         if "infrastructure_without_implementation" in pattern_types:
@@ -799,6 +881,9 @@ def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]]) 
             return "Explore standard solutions before building custom"
         else:
             return "Some patterns detected - check recommendations below"
+    elif persona_concerns or has_consensus_concerns:
+        # Personas identified concerns even without pattern detection
+        return "Engineering team has concerns - review collaborative insights"
     else:
         return "No concerning patterns detected - looking good!"
 

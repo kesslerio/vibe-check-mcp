@@ -20,11 +20,21 @@ import argparse
 import secrets
 from typing import Dict, Any, Optional
 
+# Configuration Constants
+DEFAULT_MAX_DIFF_SIZE = 50000  # Maximum PR diff size in characters (50KB)
+
 try:
-    from fastmcp import FastMCP
+    # Use official MCP server FastMCP for better Claude Code compatibility
+    from mcp.server.fastmcp import FastMCP
+    print("Using official MCP server FastMCP implementation for Claude Code compatibility")
 except ImportError:
-    print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
-    sys.exit(1)
+    try:
+        # Fallback to standalone FastMCP
+        from fastmcp import FastMCP
+        print("Using standalone FastMCP - consider installing official MCP package")
+    except ImportError:
+        print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
+        sys.exit(1)
 
 from .tools.analyze_text_nollm import analyze_text_demo
 from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
@@ -54,7 +64,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP("Vibe Check MCP")
+mcp = FastMCP(
+    name="Vibe Check MCP",
+    version="2.2.0"
+)
 
 # Register user diagnostic tools (essential for all users)
 register_diagnostic_tools(mcp)
@@ -79,16 +92,26 @@ if dev_mode_override:
         if str(tests_dir) not in sys.path:
             sys.path.insert(0, str(tests_dir))
         
-        # Clear any cached imports to avoid circular import issues
+        # Import dev tools with proper module handling
         import importlib
-        if 'integration.claude_cli_tests' in sys.modules:
-            importlib.reload(sys.modules['integration.claude_cli_tests'])
-            
-        from integration.claude_cli_tests import register_dev_tools
-        register_dev_tools(mcp)
-        logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
-        logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
-        logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
+        register_dev_tools = None
+        try:
+            # Check if module is already loaded to avoid warnings
+            if 'integration.claude_cli_tests' in sys.modules:
+                # Use the existing module instead of reloading
+                dev_tools_module = sys.modules['integration.claude_cli_tests']
+                register_dev_tools = dev_tools_module.register_dev_tools
+            else:
+                from integration.claude_cli_tests import register_dev_tools
+        except ImportError as e:
+            logger.warning(f"Dev tools not available: {e}")
+            # Skip dev tools registration if import fails
+        
+        if register_dev_tools:
+            register_dev_tools(mcp)
+            logger.info("🔧 Dev mode enabled: Comprehensive testing tools available")
+            logger.info("   Available dev tools: test_claude_cli_integration, test_claude_cli_with_file_input,")
+            logger.info("                       test_claude_cli_comprehensive, test_claude_cli_mcp_permissions")
     except ImportError as e:
         logger.warning(f"⚠️ Dev tools not available: {e}")
         logger.warning("   Set VIBE_CHECK_DEV_MODE=true and ensure tests/integration/claude_cli_tests.py exists")
@@ -1174,7 +1197,7 @@ def vibe_check_mentor(
                 
                 if diff_result.success:
                     # Performance limit: Truncate very large diffs to prevent timeout
-                    max_diff_size = int(os.getenv('VIBE_CHECK_MAX_DIFF_SIZE', '50000'))  # 50KB default
+                    max_diff_size = int(os.getenv('VIBE_CHECK_MAX_DIFF_SIZE', str(DEFAULT_MAX_DIFF_SIZE)))
                     diff_data = diff_result.data
                     
                     if len(diff_data) > max_diff_size:
@@ -1242,13 +1265,19 @@ def vibe_check_mentor(
         # Step 3: Standard mode - Create or retrieve session
         if continue_session and session_id and session_id in engine.sessions:
             session = engine.sessions[session_id]
-            # Update topic for continued conversation
+            # Update topic for continued conversation but preserve session continuity
             session.topic = query
+            logger.info(f"Continuing session {session_id} with new topic: {query}")
         else:
-            session = engine.create_session(
-                topic=query,
-                session_id=session_id
-            )
+            # For new sessions, preserve session_id if provided for continuity
+            if session_id and not continue_session:
+                # User provided session_id but not continuing - this maintains ID consistency
+                session = engine.create_session(topic=query, session_id=session_id)
+                logger.info(f"Created new session with provided ID: {session_id}")
+            else:
+                # Generate new session for fresh start
+                session = engine.create_session(topic=query)
+                logger.info(f"Created new session with generated ID: {session.session_id}")
         
         # Step 4: Determine number of contributions based on depth
         contribution_counts = {
@@ -1281,6 +1310,9 @@ def vibe_check_mentor(
         # Step 6: Synthesize insights
         synthesis = engine.synthesize_session(session)
         
+        # Cleanup old sessions to prevent memory leaks
+        engine.cleanup_old_sessions()
+        
         # Step 7: Get coaching recommendations
         from .core.vibe_coaching import VibeCoachingFramework, CoachingTone
         coaching_framework = VibeCoachingFramework()
@@ -1295,7 +1327,7 @@ def vibe_check_mentor(
         response = {
             "status": "success",
             "immediate_feedback": {
-                "summary": _generate_summary(vibe_level, detected_patterns),
+                "summary": _generate_summary(vibe_level, detected_patterns, synthesis),
                 "confidence": vibe_analysis.get("vibe_assessment", {}).get("confidence", 0),
                 "detected_patterns": [p["pattern_type"] for p in detected_patterns],
                 "vibe_level": vibe_level
@@ -1506,7 +1538,18 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         
         if transport_mode == "stdio":
             logger.info("🔗 Using stdio transport for Claude Desktop/Code integration")
-            mcp.run()  # Uses stdio by default
+            # Set environment variables that might help with Claude Code compatibility
+            os.environ.setdefault("FASTMCP_SERVER_STRICT_INIT", "false")
+            os.environ.setdefault("FASTMCP_SERVER_PROTOCOL_COMPLIANCE", "relaxed")
+            
+            # Run with explicit stdio transport and enhanced error handling
+            try:
+                mcp.run(transport="stdio")
+            except Exception as e:
+                logger.error(f"Server failed to start with stdio transport: {e}")
+                # Try with minimal configuration as fallback
+                logger.info("Attempting fallback startup with minimal configuration...")
+                mcp.run()
         else:
             # HTTP transport for Docker/server deployment
             server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")

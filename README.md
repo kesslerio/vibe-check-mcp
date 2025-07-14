@@ -2,9 +2,9 @@
 
 **Your AI coding safety net with senior engineer collaborative reasoning - because getting 90% done and then stuck for weeks sucks.**
 
-Vibe Check MCP v0.3.0 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
+Vibe Check MCP v0.4.4 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
 
-## 🧠 NEW in v0.3.0: Senior Engineer Collaborative Reasoning
+## 🧠 Senior Engineer Collaborative Reasoning
 
 **The game-changing feature that actually prevents disasters before they happen:**
 
@@ -28,7 +28,7 @@ Get feedback from **multiple engineering perspectives simultaneously**:
 - Writing complex parsers when libraries handle it
 - **The Cognee Case Study**: Prevented 2+ weeks of custom development when official Docker containers existed
 
-[![Version](https://img.shields.io/badge/Version-0.3.0-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)
+[![Version](https://img.shields.io/badge/Version-0.4.4-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.4)
 [![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
@@ -72,7 +72,7 @@ You're not alone. Vibe Check is specifically designed for **vibe coders** - peop
 
 Vibe Check MCP provides **three modes of analysis** to catch engineering anti-patterns before they become expensive mistakes:
 
-### **🧠 Senior Engineer Mentor** (NEW in v0.3.0)
+### **🧠 Senior Engineer Mentor**
 - **Collaborative reasoning** with multiple engineering personas
 - **Interrupt mode** that stops bad decisions in real-time
 - **Architecture guidance** for complex technical decisions
@@ -112,25 +112,26 @@ Vibe Check MCP provides **three modes of analysis** to catch engineering anti-pa
 
 Choose the installation method that works best for your setup:
 
-### 🎯 **Option 1: NPX (Instant Setup) - NEW!**
+### 🎯 **Option 1: NPX (Instant Setup) - Recommended!**
 
 ```bash
 # Run directly without installation
 npx vibe-check-mcp --stdio
 
-# Or add to Claude Code MCP config
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["vibe-check-mcp", "--stdio"]
-}'
+# Add to Claude Code MCP config with GitHub token (for private repos)
+claude mcp add vibe-check-npm -e GITHUB_TOKEN="your_github_token_here" -- npx vibe-check-mcp --stdio
+
+# Or without GitHub token (public repos only)
+claude mcp add vibe-check-npm -- npx vibe-check-mcp --stdio
 ```
 
 **Benefits:**
 - ✅ No local installation required
-- ✅ Always runs latest version
-- ✅ Automatic Python dependency management
+- ✅ Always runs latest version (v0.4.4+)
+- ✅ Automatic Python dependency management (aiohttp, PyYAML, etc.)
 - ✅ Cross-platform compatibility
+- ✅ Reliable MCP server connection (fixed in v0.4.4)
+- ✅ Optional GitHub token for private repository analysis
 
 ### 🎯 **Option 2: Smithery (Recommended for Production)**
 
@@ -146,10 +147,38 @@ npx -y @smithery/cli install vibe-check-mcp --client claude
 - ✅ Enables automatic updates via Smithery
 - ✅ Production-ready configuration
 
-### 🎯 **Option 3: Manual Installation (Advanced)**
+### 🎯 **Option 3: Local Development Setup**
+
+Perfect for contributing to the project or customizing the server:
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/kesslerio/vibe-check-mcp.git
+cd vibe-check-mcp
+pip install -r requirements.txt
+
+# 2. Test server locally
+PYTHONPATH=src python -m vibe_check.server --help
+
+# 3. Add local development server to Claude Code (with GitHub token)
+claude mcp add vibe-check-local -e PYTHONPATH="$(pwd)/src" -e GITHUB_TOKEN="your_github_token_here" -- python -m vibe_check.server --stdio
+
+# Or without GitHub token (public repos only)
+claude mcp add vibe-check-local -e PYTHONPATH="$(pwd)/src" -- python -m vibe_check.server --stdio
+
+# 4. Restart Claude Code
+```
+
+**When to use local development:**
+- ✅ Contributing to the project
+- ✅ Customizing anti-pattern detection rules
+- ✅ Adding new tools or features
+- ✅ Testing unreleased changes
+
+### 🎯 **Option 4: Manual Installation (Advanced)**
 
 <details>
-<summary>📦 Manual Installation (Click to expand)</summary>
+<summary>📦 Manual Production Installation (Click to expand)</summary>
 
 ```bash
 # 1. Clone and install
@@ -157,24 +186,19 @@ git clone https://github.com/kesslerio/vibe-check-mcp.git
 cd vibe-check-mcp
 pip install -r requirements.txt
 
-# 2. Add to Claude Code (IMPORTANT: Do NOT use -s user flag - causes recursion!)
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "python", 
-  "args": ["-m", "vibe_check.server"],
-  "env": {
-    "PYTHONPATH": "'"$(pwd)"'/src",
-    "GITHUB_TOKEN": "your_github_token_here"
-  }
-}'
+# 2. Add to Claude Code with GitHub token
+claude mcp add vibe-check -e PYTHONPATH="$(pwd)/src" -e GITHUB_TOKEN="your_github_token_here" -- python -m vibe_check.server --stdio
+
+# Or without GitHub token (public repos only)
+claude mcp add vibe-check -e PYTHONPATH="$(pwd)/src" -- python -m vibe_check.server --stdio
 
 # 3. Restart Claude Code and start using!
 
-⚠️ **CRITICAL**: Never use `-s user` flag with MCP servers as it causes infinite recursion and Claude Code timeouts. This project only works in Claude Code SDK (non-interactive) mode. See [Claude Code SDK docs](https://docs.anthropic.com/en/docs/claude-code/sdk) for details.
+💡 **Tip**: Add `-s project` to share with your team via .mcp.json, or `-s user` to use across all your projects.
 ```
 </details>
 
-### 🎯 **Option 4: Script-Based Installation**
+### 🎯 **Option 5: Script-Based Installation**
 
 <details>
 <summary>🚀 One-Line Script Installation (Click to expand)</summary>
@@ -192,19 +216,36 @@ curl -fsSL https://raw.githubusercontent.com/kesslerio/vibe-check-mcp/main/insta
 
 ## 🔧 Configuration
 
-### 🔐 GitHub Token Setup (Optional)
+### 🔐 GitHub Token Setup
 
-For private repository support, configure your GitHub token:
+**Required for:** Private repositories, organization repos, increased rate limits
+
+**When you need it:**
+- ✅ Analyzing private GitHub repositories
+- ✅ Analyzing organization repositories 
+- ✅ Higher API rate limits (5000/hour vs 60/hour)
+- ❌ **Not needed** for public repository analysis
+
+**How to get a GitHub token:**
+
+1. **Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
+2. **Click "Generate new token (classic)"**
+3. **Select these permissions:**
+   - ✅ `repo` (for private repository access)  
+   - ✅ `read:org` (for organization repositories)
+4. **Copy the token (starts with `ghp_`)**
+
+**How to use the token:**
 
 ```bash
-# Set GitHub token for private repository access
+# Option A: Set as environment variable (recommended)
 export GITHUB_TOKEN="ghp_your_token_here"
-# Add to your shell profile (~/.zshrc, ~/.bashrc) for persistence
+# Add to ~/.zshrc or ~/.bashrc for persistence
+
+# Option B: Pass directly in MCP config (see installation options above)
 ```
 
-**Token Permissions Required:**
-- ✅ `repo` (for private repository access)  
-- ✅ `read:org` (for organization repositories)
+**Security Note:** Keep your token secure! Don't commit it to version control.
 
 ## 🚀 Quick Setup for Claude Code
 
@@ -212,14 +253,11 @@ Since our project is specifically designed for Claude Code integration, here's t
 
 ### Step 1: Add to Claude Code (Recommended)
 ```bash
-claude mcp add-json vibe-check '{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["vibe-check-mcp", "--stdio"],
-  "env": {
-    "GITHUB_TOKEN": "your_github_token_here"
-  }
-}'
+# With GitHub token (for private repositories)
+claude mcp add vibe-check -e GITHUB_TOKEN="your_github_token_here" -- npx vibe-check-mcp --stdio
+
+# Or without GitHub token (public repositories only)
+claude mcp add vibe-check -- npx vibe-check-mcp --stdio
 ```
 
 ### Step 2: Restart Claude Code
