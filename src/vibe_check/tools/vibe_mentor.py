@@ -17,6 +17,9 @@ import json
 import logging
 import secrets
 
+# Configuration Constants
+DEFAULT_MAX_SESSIONS = 50  # Maximum number of mentor sessions to keep in memory
+
 # Local imports
 from ..core.pattern_detector import PatternDetector
 from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
@@ -717,7 +720,7 @@ class VibeMentorEngine:
                     }
                 
             except Exception as e:
-                logger.debug(f"Enhanced interrupt generation failed: {e}, using basic mode")
+                logger.debug(f"Enhanced interrupt generation failed for pattern {pattern_type} in {phase} phase: {e}, falling back to basic mode")
         
         # Phase-specific questions mapped to patterns
         phase_questions = {
@@ -806,7 +809,7 @@ class VibeMentorEngine:
         _interrupt_logger.success(f"Generated {severity} priority intervention for {pattern_type}")
         return result
 
-    def cleanup_old_sessions(self, max_sessions: int = 50) -> None:
+    def cleanup_old_sessions(self, max_sessions: int = DEFAULT_MAX_SESSIONS) -> None:
         """
         Clean up old sessions to prevent memory leaks.
         

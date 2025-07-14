@@ -20,6 +20,9 @@ import argparse
 import secrets
 from typing import Dict, Any, Optional
 
+# Configuration Constants
+DEFAULT_MAX_DIFF_SIZE = 50000  # Maximum PR diff size in characters (50KB)
+
 try:
     # Use official MCP server FastMCP for better Claude Code compatibility
     from mcp.server.fastmcp import FastMCP
@@ -60,8 +63,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastMCP server with enhanced Claude Code compatibility
-# Use explicit initialization to better handle non-standard MCP clients
+# Initialize FastMCP server
 mcp = FastMCP(
     name="Vibe Check MCP",
     version="2.2.0"
@@ -1195,7 +1197,7 @@ def vibe_check_mentor(
                 
                 if diff_result.success:
                     # Performance limit: Truncate very large diffs to prevent timeout
-                    max_diff_size = int(os.getenv('VIBE_CHECK_MAX_DIFF_SIZE', '50000'))  # 50KB default
+                    max_diff_size = int(os.getenv('VIBE_CHECK_MAX_DIFF_SIZE', str(DEFAULT_MAX_DIFF_SIZE)))
                     diff_data = diff_result.data
                     
                     if len(diff_data) > max_diff_size:
