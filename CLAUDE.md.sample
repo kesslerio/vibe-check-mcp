@@ -98,24 +98,20 @@ BUILD/TEST COMMANDS:
 
 CLAUDE CODE MCP INTEGRATION:
 
-Method 1 - NPM Package (recommended - published package):
-claude mcp add-json vibe-check '{
-  "command": "npx",
-  "args": ["vibe-check-mcp", "--stdio"],
-  "env": {
-    "GITHUB_TOKEN": "your_github_token_here"
-  }
-}'
+WORKING SOLUTION ✅ (v0.4.1 - Claude Code compatibility fixed):
 
-Method 2 - Local Python (development):
-claude mcp add vibe-check -e PYTHONPATH=src -- python -m vibe_check server --stdio
+Method 1 - NPM Package (recommended):
+claude mcp add vibe-check "npx -y vibe-check-mcp --stdio"
 
-Method 3 - Direct JSON in .claude.json:
+Method 2 - With environment variables:
+claude mcp add vibe-check npx -y vibe-check-mcp --stdio -e GITHUB_TOKEN=your_token
+
+Method 3 - Direct JSON in mcp.json:
 {
   "mcpServers": {
     "vibe-check": {
       "command": "npx",
-      "args": ["vibe-check-mcp", "--stdio"],
+      "args": ["-y", "vibe-check-mcp", "--stdio"],
       "env": {
         "GITHUB_TOKEN": "your_github_token_here"
       }
@@ -123,11 +119,28 @@ Method 3 - Direct JSON in .claude.json:
   }
 }
 
+COMPATIBILITY FIX DETAILS:
+- ✅ ISSUE #1604 RESOLVED: Switched from standalone FastMCP to official mcp.server.fastmcp
+- ✅ PROTOCOL COMPLIANCE: Official MCP implementation properly handles Claude Code initialization sequence
+- ✅ PUBLISHED: vibe-check-mcp@0.4.1 with working Claude Code compatibility
+- ✅ VALIDATION: Manual protocol testing confirms proper MCP handshake
+
+TECHNICAL SOLUTION:
+```python
+# OLD (incompatible):
+from fastmcp import FastMCP
+
+# NEW (working):
+from mcp.server.fastmcp import FastMCP
+```
+
+The official MCP server implementation correctly handles the initialization sequence that Claude Code expects, eliminating the "Failed to validate request: Received request before initialization was complete" error.
+
 After adding, restart Claude Code to activate the server.
 Verify with /mcp command in Claude Code chat.
 
 NPM PACKAGE MANAGEMENT:
-- Published as: vibe-check-mcp@0.4.0
+- Published as: vibe-check-mcp@0.4.1
 - Publish updates: npm publish
 - The npm package includes a bash wrapper that handles Python dependencies automatically
 

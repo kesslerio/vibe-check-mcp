@@ -4,7 +4,7 @@
   "description": "Vibe Check MCP - Anti-pattern detection and mentoring for better engineering decisions",
   "main": "src/vibe_check/server.py",
   "bin": {
-    "vibe-check-mcp": "./bin/vibe-check-mcp"
+    "vibe-check-mcp": "bin/vibe-check-mcp"
   },
   "scripts": {
     "start": "python -m vibe_check.server",
@@ -27,7 +27,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kesslerio/vibe-check-mcp.git"
+    "url": "git+https://github.com/kesslerio/vibe-check-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/kesslerio/vibe-check-mcp/issues"
