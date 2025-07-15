@@ -37,6 +37,7 @@ except ImportError:
         sys.exit(1)
 
 from .tools.analyze_text_nollm import analyze_text_demo
+from .tools.large_prompt_demo import demo_large_prompt_analysis
 from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
 from .tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
 from .tools.analyze_llm.tool_registry import register_llm_analysis_tools
@@ -146,6 +147,38 @@ def analyze_text_nollm(text: str, detail_level: str = "standard") -> Dict[str, A
     """
     logger.info(f"Fast text analysis requested for {len(text)} characters")
     return analyze_text_demo(text, detail_level)
+
+@mcp.tool()
+def demo_large_prompt_handling(
+    content: str,
+    files: list = None,
+    detail_level: str = "standard"
+) -> Dict[str, Any]:
+    """
+    🚀 Demo: Zen-style Large Prompt Handling (Issue #164)
+    
+    Demonstrates the simple approach inspired by Zen MCP server for handling
+    prompts that exceed MCP's 25K token limit. No complex infrastructure needed!
+    
+    How it works:
+    1. Check if content >50K characters
+    2. Ask Claude to save to file and resubmit
+    3. Claude handles the file operations automatically
+    4. Process the content normally
+    
+    This is a proof of concept for the minimal solution that replaces the
+    overengineered 473-line approach from PR #157.
+    
+    Args:
+        content: The content to analyze (if >50K chars, will request file mode)
+        files: Optional list of file paths (when Claude resubmits with files)
+        detail_level: Analysis detail level
+        
+    Returns:
+        Either analysis results or instructions to use file mode
+    """
+    logger.info(f"Large prompt demo requested for {len(content)} characters")
+    return demo_large_prompt_analysis(content, files, detail_level)
 
 @mcp.tool()
 def analyze_issue_nollm(
