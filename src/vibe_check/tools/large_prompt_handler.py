@@ -18,19 +18,18 @@ logger = logging.getLogger(__name__)
 class LargePromptHandler:
     """Simple handler for large prompts using file-based approach."""
     
-    # Simple character-based threshold (no tiktoken needed!)
-    CHARACTER_LIMIT = 50000  # 50K characters as per Zen MCP
-    
     def __init__(self):
-        logger.info(f"LargePromptHandler initialized with {self.CHARACTER_LIMIT:,} character limit")
+        # Allow configuration via environment variable with sensible default
+        self.character_limit = int(os.getenv('VIBE_CHECK_CHARACTER_LIMIT', '50000'))
+        logger.info(f"LargePromptHandler initialized with {self.character_limit:,} character limit")
     
     def should_use_file_mode(self, prompt: str) -> bool:
         """Check if prompt exceeds character limit."""
         char_count = len(prompt)
-        should_use_file = char_count > self.CHARACTER_LIMIT
+        should_use_file = char_count > self.character_limit
         
         if should_use_file:
-            logger.info(f"Large prompt detected: {char_count:,} chars > {self.CHARACTER_LIMIT:,}")
+            logger.info(f"Large prompt detected: {char_count:,} chars > {self.character_limit:,}")
         
         return should_use_file
     
@@ -41,9 +40,9 @@ class LargePromptHandler:
         response = {
             "status": "prompt_too_large",
             "character_count": char_count,
-            "limit": self.CHARACTER_LIMIT,
+            "limit": self.character_limit,
             "message": (
-                f"The prompt is too large for MCP's limits ({char_count:,} characters > {self.CHARACTER_LIMIT:,}). "
+                f"The prompt is too large for MCP's limits ({char_count:,} characters > {self.character_limit:,}). "
                 "Please save the prompt text to a temporary file named 'prompt.txt' and resend "
                 "the request with an empty prompt string, including the absolute file path in the "
                 "files parameter along with any other files you wish to share as context."
@@ -105,9 +104,15 @@ class LargePromptHandler:
         """
         # Check if we have files provided (file mode)
         if files and len(files) > 0:
-            # Look for prompt.txt or similar
+            # More flexible file detection - check multiple patterns
+            prompt_indicators = ['prompt', 'content', 'text', 'input', 'analysis']
+            
             for file_path in files:
-                if 'prompt' in os.path.basename(file_path).lower():
+                filename_lower = os.path.basename(file_path).lower()
+                
+                # Check for prompt-related filenames or any .txt file
+                if (any(indicator in filename_lower for indicator in prompt_indicators) or 
+                    filename_lower.endswith('.txt')):
                     content = self.read_from_file(file_path)
                     if content:
                         logger.info(f"Using file mode: loaded {len(content):,} chars from {file_path}")
