@@ -48,6 +48,7 @@ class ConfidenceScores:
     HIGH = 0.88
     GOOD = 0.85
     MODERATE = 0.82
+    MEDIUM = 0.78  # Added for compatibility with response_strategies
     ACCEPTABLE = 0.70
 
 
