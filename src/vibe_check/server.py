@@ -18,6 +18,8 @@ import os
 import sys
 import argparse
 import secrets
+import time
+import random
 from typing import Dict, Any, Optional
 
 # Configuration Constants
@@ -1193,7 +1195,48 @@ def vibe_check_mentor(
         # Get mentor engine instance
         engine = get_mentor_engine()
         
-        # Step 1: Enhanced vibe-check pattern detection with PR diff support
+        # Step 1: Extract business context BEFORE pattern detection
+        from .core.business_context_extractor import BusinessContextExtractor, ContextType
+        context_extractor = BusinessContextExtractor()
+        business_context = context_extractor.extract_context(query, context)
+        
+        logger.info(f"Business context: type={business_context.primary_type.value}, confidence={business_context.confidence:.2f}")
+        
+        # If confidence is low/medium and not in interrupt mode, ask clarifying questions
+        if business_context.needs_clarification and mode != "interrupt" and business_context.questions_needed:
+            logger.info(f"Low confidence ({business_context.confidence:.2f}), asking clarifying questions")
+            return {
+                "status": "clarification_needed",
+                "immediate_feedback": {
+                    "summary": "I need some clarification to provide the most helpful feedback",
+                    "confidence": business_context.confidence,
+                    "detected_patterns": [],
+                    "vibe_level": "unknown",
+                    "context_type": business_context.primary_type.value
+                },
+                "clarifying_questions": business_context.questions_needed,
+                "detected_indicators": business_context.indicators,
+                "session_info": {
+                    "session_id": session_id or f"mentor-session-{int(time.time())}-{random.randint(10000000, 99999999)}",
+                    "can_continue": True
+                },
+                "formatted_output": f"\n🤔 **I need some clarification to provide the most helpful feedback:**\n\n" + 
+                                  "\n".join([f"• {q}" for q in business_context.questions_needed]) +
+                                  f"\n\n*Context indicators detected: {', '.join(business_context.indicators[:3]) if business_context.indicators else 'none'}*"
+            }
+        
+        # Step 2: Route based on business context type with high confidence
+        if business_context.confidence >= 0.7:
+            if business_context.is_completion_report:
+                # For completion reports, focus on gap analysis and validation
+                logger.info("High confidence completion report - analyzing for gaps and improvements")
+                # Continue with modified analysis focused on validation
+            elif business_context.is_review_request:
+                # For review requests, focus on constructive feedback
+                logger.info("High confidence review request - providing constructive analysis")
+                # Continue with review-oriented analysis
+        
+        # Step 3: Enhanced vibe-check pattern detection with PR diff support
         combined_text = f"{query}\n\n{context}" if context else query
         
         # FIX FOR ISSUE #151: Detect PR analysis and fetch actual diff
@@ -1262,6 +1305,13 @@ def vibe_check_mentor(
                 confidence = pattern.get("confidence", 0.0)
                 if confidence > max_confidence:
                     max_confidence = confidence
+        
+        # CONTEXT-AWARE ADJUSTMENT: Modify vibe level based on business context
+        if business_context.is_completion_report and detected_count > 0:
+            # For completion reports, detected patterns are less concerning
+            logger.info(f"Adjusting pattern confidence for completion report context (was: {max_confidence})")
+            max_confidence = max_confidence * 0.5  # Reduce concern level for completed work
+            detected_count = max(0, detected_count - 1)  # Reduce pattern count impact
         
         # Determine vibe level based on detection results
         if detected_count == 0:
