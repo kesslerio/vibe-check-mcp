@@ -1248,9 +1248,43 @@ def vibe_check_mentor(
         enhanced_text = combined_text + pr_diff_content
         vibe_analysis = analyze_text_demo(enhanced_text, detail_level="standard")
         
-        detected_patterns = vibe_analysis.get("detected_patterns", [])
-        vibe_level = vibe_analysis.get("vibe_assessment", {}).get("vibe_level", "unknown")
-        pattern_confidence = vibe_analysis.get("vibe_assessment", {}).get("confidence", 0)
+        # Fix for Issue #163: analyze_text_demo returns "patterns", not "detected_patterns"
+        patterns_raw = vibe_analysis.get("patterns", [])
+        detected_patterns = patterns_raw  # Keep the raw pattern data
+        
+        # Calculate vibe assessment from patterns since analyze_text_demo doesn't provide it
+        # Find the highest confidence pattern that was detected
+        max_confidence = 0.0
+        detected_count = 0
+        for pattern in patterns_raw:
+            if pattern.get("detected", False):
+                detected_count += 1
+                confidence = pattern.get("confidence", 0.0)
+                if confidence > max_confidence:
+                    max_confidence = confidence
+        
+        # Determine vibe level based on detection results
+        if detected_count == 0:
+            vibe_level = "good"
+            pattern_confidence = 0.0
+        elif detected_count == 1 and max_confidence < 0.7:
+            vibe_level = "caution"
+            pattern_confidence = max_confidence
+        elif detected_count >= 2 or max_confidence >= 0.7:
+            vibe_level = "concerning"
+            pattern_confidence = max_confidence
+        else:
+            vibe_level = "unknown"
+            pattern_confidence = max_confidence
+        
+        # Debug logging for Issue #163
+        logger.debug(f"Vibe analysis results: {detected_count} patterns detected, max confidence: {max_confidence}, vibe level: {vibe_level}")
+        if detected_count == 0:
+            logger.info(f"No patterns detected for query: {query[:100]}...")
+            logger.debug(f"Raw pattern analysis: {patterns_raw}")
+        else:
+            detected_pattern_types = [p["pattern_type"] for p in patterns_raw if p.get("detected", False)]
+            logger.info(f"Detected patterns: {detected_pattern_types} with confidence {max_confidence}")
         
         # Step 2: Handle interrupt mode for quick interventions
         if mode == "interrupt":
@@ -1361,7 +1395,7 @@ def vibe_check_mentor(
             "status": "success",
             "immediate_feedback": {
                 "summary": _generate_summary(vibe_level, detected_patterns, synthesis),
-                "confidence": vibe_analysis.get("vibe_assessment", {}).get("confidence", 0),
+                "confidence": pattern_confidence,  # Use the calculated confidence
                 "detected_patterns": [p["pattern_type"] for p in detected_patterns],
                 "vibe_level": vibe_level
             },
