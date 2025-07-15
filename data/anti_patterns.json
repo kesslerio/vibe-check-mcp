@@ -104,6 +104,41 @@
         "regex": "\\bdocumentation\\s+(?:shows|says|recommends|suggests)",
         "description": "references official documentation",
         "weight": -0.2
+      },
+      {
+        "regex": "\\b(?:completed|finished|implemented|done|shipped)\\s+(?:the\\s+)?(?:issue|feature|story|ticket|task|pr|pull\\s+request)\\s*#?\\d+",
+        "description": "completion report with issue/task reference",
+        "weight": -0.8
+      },
+      {
+        "regex": "\\b(?:just|already|successfully)?\\s*(?:completed|finished|implemented|shipped|deployed|released)\\s+(?:the\\s+)?(?:implementation|feature|change|update|integration)",
+        "description": "general completion indicator",
+        "weight": -0.7
+      },
+      {
+        "regex": "\\b(?:did\\s+i\\s+miss|what\\s+did\\s+i\\s+miss|anything\\s+(?:i\\s+)?(?:missed|forgot)|feedback\\s+on|review\\s+(?:of|this)|thoughts\\s+on|look\\s+good)",
+        "description": "review request indicator",
+        "weight": -0.6
+      },
+      {
+        "regex": "\\b(?:changed|updated|modified)\\s+from\\s+.+\\s+to\\s+",
+        "description": "describes completed changes",
+        "weight": -0.5
+      },
+      {
+        "regex": "\\b(?:here's|this\\s+is)\\s+(?:what\\s+i|the)\\s+(?:did|implemented|built|created)",
+        "description": "presenting completed work",
+        "weight": -0.6
+      },
+      {
+        "regex": "\\b(?:strategy|approach|method|process)\\s+(?:update|change|migration|refactor)",
+        "description": "business process change description",
+        "weight": -0.4
+      },
+      {
+        "regex": "\\bfollowing\\s+(?:the\\s+)?(?:plan|design|requirements|specification|issue)",
+        "description": "indicates following existing plan",
+        "weight": -0.3
       }
     ]
   },
