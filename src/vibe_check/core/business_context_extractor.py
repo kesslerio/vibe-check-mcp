@@ -36,6 +36,13 @@ class ConfidenceLevel(Enum):
     UNCERTAIN = 0.2
 
 
+class ConfidenceThresholds:
+    """Thresholds for confidence-based decisions"""
+    LOW = 0.3
+    MEDIUM = 0.5
+    HIGH = 0.7
+
+
 @dataclass
 class BusinessContext:
     """Structured business context information"""
@@ -151,9 +158,16 @@ class BusinessContextExtractor:
         matched_indicators = []
         
         for pattern, weight in patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                total_score += weight
-                matched_indicators.append(f"{pattern_type}: {pattern[:50]}...")
+            try:
+                if re.search(pattern, text, re.IGNORECASE):
+                    total_score += weight
+                    matched_indicators.append(f"{pattern_type}: {pattern[:50]}...")
+            except re.error as e:
+                logger.warning(f"Regex pattern error in {pattern_type}: {pattern[:50]}... - {str(e)}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error checking pattern in {pattern_type}: {str(e)}")
+                continue
         
         return (total_score, pattern_type, matched_indicators)
     
@@ -172,7 +186,7 @@ class BusinessContextExtractor:
         max_score = max(scores.values())
         
         # If no clear signal, return unknown with questions
-        if max_score < 0.3:
+        if max_score < ConfidenceThresholds.LOW:
             return (ContextType.UNKNOWN, ConfidenceLevel.UNCERTAIN.value, 
                    self._generate_clarifying_questions(full_text, "unknown"))
         
@@ -180,12 +194,12 @@ class BusinessContextExtractor:
         primary_type = max(scores, key=scores.get)
         
         # Special handling for mixed signals
-        if completion_score > 0.5 and review_score > 0.5:
+        if completion_score > ConfidenceThresholds.MEDIUM and review_score > ConfidenceThresholds.MEDIUM:
             # Both indicators present - it's a completion with review request
             primary_type = ContextType.COMPLETION_REPORT
             confidence = ConfidenceLevel.HIGH.value
             questions = []
-        elif completion_score > 0.3 and planning_score > 0.3:
+        elif completion_score > ConfidenceThresholds.LOW and planning_score > ConfidenceThresholds.LOW:
             # Mixed completion and planning signals - lower confidence
             primary_type = ContextType.COMPLETION_REPORT if completion_score > planning_score else ContextType.PLANNING_DISCUSSION
             confidence = ConfidenceLevel.MEDIUM.value
@@ -196,12 +210,12 @@ class BusinessContextExtractor:
             score_diff = sorted_scores[0] - sorted_scores[1] if len(sorted_scores) > 1 else sorted_scores[0]
             
             # Determine confidence level
-            if score_diff > 0.5 and max_score > 0.7:
+            if score_diff > ConfidenceThresholds.MEDIUM and max_score > ConfidenceThresholds.HIGH:
                 confidence = ConfidenceLevel.HIGH.value
                 questions = []
-            elif score_diff > 0.3 or max_score > 0.5:
+            elif score_diff > ConfidenceThresholds.LOW or max_score > ConfidenceThresholds.MEDIUM:
                 confidence = ConfidenceLevel.MEDIUM.value
-                questions = self._generate_clarifying_questions(full_text, primary_type.value) if max_score < 0.7 else []
+                questions = self._generate_clarifying_questions(full_text, primary_type.value) if max_score < ConfidenceThresholds.HIGH else []
             else:
                 confidence = ConfidenceLevel.LOW.value
                 questions = self._generate_clarifying_questions(full_text, primary_type.value)
