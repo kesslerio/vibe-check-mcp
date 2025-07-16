@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5] - 2025-07-16
+
+### Fixed
+- **Context-Aware Mentor**: Fixed vibe_check_mentor providing generic advice on completion reports (Issue #167)
+  - Added BusinessContextExtractor for intelligent context detection
+  - Implemented clarifying questions for low/medium confidence scenarios
+  - Added negative indicators to prevent false positive pattern triggers
+  - Reordered processing to analyze context before patterns
+  - Added ConfidenceThresholds constants and comprehensive error handling
+
 ## [0.4.0] - 2025-06-19
 
 ### Added
