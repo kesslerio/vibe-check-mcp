@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6] - 2025-07-16
+
+### Fixed
+- **vibe_check_mentor Phase Parameter**: Fixed redundant clarifying questions when phase is explicitly set (#173, #174)
+  - When `phase="planning"` is set, bypasses "Are you planning to implement this?" questions
+  - Treats explicit phase as high-confidence signal (0.8)
+  - Supports phases: planning, implementation, coding, development, review
+  
+### Improvements
+- Added debug logging when no explicit phase is provided
+- Enhanced docstring with clear example of phase bypass behavior
+- Better user experience for architectural planning discussions
+
 ## [0.4.5] - 2025-07-16
 
 ### Added
