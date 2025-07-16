@@ -107,39 +107,74 @@ class BusinessContextExtractor:
         (r'\b(?:workflow|pipeline|architecture)\s+(?:design|implementation|update)', 0.6),
     ]
     
-    def extract_context(self, query: str, additional_context: Optional[str] = None) -> BusinessContext:
+    def extract_context(self, query: str, additional_context: Optional[str] = None, phase: Optional[str] = None) -> BusinessContext:
         """
         Extract business context from user query and additional context.
+        
+        Args:
+            query: User's query text
+            additional_context: Optional additional context
+            phase: Optional explicit phase (e.g., "planning", "implementation", "review")
+                  When provided, acts as high-confidence signal to bypass ambiguity detection
         
         Returns a structured context with confidence level and suggested questions
         for clarification when confidence is low/medium.
         """
         full_text = f"{query} {additional_context or ''}".lower()
         
-        # Track all detected patterns
-        detected_patterns = []
+        # Handle explicit phase parameter - HIGH CONFIDENCE SIGNAL
+        if phase:
+            phase_lower = phase.lower()
+            if phase_lower == "planning":
+                # Explicit planning phase - skip ambiguity detection
+                context_type = ContextType.PLANNING_DISCUSSION
+                confidence = ConfidenceLevel.HIGH.value
+                questions = []
+                detected_patterns = [f"explicit_phase: planning (confidence: {confidence})"]
+                logger.info(f"Explicit phase=planning detected, bypassing ambiguity detection")
+            elif phase_lower in ["implementation", "coding", "development"]:
+                context_type = ContextType.IMPLEMENTATION_PROPOSAL
+                confidence = ConfidenceLevel.HIGH.value
+                questions = []
+                detected_patterns = [f"explicit_phase: {phase_lower} (confidence: {confidence})"]
+                logger.info(f"Explicit phase={phase_lower} detected, bypassing ambiguity detection")
+            elif phase_lower == "review":
+                context_type = ContextType.REVIEW_REQUEST
+                confidence = ConfidenceLevel.HIGH.value
+                questions = []
+                detected_patterns = [f"explicit_phase: review (confidence: {confidence})"]
+                logger.info(f"Explicit phase=review detected, bypassing ambiguity detection")
+            else:
+                # Unknown phase - fall back to pattern detection
+                logger.warning(f"Unknown explicit phase '{phase}', falling back to pattern detection")
+                phase = None  # Reset to trigger normal detection below
         
-        # Check for completion indicators
-        completion_score = self._check_patterns(full_text, self.COMPLETION_PATTERNS, "completion")
-        detected_patterns.extend(completion_score[2])
-        
-        # Check for review requests
-        review_score = self._check_patterns(full_text, self.REVIEW_PATTERNS, "review")
-        detected_patterns.extend(review_score[2])
-        
-        # Check for planning indicators
-        planning_score = self._check_patterns(full_text, self.PLANNING_PATTERNS, "planning")
-        detected_patterns.extend(planning_score[2])
-        
-        # Check for process descriptions
-        process_score = self._check_patterns(full_text, self.PROCESS_PATTERNS, "process")
-        detected_patterns.extend(process_score[2])
-        
-        # Determine primary context type
-        context_type, confidence, questions = self._determine_context_type(
-            completion_score[0], review_score[0], planning_score[0], process_score[0],
-            full_text
-        )
+        # Normal pattern detection when no explicit phase or unknown phase
+        if not phase:
+            # Track all detected patterns
+            detected_patterns = []
+            
+            # Check for completion indicators
+            completion_score = self._check_patterns(full_text, self.COMPLETION_PATTERNS, "completion")
+            detected_patterns.extend(completion_score[2])
+            
+            # Check for review requests
+            review_score = self._check_patterns(full_text, self.REVIEW_PATTERNS, "review")
+            detected_patterns.extend(review_score[2])
+            
+            # Check for planning indicators
+            planning_score = self._check_patterns(full_text, self.PLANNING_PATTERNS, "planning")
+            detected_patterns.extend(planning_score[2])
+            
+            # Check for process descriptions
+            process_score = self._check_patterns(full_text, self.PROCESS_PATTERNS, "process")
+            detected_patterns.extend(process_score[2])
+            
+            # Determine primary context type
+            context_type, confidence, questions = self._determine_context_type(
+                completion_score[0], review_score[0], planning_score[0], process_score[0],
+                full_text
+            )
         
         # Extract metadata
         metadata = self._extract_metadata(full_text)

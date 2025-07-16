@@ -1198,7 +1198,7 @@ def vibe_check_mentor(
         # Step 1: Extract business context BEFORE pattern detection
         from .core.business_context_extractor import BusinessContextExtractor, ContextType
         context_extractor = BusinessContextExtractor()
-        business_context = context_extractor.extract_context(query, context)
+        business_context = context_extractor.extract_context(query, context, phase=phase)
         
         logger.info(f"Business context: type={business_context.primary_type.value}, confidence={business_context.confidence:.2f}")
         
