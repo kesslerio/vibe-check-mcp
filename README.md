@@ -281,7 +281,7 @@ claude "Quick vibe check: analyze this text for any engineering anti-patterns"
 # Check Claude Code version and MCP integration
 claude --version
 
-# Test the mentor feature (NEW in v0.3.0)
+# Test the mentor feature (Enhanced in v0.4.5)
 claude "Should I build a custom HTTP client for the Stripe API?"
 
 # Test fast pattern detection
@@ -400,7 +400,7 @@ See **[MCP Deployment Guide](docs/MCP_DEPLOYMENT_GUIDE.md)** for complete setup 
 
 ## 🎯 Real-World Impact
 
-### **🧠 Senior Engineer Mentoring** (NEW in v0.3.0)
+### **🧠 Senior Engineer Mentoring** (Enhanced in v0.4.5)
 - **Before**: Make expensive architectural decisions alone
 - **After**: Get multi-persona feedback before committing to approaches
 - **Impact**: Interrupt mode has already prevented multiple engineering disasters in our own development
@@ -447,8 +447,8 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed for seamles
 
 **Ready to prevent your next engineering failure?** 
 
-Install **Vibe Check MCP v0.3.0** and get your senior engineer mentor that actually prevents disasters before they happen.
+Install **Vibe Check MCP v0.4.5** and get your context-aware senior engineer mentor that actually prevents disasters before they happen.
 
-🚀 **[Get v0.3.0 Now](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)** | 📖 **[Release Notes](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.3.0)** | 🧠 **[Try the Mentor Feature](#-senior-engineer-mentor-new-in-v030)**
+🚀 **[Get v0.4.5 Now](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.5)** | 📖 **[Release Notes](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.5)** | 🧠 **[Try the Mentor Feature](#-senior-engineer-mentoring-enhanced-in-v045)**
 
 **Stop building the wrong thing. Start building the right thing faster.**
