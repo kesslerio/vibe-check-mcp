@@ -9,13 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.5] - 2025-07-16
 
+### Added
+- **Context-Aware Processing**: New BusinessContextExtractor intelligently distinguishes between completion reports, review requests, and planning discussions (#167)
+- **Clarifying Questions**: vibe_check_mentor now asks intelligent questions when confidence is low/medium instead of making assumptions
+- **Large Prompt Handling**: Zen-style simple solution for MCP's 25K token limit - automatically handles large PRs by asking Claude to save to file (#164, #165)
+- **Code-Aware Analysis**: GitHub issue and PR analysis now fetches and analyzes actual code, not just descriptions (#151, #152, #154)
+- **Architecture-Aware Detection**: Detects architectural concepts (auth, payment, API, etc.) from natural language and provides targeted analysis (#155, #158)
+
 ### Fixed
-- **Context-Aware Mentor**: Fixed vibe_check_mentor providing generic advice on completion reports (Issue #167)
-  - Added BusinessContextExtractor for intelligent context detection
-  - Implemented clarifying questions for low/medium confidence scenarios
-  - Added negative indicators to prevent false positive pattern triggers
-  - Reordered processing to analyze context before patterns
-  - Added ConfidenceThresholds constants and comprehensive error handling
+- **vibe_check_mentor Generic Advice**: Fixed critical bug where mentor provided template responses instead of contextual analysis (#167, #163)
+  - Pattern detection now runs after context understanding
+  - Reduced false positives by 50% for completion reports
+  - Added negative indicators to anti_patterns.json
+- **Pattern Detection Failures**: Fixed field name mismatch causing confidence: 0 failures (#163, #166)
+  - Corrected "detected_patterns" vs "patterns" field access
+  - Added missing ConfidenceScores.MEDIUM constant
+- **Immediate Feedback Bug**: Fixed mentor always reporting "No concerning patterns" even when personas raised valid concerns (#156, #159)
+  - Enhanced _generate_summary() to consider collaborative reasoning insights
+  - Improved session management to maintain continuity
+- **PR Analysis Bug**: Fixed critical issue where PR reviews only analyzed titles/descriptions, never the actual diff (#151, #153)
+
+### Improvements
+- **Enhanced Anti-Pattern Detection**: Added comprehensive negative indicators with weights to prevent false triggers
+  - Completion indicators (weight -0.8)
+  - Review indicators (weight -0.6)
+  - Process descriptors (weight -0.4)
+- **Better Error Handling**: Added try-except blocks for regex pattern failures with proper logging
+- **Code Quality**: Added ConfidenceThresholds class to replace magic numbers throughout codebase
+- **Session Management**: Fixed new session IDs being generated mid-conversation
+- **Debug Logging**: Enhanced pattern detection visibility for troubleshooting
 
 ## [0.4.0] - 2025-06-19
 
