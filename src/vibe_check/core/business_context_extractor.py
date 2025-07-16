@@ -119,6 +119,15 @@ class BusinessContextExtractor:
         
         Returns a structured context with confidence level and suggested questions
         for clarification when confidence is low/medium.
+        
+        Example:
+            # Without explicit phase - may ask clarifying questions
+            result = extractor.extract_context("I implement X")
+            # May ask: "Are you planning to implement this?"
+            
+            # With explicit phase - bypasses ambiguity detection
+            result = extractor.extract_context("I implement X", phase="planning")
+            # Returns: high confidence (0.8), no questions asked
         """
         full_text = f"{query} {additional_context or ''}".lower()
         
@@ -151,6 +160,7 @@ class BusinessContextExtractor:
         
         # Normal pattern detection when no explicit phase or unknown phase
         if not phase:
+            logger.debug("No explicit phase provided, using pattern detection")
             # Track all detected patterns
             detected_patterns = []
             
