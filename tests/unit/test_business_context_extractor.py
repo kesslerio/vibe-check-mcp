@@ -156,3 +156,75 @@ class TestBusinessContextExtractor:
         # Should recognize the stronger indicator (completed) but with lower confidence
         assert result.primary_type in [ContextType.COMPLETION_REPORT, ContextType.PLANNING_DISCUSSION]
         assert result.confidence < ConfidenceLevel.HIGH.value  # Mixed signals lower confidence
+
+    # NEW TESTS FOR ISSUE #173 FIX - Explicit Phase Parameter
+    
+    def test_explicit_planning_phase(self):
+        """Test explicit phase='planning' bypasses ambiguity detection"""
+        # Ambiguous query that normally would trigger questions
+        query = "I implement a new API integration solution"
+        
+        # Without explicit phase - should ask clarifying questions or have low confidence
+        result_normal = self.extractor.extract_context(query)
+        normal_confidence = result_normal.confidence
+        
+        # With explicit phase='planning' - should have high confidence
+        result_explicit = self.extractor.extract_context(query, phase="planning")
+        assert result_explicit.primary_type == ContextType.PLANNING_DISCUSSION
+        assert result_explicit.confidence >= ConfidenceLevel.HIGH.value
+        assert result_explicit.confidence > normal_confidence  # Should be higher than normal
+        assert len(result_explicit.questions_needed) == 0
+        assert "explicit_phase: planning" in result_explicit.indicators[0]
+    
+    def test_explicit_implementation_phase(self):
+        """Test explicit phase='implementation' sets correct context"""
+        query = "Working on the API integration"
+        
+        result = self.extractor.extract_context(query, phase="implementation")
+        
+        assert result.primary_type == ContextType.IMPLEMENTATION_PROPOSAL
+        assert result.confidence >= ConfidenceLevel.HIGH.value
+        assert len(result.questions_needed) == 0
+    
+    def test_explicit_review_phase(self):
+        """Test explicit phase='review' sets correct context"""
+        query = "Check my implementation approach"
+        
+        result = self.extractor.extract_context(query, phase="review")
+        
+        assert result.primary_type == ContextType.REVIEW_REQUEST
+        assert result.confidence >= ConfidenceLevel.HIGH.value
+        assert len(result.questions_needed) == 0
+    
+    def test_unknown_explicit_phase_fallback(self):
+        """Test unknown explicit phase falls back to normal detection"""
+        query = "I'm planning to implement something"
+        
+        result = self.extractor.extract_context(query, phase="unknown_phase")
+        
+        # Should fall back to normal pattern detection
+        assert result.primary_type == ContextType.PLANNING_DISCUSSION  # Normal detection
+        # Confidence may be lower than explicit phase
+    
+    def test_original_issue_173_scenario(self):
+        """Test the exact scenario from Issue #173 that was failing"""
+        query = "I'm planning to implement a tier2/3 knowledge index feature for our tier1 content files. Should I extend the existing EnhancedTierAssignment class to include a tier_index field, or create a separate TierIndexGenerator service?"
+        context = "This is greenfield planning for new feature. Existing architecture: TierClassificationServiceV3 handles tier classification"
+        
+        # With explicit phase - should NOT ask clarifying questions
+        result = self.extractor.extract_context(query, context, phase="planning")
+        
+        assert result.primary_type == ContextType.PLANNING_DISCUSSION
+        assert result.confidence >= ConfidenceLevel.HIGH.value
+        assert len(result.questions_needed) == 0
+        assert not any("Are you planning to implement this" in q for q in result.questions_needed)
+        assert "explicit_phase: planning" in result.indicators[0]
+    
+    def test_backward_compatibility_no_phase(self):
+        """Test that existing code without phase parameter still works"""
+        query = "I'm planning to build something"
+        
+        # Old way - should still work
+        result = self.extractor.extract_context(query)
+        assert result.primary_type is not None
+        assert isinstance(result.confidence, float)
