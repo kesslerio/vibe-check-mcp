@@ -47,7 +47,7 @@ class AIEngineerGenerator(BasePersonaGenerator):
     ) -> Tuple[str, str, float]:
         """Enhance response based on topic keywords"""
         ai_keywords = ["integration", "ai", "mcp", "claude", "tool"]
-        if self._has_topic_keywords(topic, ai_keywords):
+        if self.has_topic_keywords(topic, ai_keywords):
             # For AI-related topics, use specialized integration insight
             return AIEngineerHandler.get_integration_insight(topic)
         

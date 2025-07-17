@@ -36,7 +36,7 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
     ) -> Tuple[str, str, float]:
         """Enhance response based on detected patterns"""
         # Check for infrastructure-without-implementation pattern
-        if self._has_pattern(patterns, "infrastructure_without_implementation"):
+        if self.has_pattern(patterns, "infrastructure_without_implementation"):
             infra_response = InfrastructurePatternHandler.get_senior_engineer_response()
             enhancement = f"Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
             return self._enhance_content(infra_response, enhancement)
@@ -50,7 +50,7 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
     ) -> Tuple[str, str, float]:
         """Enhance response based on topic keywords"""
         integration_keywords = ["api", "integration", "service"]
-        if self._has_topic_keywords(topic, integration_keywords):
+        if self.has_topic_keywords(topic, integration_keywords):
             enhancement = f"For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
             return self._enhance_content(base_response, enhancement)
         

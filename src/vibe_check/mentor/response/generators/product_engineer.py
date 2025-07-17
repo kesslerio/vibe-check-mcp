@@ -49,7 +49,7 @@ class ProductEngineerGenerator(BasePersonaGenerator):
     ) -> Tuple[str, str, float]:
         """Enhance response based on topic keywords"""
         build_keywords = ["build", "create", "implement"]
-        if self._has_topic_keywords(topic, build_keywords):
+        if self.has_topic_keywords(topic, build_keywords):
             enhancement = f"Before building '{topic}', have we validated this solves a real user problem? I'd rather ship something imperfect that users love than something perfect they don't need."
             return self._enhance_content(base_response, enhancement)
         
