@@ -8,6 +8,7 @@ and manages the integration with pattern detection.
 import logging
 from typing import Any, Dict, List, Optional
 
+from ..models.config import REFERENCE_DETECTION_WORD_COUNT
 from ..models.persona import PersonaData
 from ..models.session import CollaborativeReasoningSession, ContributionData
 from .generators.senior_engineer import SeniorEngineerGenerator
@@ -21,11 +22,15 @@ class ResponseCoordinator:
     """Coordinates response generation from multiple personas"""
     
     def __init__(self):
-        self.generators = {
-            "senior_engineer": SeniorEngineerGenerator(),
-            "product_engineer": ProductEngineerGenerator(),
-            "ai_engineer": AIEngineerGenerator()
-        }
+        try:
+            self.generators = {
+                "senior_engineer": SeniorEngineerGenerator(),
+                "product_engineer": ProductEngineerGenerator(),
+                "ai_engineer": AIEngineerGenerator()
+            }
+        except Exception as e:
+            logger.error(f"Failed to initialize response generators: {str(e)}")
+            raise RuntimeError(f"Response coordinator initialization failed: {str(e)}") from e
     
     def generate_contribution(
         self,
@@ -38,6 +43,16 @@ class ResponseCoordinator:
         Generate a contribution from a persona based on their characteristics.
         This is our enhancement over Clear-Thought - actual reasoning generation.
         """
+        
+        # Input validation
+        if not session:
+            raise ValueError("Session cannot be None")
+        
+        if not persona:
+            raise ValueError("Persona cannot be None")
+        
+        if detected_patterns is None:
+            detected_patterns = []
         
         # Get the appropriate generator for this persona
         generator = self.generators.get(persona.id)
@@ -87,7 +102,7 @@ class ResponseCoordinator:
         for contrib in contributions:
             # Simple reference detection based on keyword overlap
             if any(
-                word in content_lower for word in contrib.content.lower().split()[:5]
+                word in content_lower for word in contrib.content.lower().split()[:REFERENCE_DETECTION_WORD_COUNT]
             ):
                 references.append(f"{contrib.persona_id}_{contrib.type}")
 

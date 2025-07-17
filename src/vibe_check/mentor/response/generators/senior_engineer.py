@@ -11,39 +11,47 @@ from ...models.config import ConfidenceScores, ExperienceStrings
 from ...models.session import ContributionData
 from ...patterns.handlers.infrastructure import InfrastructurePatternHandler
 from ...patterns.handlers.custom_solution import CustomSolutionHandler
+from .base_generator import BasePersonaGenerator
 
 
-class SeniorEngineerGenerator:
+class SeniorEngineerGenerator(BasePersonaGenerator):
     """Generates senior engineer perspective responses"""
     
-    def generate_response(
+    def _get_base_response(
         self,
         topic: str,
         patterns: List[Dict[str, Any]],
         previous_contributions: List[ContributionData],
         context: Optional[str] = None
     ) -> Tuple[str, str, float]:
-        """Generate senior engineer perspective based on patterns and topic"""
-
+        """Get base response for senior engineer"""
+        # Default to custom solution handler
+        return CustomSolutionHandler.get_senior_engineer_insight(topic)
+    
+    def _enhance_response_for_patterns(
+        self,
+        base_response: Tuple[str, str, float],
+        topic: str,
+        patterns: List[Dict[str, Any]]
+    ) -> Tuple[str, str, float]:
+        """Enhance response based on detected patterns"""
         # Check for infrastructure-without-implementation pattern
         if self._has_pattern(patterns, "infrastructure_without_implementation"):
-            base_response = InfrastructurePatternHandler.get_senior_engineer_response()
-            # Enhance with topic-specific context
-            enhanced_content = f"{base_response[1]} Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
-            return (base_response[0], enhanced_content, base_response[2])
-
-        # Handle custom solution patterns with topic context
-        base_response = CustomSolutionHandler.get_senior_engineer_insight(topic)
-        # Add specific technical concerns based on topic keywords
-        if any(keyword in topic.lower() for keyword in ["api", "integration", "service"]):
-            enhanced_content = f"{base_response[1]} For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
-            return (base_response[0], enhanced_content, base_response[2])
+            infra_response = InfrastructurePatternHandler.get_senior_engineer_response()
+            enhancement = f"Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
+            return self._enhance_content(infra_response, enhancement)
         
         return base_response
     
-    def _has_pattern(self, patterns: List[Dict[str, Any]], pattern_type: str) -> bool:
-        """Check if a specific pattern type exists in the patterns list"""
-        try:
-            return any(p.get("pattern_type") == pattern_type for p in patterns if isinstance(p, dict))
-        except (TypeError, AttributeError):
-            return False
+    def _enhance_response_for_keywords(
+        self,
+        base_response: Tuple[str, str, float],
+        topic: str
+    ) -> Tuple[str, str, float]:
+        """Enhance response based on topic keywords"""
+        integration_keywords = ["api", "integration", "service"]
+        if self._has_topic_keywords(topic, integration_keywords):
+            enhancement = f"For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
+            return self._enhance_content(base_response, enhancement)
+        
+        return base_response

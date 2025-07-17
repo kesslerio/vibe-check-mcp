@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from ..models.config import DEFAULT_MAX_SESSIONS, DEFAULT_PERSONAS
+from ..models.config import DEFAULT_MAX_SESSIONS, DEFAULT_PERSONAS, SESSION_TIMESTAMP_FORMAT
 from ..models.persona import PersonaData
 from ..models.session import CollaborativeReasoningSession
 
@@ -29,24 +29,38 @@ class SessionManager:
         session_id: Optional[str] = None,
     ) -> CollaborativeReasoningSession:
         """Initialize a new collaborative reasoning session"""
+        
+        # Input validation
+        if not topic or not topic.strip():
+            raise ValueError("Topic cannot be empty")
+        
+        if personas is not None and not personas:
+            raise ValueError("Personas list cannot be empty if provided")
+        
+        try:
+            session_id = session_id or SESSION_TIMESTAMP_FORMAT.format(
+                timestamp=int(datetime.now().timestamp()),
+                token=secrets.token_hex(4)
+            )
+            # Log session creation for debugging correlation
+            logger.info(f"Creating mentor session {session_id} for topic: {topic[:100]}")
 
-        session_id = session_id or f"mentor-session-{int(datetime.now().timestamp())}-{secrets.token_hex(4)}"
-        # Log session creation for debugging correlation
-        logger.info(f"Creating mentor session {session_id} for topic: {topic[:100]}")
+            session = CollaborativeReasoningSession(
+                topic=topic,
+                personas=personas or DEFAULT_PERSONAS,
+                contributions=[],
+                stage="problem-definition",
+                active_persona_id=DEFAULT_PERSONAS[0].id,
+                session_id=session_id,
+                iteration=0,
+                suggested_contribution_types=["observation", "question"],
+            )
 
-        session = CollaborativeReasoningSession(
-            topic=topic,
-            personas=personas or DEFAULT_PERSONAS,
-            contributions=[],
-            stage="problem-definition",
-            active_persona_id=DEFAULT_PERSONAS[0].id,
-            session_id=session_id,
-            iteration=0,
-            suggested_contribution_types=["observation", "question"],
-        )
-
-        self.sessions[session_id] = session
-        return session
+            self.sessions[session_id] = session
+            return session
+        except Exception as e:
+            logger.error(f"Failed to create session for topic '{topic[:50]}': {str(e)}")
+            raise RuntimeError(f"Session creation failed: {str(e)}") from e
     
     def get_session(self, session_id: str) -> Optional[CollaborativeReasoningSession]:
         """Retrieve a session by ID"""

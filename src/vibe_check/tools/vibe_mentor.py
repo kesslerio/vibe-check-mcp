@@ -85,8 +85,11 @@ class VibeMentorEngine:
                 return enhanced_engine.generate_contribution(
                     session, persona, detected_patterns, context
                 )
-            except ImportError:
-                logger.warning("Enhanced reasoning not available, falling back to basic mode")
+            except ImportError as e:
+                logger.warning(f"Enhanced reasoning not available: {str(e)}, falling back to basic mode")
+                self._enhanced_mode = False
+            except Exception as e:
+                logger.error(f"Enhanced reasoning failed: {str(e)}, falling back to basic mode")
                 self._enhanced_mode = False
 
         # Use modular response coordinator

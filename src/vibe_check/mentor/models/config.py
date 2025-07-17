@@ -12,6 +12,8 @@ from .persona import PersonaData
 
 # Configuration Constants
 DEFAULT_MAX_SESSIONS = 50  # Maximum number of mentor sessions to keep in memory
+SESSION_TIMESTAMP_FORMAT = "mentor-session-{timestamp}-{token}"  # Format for session IDs
+REFERENCE_DETECTION_WORD_COUNT = 5  # Number of words to check for reference detection
 
 
 class ExperienceStrings:

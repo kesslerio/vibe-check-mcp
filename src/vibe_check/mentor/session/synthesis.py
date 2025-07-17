@@ -28,10 +28,10 @@ class SessionSynthesizer:
             contributions_by_type[contrib.type].append(contrib)
 
         # Extract consensus points (similar content from multiple personas)
-        consensus = SessionSynthesizer._extract_consensus(session.contributions)
+        consensus = SessionSynthesizer._extract_consensus(session.contributions) if session.contributions else []
         
         # Identify key insights (high confidence insights and syntheses)
-        key_insights = SessionSynthesizer._extract_key_insights(session.contributions)
+        key_insights = SessionSynthesizer._extract_key_insights(session.contributions) if session.contributions else []
 
         # Find disagreements
         disagreements = SessionSynthesizer._extract_disagreements(contributions_by_type)
@@ -75,8 +75,11 @@ class SessionSynthesizer:
     @staticmethod
     def _extract_consensus(contributions: List[ContributionData]) -> List[str]:
         """Extract consensus points from contributions"""
+        if not contributions:
+            return []
+        
         consensus = []
-        all_content = [c.content.lower() for c in contributions]
+        all_content = [c.content.lower() for c in contributions if c and c.content]
 
         # Simple consensus detection based on keyword overlap
         consensus_keywords = [
