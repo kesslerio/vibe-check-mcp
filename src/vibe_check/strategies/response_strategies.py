@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
 
 from ..config.config_loader import get_config_loader
-from ..tools.vibe_mentor import ConfidenceScores
+from ..mentor.models.config import ConfidenceScores
 
 
 @dataclass

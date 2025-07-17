@@ -11,10 +11,10 @@ from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
 
 # Import existing structures
-from .vibe_mentor import (
-    PersonaData, ContributionData, PatternHandler, 
-    ConfidenceScores, CollaborativeReasoningSession
-)
+from ..mentor.models.persona import PersonaData
+from ..mentor.models.session import ContributionData, CollaborativeReasoningSession
+from ..mentor.models.config import ConfidenceScores
+from ..mentor.patterns.handlers.base import PatternHandler
 
 # Import strategy pattern components
 from ..strategies.response_strategies import get_strategy_manager, TechnicalContext

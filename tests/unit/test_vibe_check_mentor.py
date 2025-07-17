@@ -21,13 +21,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.vibe_mentor import (
     VibeMentorEngine,
-    PersonaData,
-    ContributionData,
-    CollaborativeReasoningSession,
     get_mentor_engine,
     cleanup_mentor_engine,
     _generate_summary,
 )
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import ContributionData, CollaborativeReasoningSession
 
 
 class TestPersonaData:
