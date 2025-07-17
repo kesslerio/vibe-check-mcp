@@ -58,14 +58,24 @@ class LLMComparisonStrategy(ResponseStrategy):
     
     def can_handle(self, tech_context: TechnicalContext, query: str) -> bool:
         llm_terms = ['gpt', 'claude', 'gemini', 'sonnet', 'opus', 'o3', 'nano', 'mini', 'haiku', 'deepseek']
+        query_lower = query.lower()
         
-        # Check query text
-        if any(term in query.lower() for term in llm_terms):
+        # MUST have comparison indicators AND LLM terms to trigger
+        comparison_indicators = ['vs', 'versus', 'compare', 'comparison', 'which', 'better', 'choose', 'pick']
+        has_comparison = any(indicator in query_lower for indicator in comparison_indicators)
+        
+        # Check if query contains LLM terms
+        has_llm_terms = any(term in query_lower for term in llm_terms)
+        
+        # Only handle if it's actually comparing LLMs, not just mentioning them
+        if has_llm_terms and has_comparison:
             return True
         
-        # Check decision points
+        # Check decision points for explicit LLM comparisons
         if any(term in dp.lower() for dp in tech_context.decision_points for term in ['gpt', 'claude', 'gemini', 'deepseek']):
-            return True
+            # Only if decision point also has comparison language
+            if any(indicator in dp.lower() for dp in tech_context.decision_points for indicator in comparison_indicators):
+                return True
         
         return False
     

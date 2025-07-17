@@ -55,7 +55,7 @@ class VibeMentorEngine:
         self.session_manager = SessionManager()
         self.response_coordinator = ResponseCoordinator() 
         self.pattern_detector = PatternDetector()
-        self._enhanced_mode = True  # Flag to enable enhanced reasoning
+        self._enhanced_mode = False  # Flag to enable enhanced reasoning - DISABLED to fix generic responses
 
     # Delegate session management to SessionManager
     def create_session(

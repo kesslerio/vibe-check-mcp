@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
 from ...models.session import ContributionData
-from ...patterns.base import PatternHandler
+from ...patterns.handlers.base import PatternHandler
 
 
 class BasePersonaGenerator(PatternHandler, ABC):
