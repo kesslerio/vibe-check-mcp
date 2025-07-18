@@ -214,6 +214,240 @@ The mentor tool leverages vibe-check's pattern detection engine (87.5% accuracy)
 
 Each persona responds based on detected patterns, providing contextually relevant advice that addresses the specific anti-patterns in your query.
 
+## Contextual Documentation System: Project-Aware Analysis
+
+**🎯 NEW: Say goodbye to generic advice! Vibe Check now understands your specific technology stack and provides library-specific recommendations.**
+
+The contextual documentation system transforms vibe-check from generic pattern detection into project-aware engineering analysis by automatically detecting your technology stack and providing library-specific guidance.
+
+### Contextual Analysis Tools
+
+#### 1. `detect_project_libraries` - Technology Stack Detection
+**Automatically scans your project to identify technology stack with confidence scores**
+
+```typescript
+// Scan current project
+detect_project_libraries(
+    project_root: ".",
+    languages: ["python", "javascript", "typescript"],
+    max_files: 1000,
+    timeout_seconds: 30
+)
+
+// Expected Response:
+{
+    "libraries": {
+        "fastapi": 0.95,        // High confidence (found @app.get decorators)
+        "react": 0.92,          // High confidence (.tsx files + useState hooks)
+        "supabase": 0.87,       // High confidence (requirements.txt + imports)
+        "github": 0.78,         // Medium confidence (GitHub API patterns)
+        "openai": 0.85          // High confidence (OpenAI client usage)
+    },
+    "scan_duration_ms": 245,
+    "files_scanned": 156,
+    "detection_confidence": 0.91
+}
+```
+
+**Detection Methods:**
+- **Dependency Analysis**: `requirements.txt`, `package.json`, `pyproject.toml`
+- **Import Pattern Matching**: `from fastapi import`, `import React`
+- **Code Pattern Detection**: `@app.get`, `useState`, `useEffect`
+- **File Extension Mapping**: `.tsx` → React, `.py` + FastAPI patterns
+
+#### 2. `load_project_context` - Comprehensive Project Analysis
+**Loads complete project context including library docs and team conventions**
+
+```typescript
+// Load full project context
+load_project_context(
+    project_root: ".",
+    include_library_docs: true,
+    cache_duration_minutes: 60
+)
+
+// Expected Response:
+{
+    "context": {
+        "libraries_detected": ["fastapi", "supabase", "react"],
+        "project_conventions": {
+            "team_conventions": ["Use functional components", "Prefer async/await"],
+            "architecture_decisions": ["Supabase for auth", "Microservices pattern"],
+            "technology_stack": ["fastapi", "supabase", "postgresql"]
+        },
+        "library_docs": {
+            "fastapi": "FastAPI best practices and patterns...",
+            "supabase": "Supabase auth and database integration..."
+        },
+        "pattern_exceptions": ["custom-auth-for-gdpr"],
+        "conflict_resolution": {
+            "custom-auth-for-gdpr": "GDPR compliance requires custom auth flow"
+        }
+    }
+}
+```
+
+**Parsed Documentation Sources:**
+- `README.md` → Project overview and main technologies
+- `CONTRIBUTING.md` → Team conventions and coding standards
+- `ARCHITECTURE.md` → Architecture decisions and patterns
+- `docs/TECHNICAL.md` → Technical implementation details
+
+#### 3. `create_vibe_check_directory_structure` - Project Configuration Setup
+**Creates .vibe-check/ configuration directory with project-specific defaults**
+
+```typescript
+// Setup project configuration
+create_vibe_check_directory_structure(
+    project_root: ".",
+    include_examples: true
+)
+
+// Creates:
+// ├── .vibe-check/
+// │   ├── config.json (with detected libraries)
+// │   ├── pattern-exceptions.json
+// │   ├── library-context.json
+// │   └── context-cache/
+```
+
+### Enhanced Analysis with Context
+
+#### Context-Aware Text Analysis
+**analyze_text_nollm now accepts project context for library-specific recommendations**
+
+```typescript
+// Before: Generic analysis
+analyze_text_nollm("I want to build a custom HTTP client")
+
+// After: Context-aware analysis
+analyze_text_nollm(
+    text: "I want to build a custom HTTP client",
+    use_project_context: true,
+    project_root: "."
+)
+
+// Response includes contextual recommendations:
+{
+    "patterns": [...],
+    "contextual_analysis": {
+        "libraries_detected": ["fastapi", "supabase"],
+        "contextual_recommendations": [
+            "For FastAPI, use httpx client with async support",
+            "Supabase provides built-in REST client - check if you need custom"
+        ],
+        "project_aware": true
+    }
+}
+```
+
+#### Project-Aware Mentor Analysis
+**vibe_check_mentor now provides library-specific advice based on your stack**
+
+```typescript
+// Load project context first
+const context = load_project_context(".");
+
+// Get project-aware mentor advice
+vibe_check_mentor(
+    query: "Should I build a custom authentication system?",
+    reasoning_depth: "standard",
+    project_context: context
+)
+
+// Personas now provide library-specific advice:
+// Senior Engineer: "I see you're using Supabase. Use built-in RLS auth instead."
+// Product Engineer: "Supabase auth integrates with your React app via @supabase/auth-js"
+// AI Engineer: "Leverage Supabase's ML-ready user embeddings for personalization"
+```
+
+### Real-World Example: Authentication Decision
+
+#### ❌ Before (Generic Advice)
+```
+Query: "Should I build a custom authentication system?"
+Response: "Generally, avoid custom auth. Use established libraries like Auth0 or OAuth."
+```
+
+#### ✅ After (Project-Aware Analysis)
+```
+Query: "Should I build a custom authentication system?"
+
+Context Detection:
+- FastAPI backend detected (confidence: 0.95)
+- Supabase integration found (confidence: 0.87) 
+- React frontend detected (confidence: 0.92)
+
+Senior Engineer: "I see you're using Supabase. Use their built-in auth with Row Level Security policies. This handles JWT tokens automatically and integrates with your FastAPI dependency injection."
+
+Product Engineer: "For your React frontend, use @supabase/auth-js hooks. It provides useUser(), useAuth(), and session management out of the box. Ship auth in a day instead of weeks."
+
+AI Engineer: "Supabase's auth gives you user embeddings for ML features. Plus their realtime subscriptions work seamlessly with authenticated users."
+
+Recommendation: Use Supabase's built-in authentication system instead of building custom auth.
+```
+
+### Configuration: .vibe-check/ Directory
+
+The system creates a `.vibe-check/` directory structure for project-specific configuration:
+
+```json
+// .vibe-check/config.json
+{
+    "context_loading": {
+        "enabled": true,
+        "cache_duration_minutes": 60,
+        "library_detection": {
+            "languages": ["python", "javascript", "typescript"],
+            "max_files_to_scan": 1000,
+            "timeout_seconds": 30
+        }
+    },
+    "libraries": {
+        "fastapi": {
+            "version": "0.100+",
+            "patterns": ["dependency-injection", "async-preferred"],
+            "architecture": "microservices"
+        },
+        "react": {
+            "version": "18.x",
+            "patterns": ["hooks-preferred", "functional-components"]
+        }
+    },
+    "project_patterns": {
+        "authentication": "supabase-required",
+        "database": "postgresql-preferred"
+    },
+    "exceptions": [
+        "custom-auth-required-for-gdpr-compliance"
+    ]
+}
+```
+
+### Performance & Caching
+
+- **Library Detection**: ~200-400ms for 1000 files
+- **Documentation Parsing**: ~50-100ms for standard docs
+- **Context Loading**: ~250-500ms total (cached for 60min)
+- **Memory Usage**: <100MB cache size limit
+
+**Smart Caching:**
+- Library detection results cached for 60 minutes
+- Documentation content cached locally in `.vibe-check/context-cache/`
+- Project context loaded lazily on first analysis
+
+### Natural Language Usage
+
+```
+"Analyze this with my project context"
+"Check if I should build custom auth for my FastAPI app"
+"What's the vibe check on this integration for my React + Supabase setup?"
+"Scan my project libraries and give me architecture advice"
+"Setup vibe-check configuration for my project"
+```
+
+The contextual documentation system makes every analysis project-aware, providing specific, actionable recommendations based on your actual technology stack instead of generic patterns.
+
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
 - `claude_cli_diagnostics` - Diagnose Claude CLI issues

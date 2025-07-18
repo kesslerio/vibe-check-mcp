@@ -101,6 +101,48 @@ Vibe Check MCP provides **three modes of analysis** to catch engineering anti-pa
 
 **Validated Results**: 87.5% detection accuracy, 0% false positives in comprehensive testing.
 
+## 🎯 **NEW: Project-Aware Contextual Analysis**
+
+**Say goodbye to generic advice! Vibe Check now understands your specific technology stack and provides library-specific recommendations.**
+
+### ❌ Before (Generic)
+```
+User: "Should I build a custom authentication system?"
+Vibe Check: "Generally, avoid custom auth. Use established libraries."
+```
+
+### ✅ After (Project-Aware)
+```
+User: "Should I build a custom authentication system?"
+Vibe Check: "I see you're using FastAPI + Supabase. Supabase has built-in auth with 
+JWT tokens and Row Level Security. Use the @supabase/auth-js client for 
+frontend auth state management. This eliminates the need for custom auth entirely."
+```
+
+### 🏗️ **3-Layer Contextual System**
+
+1. **🔍 Library Detection Engine**
+   - Automatically scans your project files and dependencies
+   - Detects: FastAPI, React, Supabase, GitHub integrations, OpenAI usage
+   - Confidence scoring: 95% FastAPI, 87% Supabase, 92% React
+
+2. **📖 Project Documentation Parser**
+   - Reads your README.md, CONTRIBUTING.md, docs/
+   - Extracts team conventions and architecture decisions
+   - Understands your specific patterns and exceptions
+
+3. **🧠 Context-Aware Analysis**
+   - Senior Engineer: "For FastAPI + Supabase, use built-in RLS auth"
+   - Product Engineer: "Supabase auth integrates with React via @supabase/auth-js"
+   - AI Engineer: "Leverage Supabase's user embeddings for ML features"
+
+### 🛠️ **New MCP Tools**
+- `detect_project_libraries` - Scan your codebase for tech stack
+- `load_project_context` - Get comprehensive project analysis
+- `create_vibe_check_directory_structure` - Setup `.vibe-check/` config
+
+**📖 [Full Contextual Documentation Guide →](docs/features/contextual-documentation-system.md)**
+
 ## ⚡ Quick Start
 
 ### Prerequisites
