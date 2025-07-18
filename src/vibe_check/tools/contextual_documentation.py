@@ -279,6 +279,22 @@ class ProjectDocumentationParser:
     
     def __init__(self, config: VibeCheckConfig):
         self.config = config
+        self._knowledge_base_cache = None
+    
+    def _load_integration_knowledge_base(self) -> Dict[str, Any]:
+        """Load integration knowledge base (cached)"""
+        if self._knowledge_base_cache is None:
+            try:
+                # Navigate to project root and find data directory
+                current_file = Path(__file__)
+                project_root = current_file.parent.parent.parent
+                knowledge_base_path = project_root / "data" / "integration_knowledge_base.json"
+                with open(knowledge_base_path, 'r') as f:
+                    self._knowledge_base_cache = json.load(f)
+            except Exception as e:
+                logger.warning(f"Could not load integration knowledge base: {e}")
+                self._knowledge_base_cache = {}
+        return self._knowledge_base_cache
     
     def parse_project_docs(self, project_root: str) -> Dict[str, Any]:
         """Parse project documentation files for context"""
