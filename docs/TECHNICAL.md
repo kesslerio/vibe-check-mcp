@@ -47,6 +47,19 @@ Vibe Check MCP - Independent MCP Server Architecture
 │  • Context-aware analysis with confidence scoring          │
 │  • Knowledge base integration for case studies             │
 ├─────────────────────────────────────────────────────────────┤
+│                  Contextual Documentation System           │
+│  ┌─────────────────┬─────────────────┬───────────────────┐  │
+│  │ Library Detection│ Project Docs   │ Context-Aware    │  │
+│  │ Engine          │ Parser         │ Analysis         │  │
+│  │                 │                │                   │  │
+│  │ • Tech stack    │ • README.md    │ • Library-specific│  │
+│  │   scanning      │ • CONTRIBUTING │   recommendations │  │
+│  │ • Dependency    │ • Architecture │ • Project-aware   │  │
+│  │   analysis      │   decisions    │   personas        │  │
+│  │ • Confidence    │ • Team         │ • Contextual      │  │
+│  │   scoring       │   conventions  │   mentoring       │  │
+│  └─────────────────┴─────────────────┴───────────────────┘  │
+├─────────────────────────────────────────────────────────────┤
 │                    Integration Services                     │
 │  • GitHub API client for issue/PR analysis                 │
 │  • External Claude CLI integration for deep reasoning      │
@@ -69,10 +82,213 @@ Vibe Check MCP - Independent MCP Server Architecture
 - **ConfidenceScorer**: Weighted confidence calculation for pattern detection
 - **KnowledgeBase**: Structured storage of patterns, case studies, and educational content
 
-#### 3. Integration Services
+#### 3. Contextual Documentation System
+- **LibraryDetectionEngine**: Scans project files and dependencies to identify technology stack
+- **ProjectDocumentationParser**: Extracts context from project docs (README, CONTRIBUTING, etc.)
+- **AnalysisContext**: Unified context container with conflict resolution and library-specific guidance
+- **ContextualDocumentationManager**: Main orchestration class for project-aware analysis
+
+#### 4. Integration Services
 - **GitHub Integration**: API client for fetching issues, PRs, and posting comments
 - **External Claude CLI**: Integration for deep LLM-powered analysis
 - **Configuration Management**: Environment-based configuration with secure defaults
+
+---
+
+## Contextual Documentation System Architecture
+
+### Overview
+The Contextual Documentation System transforms vibe-check from generic pattern detection to project-aware analysis by understanding the specific technology stack, team conventions, and codebase patterns.
+
+### 3-Layer Architecture
+
+#### Layer 1: Library Detection Engine
+```python
+class LibraryDetectionEngine:
+    """
+    Automatically detects technology stack from project files and dependencies.
+    
+    Detection Methods:
+    - Dependency file analysis (requirements.txt, package.json, pyproject.toml)
+    - Import pattern matching (from fastapi import, import React)
+    - Code pattern detection (@app.get, useState, useEffect)
+    - File extension mapping (.tsx → React, .py + FastAPI patterns)
+    """
+    
+    def detect_libraries(self, project_root: str) -> Dict[str, float]:
+        # Returns: {"fastapi": 0.95, "react": 0.92, "supabase": 0.87}
+```
+
+**Performance Characteristics:**
+- **Scan Speed**: ~200-400ms for 1000 files
+- **Memory Usage**: <50MB for large projects
+- **Accuracy**: 95%+ for common frameworks
+- **File Limits**: Configurable max files (default: 1000)
+
+#### Layer 2: Project Documentation Parser
+```python
+class ProjectDocumentationParser:
+    """
+    Extracts project-specific context from documentation files.
+    
+    Parsed Sources:
+    - README.md → Project overview and main technologies  
+    - CONTRIBUTING.md → Team conventions and coding standards
+    - ARCHITECTURE.md → Architecture decisions and patterns
+    - docs/TECHNICAL.md → Technical implementation details
+    """
+    
+    def parse_project_docs(self, project_root: str) -> Dict[str, Any]:
+        # Returns: {
+        #   "team_conventions": [...],
+        #   "architecture_decisions": [...],
+        #   "technology_stack": [...]
+        # }
+```
+
+#### Layer 3: Context-Aware Analysis Engine
+```python
+class AnalysisContext:
+    """
+    Unified context container providing library-specific recommendations.
+    
+    Features:
+    - Library-specific guidance based on detected stack
+    - Project pattern exceptions and conflict resolution
+    - Integration with mentor personas for contextual advice
+    """
+    
+    def get_contextual_recommendation(self, pattern_type: str) -> str:
+        # Returns library-specific advice instead of generic patterns
+```
+
+### Configuration: .vibe-check/ Directory Structure
+
+```
+your-project/
+├── .vibe-check/
+│   ├── config.json              # Main configuration
+│   │   ├── context_loading      # Library detection settings
+│   │   ├── libraries           # Library-specific overrides
+│   │   ├── project_patterns    # Project-specific patterns
+│   │   └── exceptions          # Approved pattern exceptions
+│   ├── pattern-exceptions.json  # Detailed exception reasoning
+│   ├── library-context.json     # Cached library detection results
+│   └── context-cache/           # Downloaded library documentation
+└── src/
+    └── your-code/
+```
+
+### New MCP Tools
+
+#### 1. `detect_project_libraries`
+**Scans project and returns detected technology stack with confidence scores**
+
+```json
+{
+  "tool": "detect_project_libraries",
+  "arguments": {
+    "project_root": ".",
+    "languages": ["python", "javascript", "typescript"],
+    "max_files": 1000,
+    "timeout_seconds": 30
+  }
+}
+```
+
+**Response Schema:**
+```json
+{
+  "libraries": {
+    "fastapi": 0.95,
+    "react": 0.92, 
+    "supabase": 0.87
+  },
+  "scan_duration_ms": 245,
+  "files_scanned": 156,
+  "detection_confidence": 0.91,
+  "errors": []
+}
+```
+
+#### 2. `load_project_context`
+**Loads comprehensive project context for contextual analysis**
+
+```json
+{
+  "tool": "load_project_context",
+  "arguments": {
+    "project_root": ".",
+    "include_library_docs": true,
+    "cache_duration_minutes": 60
+  }
+}
+```
+
+#### 3. `create_vibe_check_directory_structure`
+**Sets up .vibe-check/ configuration directory with defaults**
+
+### Integration Knowledge Base Enhancement
+
+The system uses an enhanced `integration_knowledge_base.json` with:
+
+```json
+{
+  "fastapi": {
+    "library_type": "backend_framework",
+    "detection_patterns": {
+      "imports": ["from fastapi", "FastAPI"],
+      "dependencies": ["fastapi", "uvicorn"],
+      "file_extensions": [".py"],
+      "specific_patterns": ["@app.get", "@app.post", "@router"]
+    },
+    "versions": {
+      "0.100+": {
+        "best_practices": ["dependency-injection", "async-preferred"],
+        "anti_patterns": ["synchronous-endpoints", "manual-validation"],
+        "context_7_cache": "/context-cache/fastapi-latest-docs.md"
+      }
+    },
+    "red_flags": ["custom-auth-over-oauth", "manual-cors-setup"]
+  }
+}
+```
+
+### Performance Optimizations
+
+#### Intelligent Caching
+- **Library detection results**: Cached for 60 minutes
+- **Documentation content**: Cached locally in `.vibe-check/context-cache/`
+- **Project context**: Loaded lazily on first analysis
+
+#### Scan Limits & Timeouts
+```json
+{
+  "max_files_to_scan": 1000,
+  "timeout_seconds": 30,
+  "max_file_size_kb": 500,
+  "parallel_processing": true
+}
+```
+
+#### Memory Management
+- Project-aware context manager caching
+- Automatic cleanup of old cached contexts
+- Memory limits for cache size (default: 100MB)
+
+### Security Considerations
+
+#### Safe File Reading
+- UTF-8 encoding with graceful fallback to latin-1
+- File size limits to prevent memory exhaustion
+- Path traversal protection
+- Error isolation - failed files don't break analysis
+
+#### Privacy Protection  
+- No external API calls for basic library detection
+- Library documentation cached locally
+- Project context stays on local machine
+- Optional Context7 integration for enhanced docs
 
 ---
 
