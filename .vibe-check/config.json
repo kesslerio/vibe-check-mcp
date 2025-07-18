@@ -1,0 +1,72 @@
+{
+  "context_loading": {
+    "enabled": true,
+    "cache_duration_minutes": 60,
+    "library_detection": {
+      "languages": [
+        "python",
+        "javascript",
+        "typescript"
+      ],
+      "depth": "imports_only",
+      "max_files_to_scan": 1000,
+      "timeout_seconds": 30,
+      "exclude_patterns": [
+        "node_modules/",
+        "__pycache__/",
+        ".git/",
+        "*.pyc"
+      ]
+    },
+    "project_docs": {
+      "paths": [
+        "docs/",
+        "README.md",
+        "CONTRIBUTING.md",
+        "ARCHITECTURE.md"
+      ],
+      "exclude_patterns": [
+        "node_modules/",
+        "__pycache__/",
+        ".git/"
+      ],
+      "max_file_size_kb": 500
+    },
+    "performance": {
+      "max_files_to_scan": 1000,
+      "timeout_seconds": 30,
+      "lazy_loading": true,
+      "parallel_processing": true,
+      "cache_size_mb": 100
+    }
+  },
+  "libraries": {
+    "react": {
+      "version": "18.x",
+      "patterns": [
+        "hooks-preferred",
+        "functional-components"
+      ],
+      "exceptions": [
+        "legacy-class-components-in-tests"
+      ]
+    },
+    "fastapi": {
+      "version": "0.100+",
+      "patterns": [
+        "dependency-injection",
+        "async-preferred"
+      ],
+      "architecture": "microservices"
+    }
+  },
+  "project_patterns": {
+    "authentication": "custom-jwt-required",
+    "database": "postgresql-preferred",
+    "testing": "pytest-with-coverage"
+  },
+  "exceptions": [
+    "custom-auth-required-for-compliance",
+    "monorepo-shared-utilities-allowed"
+  ]
+}

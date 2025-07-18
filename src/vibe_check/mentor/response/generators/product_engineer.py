@@ -5,12 +5,15 @@ Generates responses from the product engineer perspective,
 focusing on user value, rapid delivery, and pragmatic solutions.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from ...models.config import ConfidenceScores, ExperienceStrings
 from ...models.session import ContributionData
 from ...patterns.handlers.product_engineer import ProductEngineerHandler
 from .base_generator import BasePersonaGenerator
+
+if TYPE_CHECKING:
+    from ....tools.contextual_documentation import AnalysisContext
 
 
 class ProductEngineerGenerator(BasePersonaGenerator):
@@ -21,9 +24,10 @@ class ProductEngineerGenerator(BasePersonaGenerator):
         topic: str,
         patterns: List[Dict[str, Any]],
         previous_contributions: List[ContributionData],
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
-        """Get base response for product engineer"""
+        """Get base response for product engineer with project awareness"""
         # Default to planning challenge response
         return ProductEngineerHandler.get_planning_challenge(topic)
     
@@ -31,13 +35,22 @@ class ProductEngineerGenerator(BasePersonaGenerator):
         self,
         base_response: Tuple[str, str, float],
         topic: str,
-        patterns: List[Dict[str, Any]]
+        patterns: List[Dict[str, Any]],
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """Enhance response based on detected patterns"""
         # If any patterns detected, focus on rapid prototyping
         if patterns:
             rapid_response = ProductEngineerHandler.get_rapid_delivery_response()
             enhancement = f"For '{topic}', let's focus on what users actually need rather than what's technically interesting to build."
+            
+            # Add project-aware enhancement
+            from ....tools.contextual_documentation import AnalysisContext
+            if isinstance(project_context, AnalysisContext):
+                detected_libraries = list(project_context.library_docs.keys())
+                if detected_libraries:
+                    enhancement += f" Your current stack ({', '.join(detected_libraries[:2])}) probably has simple solutions we should try first."
+            
             return self._enhance_content(rapid_response, enhancement)
         
         return base_response
@@ -45,7 +58,8 @@ class ProductEngineerGenerator(BasePersonaGenerator):
     def _enhance_response_for_keywords(
         self,
         base_response: Tuple[str, str, float],
-        topic: str
+        topic: str,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """Enhance response based on topic keywords"""
         build_keywords = ["build", "create", "implement"]

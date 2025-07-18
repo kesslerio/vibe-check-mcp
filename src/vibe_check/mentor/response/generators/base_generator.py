@@ -19,7 +19,8 @@ class BasePersonaGenerator(PatternHandler, ABC):
         topic: str,
         patterns: List[Dict[str, Any]],
         previous_contributions: List[ContributionData],
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """
         Generate a response from this persona.
@@ -34,16 +35,16 @@ class BasePersonaGenerator(PatternHandler, ABC):
             Tuple of (contribution_type, content, confidence)
         """
         # Get base response from the persona-specific implementation
-        base_response = self._get_base_response(topic, patterns, previous_contributions, context)
+        base_response = self._get_base_response(topic, patterns, previous_contributions, context, project_context)
         
         # Check for pattern-specific enhancements
         enhanced_response = self._enhance_response_for_patterns(
-            base_response, topic, patterns
+            base_response, topic, patterns, project_context
         )
         
         # Check for keyword-specific enhancements
         final_response = self._enhance_response_for_keywords(
-            enhanced_response, topic
+            enhanced_response, topic, project_context
         )
         
         return final_response
@@ -54,7 +55,8 @@ class BasePersonaGenerator(PatternHandler, ABC):
         topic: str,
         patterns: List[Dict[str, Any]],
         previous_contributions: List[ContributionData],
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """Get the base response specific to this persona"""
         pass
@@ -64,7 +66,8 @@ class BasePersonaGenerator(PatternHandler, ABC):
         self,
         base_response: Tuple[str, str, float],
         topic: str,
-        patterns: List[Dict[str, Any]]
+        patterns: List[Dict[str, Any]],
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """Enhance response based on detected patterns"""
         pass
@@ -73,7 +76,8 @@ class BasePersonaGenerator(PatternHandler, ABC):
     def _enhance_response_for_keywords(
         self,
         base_response: Tuple[str, str, float],
-        topic: str
+        topic: str,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
         """Enhance response based on topic keywords"""
         pass

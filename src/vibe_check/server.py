@@ -20,6 +20,7 @@ import argparse
 import secrets
 import time
 import random
+from pathlib import Path
 from typing import Dict, Any, Optional
 
 # Configuration Constants
@@ -54,6 +55,8 @@ from .tools.integration_pattern_analysis import (
 from .tools.pr_review import review_pull_request
 from .tools.vibe_mentor import get_mentor_engine, _generate_summary
 from .tools.config_validation import validate_configuration, format_validation_results, log_validation_results, register_config_validation_tools
+from .tools.contextual_documentation import get_context_manager, AnalysisContext
+from .config.vibe_check_config import create_vibe_check_directory
 
 # Configure logging
 logging.basicConfig(
@@ -124,11 +127,17 @@ else:
     logger.info("   To enable dev tools: set VIBE_CHECK_DEV_MODE_OVERRIDE=true")
 
 @mcp.tool()
-def analyze_text_nollm(text: str, detail_level: str = "standard") -> Dict[str, Any]:
+def analyze_text_nollm(
+    text: str, 
+    detail_level: str = "standard",
+    use_project_context: bool = True,
+    project_root: str = "."
+) -> Dict[str, Any]:
     """
-    🚀 Fast text analysis using direct pattern detection (no LLM calls).
+    🚀 Fast text analysis using direct pattern detection with contextual awareness.
 
-    Direct pattern detection and anti-pattern analysis without LLM reasoning.
+    Direct pattern detection and anti-pattern analysis without LLM reasoning,
+    enhanced with project-specific context and library awareness.
     Perfect for "quick vibe check", "fast pattern analysis", and development workflow.
     For comprehensive LLM-powered analysis, use analyze_text_llm instead.
 
@@ -137,18 +146,22 @@ def analyze_text_nollm(text: str, detail_level: str = "standard") -> Dict[str, A
     - 🎯 Direct analysis without LLM dependencies  
     - 🤝 Basic coaching recommendations
     - 📊 Pattern detection with confidence scoring
+    - 🔍 Project-aware analysis with library context (Issue #168)
+    - 📚 Pattern exceptions and contextual recommendations
 
     Use this tool for: "quick vibe check this text", "fast pattern analysis", "basic text check"
 
     Args:
         text: Text content to analyze for anti-patterns
         detail_level: Educational detail level (brief/standard/comprehensive)
+        use_project_context: Whether to automatically load project context (default: true)
+        project_root: Root directory for project context loading (default: current directory)
         
     Returns:
-        Fast pattern detection analysis results
+        Fast pattern detection analysis results with contextual recommendations
     """
-    logger.info(f"Fast text analysis requested for {len(text)} characters")
-    return analyze_text_demo(text, detail_level)
+    logger.info(f"Fast text analysis requested for {len(text)} characters with context={use_project_context}")
+    return analyze_text_demo(text, detail_level, use_project_context=use_project_context, project_root=project_root)
 
 @mcp.tool()
 def demo_large_prompt_handling(
@@ -1236,7 +1249,17 @@ def vibe_check_mentor(
                 logger.info("High confidence review request - providing constructive analysis")
                 # Continue with review-oriented analysis
         
-        # Step 3: Enhanced vibe-check pattern detection with PR diff support
+        # Step 3: Load project context for contextual analysis
+        project_context = None
+        try:
+            from .tools.contextual_documentation import get_context_manager
+            context_manager = get_context_manager(".")
+            project_context = context_manager.get_project_context()
+            logger.info(f"Loaded project context with {len(project_context.library_docs)} libraries for mentor analysis")
+        except Exception as e:
+            logger.warning(f"Failed to load project context for mentor: {e}")
+        
+        # Step 4: Enhanced vibe-check pattern detection with PR diff support
         combined_text = f"{query}\n\n{context}" if context else query
         
         # FIX FOR ISSUE #151: Detect PR analysis and fetch actual diff
@@ -1287,9 +1310,14 @@ def vibe_check_mentor(
             except Exception as e:
                 logger.warning(f"Error fetching PR diff: {e}")
         
-        # Include PR diff in analysis if found
+        # Include PR diff in analysis if found and use project context
         enhanced_text = combined_text + pr_diff_content
-        vibe_analysis = analyze_text_demo(enhanced_text, detail_level="standard")
+        vibe_analysis = analyze_text_demo(
+            enhanced_text, 
+            detail_level="standard",
+            context=project_context,
+            use_project_context=True
+        )
         
         # Fix for Issue #163: analyze_text_demo returns "patterns", not "detected_patterns"
         patterns_raw = vibe_analysis.get("patterns", [])
@@ -1415,7 +1443,8 @@ def vibe_check_mentor(
                     session=session,
                     persona=persona,
                     detected_patterns=detected_patterns,
-                    context=context
+                    context=context,
+                    project_context=project_context
                 )
                 
                 session.contributions.append(contribution)
@@ -1497,6 +1526,220 @@ def vibe_check_mentor(
 
 
 @mcp.tool()
+def detect_project_libraries(
+    project_root: str = ".",
+    max_files: int = 1000,
+    timeout_seconds: int = 30,
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    """
+    🔍 Detect libraries used in project with performance optimization.
+    
+    Scans project files for library usage patterns, dependency declarations,
+    and import statements to build contextual awareness for analysis tools.
+    
+    Features:
+    - Multi-language support (Python, JavaScript, TypeScript)
+    - Performance limits (max files, timeout)
+    - Dependency file parsing (package.json, requirements.txt)
+    - Import statement analysis
+    - Confidence scoring for detections
+    - Caching for repeated scans
+    
+    Args:
+        project_root: Root directory to scan (default: current directory)
+        max_files: Maximum files to scan for performance (default: 1000)
+        timeout_seconds: Timeout for scan operation (default: 30)
+        force_refresh: Force refresh of cached results (default: false)
+        
+    Returns:
+        Detection results with libraries, confidence scores, and performance metrics
+    """
+    try:
+        logger.info(f"Detecting project libraries in {project_root}")
+        
+        # Get context manager
+        context_manager = get_context_manager(project_root)
+        
+        # Configure performance limits
+        context_manager.detection_engine.config.context_loading.library_detection.max_files_to_scan = max_files
+        context_manager.detection_engine.config.context_loading.library_detection.timeout_seconds = timeout_seconds
+        
+        # Perform detection
+        detection_result = context_manager.detection_engine.scan_project_files(project_root)
+        
+        # Format results
+        return {
+            "status": "success",
+            "libraries_detected": detection_result.libraries,
+            "performance_metrics": {
+                "scan_duration_ms": detection_result.scan_duration_ms,
+                "files_scanned": detection_result.files_scanned,
+                "detection_confidence": detection_result.detection_confidence
+            },
+            "errors": detection_result.errors,
+            "recommendations": [
+                f"Found {len(detection_result.libraries)} libraries in {detection_result.files_scanned} files",
+                "Consider using Context 7 for up-to-date documentation",
+                "Add .vibe-check/config.json for project-specific patterns"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Library detection error: {e}")
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "recommendations": [
+                "Check project_root path exists and is accessible",
+                "Verify file permissions for scanning",
+                "Try with smaller max_files limit"
+            ]
+        }
+
+
+@mcp.tool()
+def load_project_context(
+    project_root: str = ".",
+    include_docs: bool = True,
+    include_libraries: bool = True,
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    """
+    📚 Load complete project context for analysis tools.
+    
+    Combines library detection, project documentation parsing, and pattern
+    exceptions to create unified context for project-aware analysis.
+    
+    Features:
+    - Library detection with Context 7 integration
+    - Project documentation parsing
+    - Pattern exception loading
+    - Conflict resolution setup
+    - Context caching for performance
+    
+    Args:
+        project_root: Root directory to analyze (default: current directory)
+        include_docs: Include project documentation parsing (default: true)
+        include_libraries: Include library detection (default: true)
+        force_refresh: Force refresh of cached context (default: false)
+        
+    Returns:
+        Complete project context with libraries, documentation, and patterns
+    """
+    try:
+        logger.info(f"Loading project context for {project_root}")
+        
+        # Get context manager
+        context_manager = get_context_manager(project_root)
+        
+        # Load complete context
+        context = context_manager.get_project_context(force_refresh=force_refresh)
+        
+        # Format results
+        return {
+            "status": "success",
+            "context": {
+                "libraries": list(context.library_docs.keys()) if include_libraries else [],
+                "project_conventions": context.project_conventions if include_docs else {},
+                "pattern_exceptions": context.pattern_exceptions,
+                "context_metadata": context.context_metadata
+            },
+            "summary": {
+                "libraries_detected": len(context.library_docs),
+                "documentation_sources": len(context.project_conventions),
+                "pattern_exceptions": len(context.pattern_exceptions),
+                "last_updated": context.context_metadata.get("last_updated", "unknown")
+            },
+            "recommendations": [
+                "Context loaded successfully - analysis tools will use this for project-aware recommendations",
+                "Consider adding .vibe-check/config.json for custom patterns",
+                "Use Context 7 for latest library documentation"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Context loading error: {e}")
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "recommendations": [
+                "Check project_root path exists and is accessible",
+                "Verify .vibe-check/ directory structure",
+                "Try with force_refresh=true to clear any cached errors"
+            ]
+        }
+
+
+@mcp.tool()
+def create_vibe_check_directory_structure(
+    project_root: str = ".",
+    include_examples: bool = True
+) -> Dict[str, Any]:
+    """
+    🏗️ Create .vibe-check/ directory structure with default configuration.
+    
+    Sets up the complete .vibe-check/ directory with configuration files,
+    cache directories, and example patterns for contextual documentation.
+    
+    Features:
+    - Creates .vibe-check/ directory structure
+    - Generates default config.json
+    - Sets up pattern-exceptions.json
+    - Creates context-cache/ directory
+    - Includes example configurations
+    
+    Args:
+        project_root: Root directory to create structure in (default: current directory)
+        include_examples: Include example configurations (default: true)
+        
+    Returns:
+        Creation status and directory structure details
+    """
+    try:
+        logger.info(f"Creating .vibe-check/ directory structure in {project_root}")
+        
+        # Create directory structure
+        create_vibe_check_directory(project_root)
+        
+        # Verify creation
+        vibe_check_dir = Path(project_root) / ".vibe-check"
+        created_files = []
+        
+        if vibe_check_dir.exists():
+            created_files = [str(f.relative_to(vibe_check_dir)) for f in vibe_check_dir.rglob("*") if f.is_file()]
+        
+        return {
+            "status": "success",
+            "directory_created": str(vibe_check_dir),
+            "files_created": created_files,
+            "next_steps": [
+                "Edit .vibe-check/config.json to customize library detection",
+                "Add project-specific patterns to pattern-exceptions.json",
+                "Run detect_project_libraries to populate library context",
+                "Use load_project_context to verify setup"
+            ],
+            "recommendations": [
+                "Commit .vibe-check/config.json to version control",
+                "Add .vibe-check/context-cache/ to .gitignore",
+                "Review pattern-exceptions.json for your project needs"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Directory creation error: {e}")
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "recommendations": [
+                "Check write permissions in project_root",
+                "Verify directory path exists and is accessible",
+                "Try with absolute path to project_root"
+            ]
+        }
+
+
+@mcp.tool()
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Check MCP server status and capabilities.
@@ -1535,6 +1778,9 @@ def server_status() -> Dict[str, Any]:
         "productivity_intervention - Emergency productivity intervention and loop breaking (Issue #116 ⚡ NEW)",
         "reset_session_tracking - Reset session tracking for fresh start (Issue #116 ⚡ NEW)",
         "vibe_check_mentor - Senior engineer collaborative reasoning with multi-persona feedback (Issue #126 🔥 LATEST)",
+        "detect_project_libraries - Detect libraries used in project with performance optimization (Issue #168 🔥 NEW)",
+        "load_project_context - Load complete project context for analysis tools (Issue #168 🔥 NEW)",
+        "create_vibe_check_directory_structure - Create .vibe-check/ directory structure with default configuration (Issue #168 🔥 NEW)",
         "server_status - Server status and capabilities"
     ]
     

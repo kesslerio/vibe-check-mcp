@@ -1,5 +1,82 @@
 {
+  "react": {
+    "library_type": "frontend_framework",
+    "detection_patterns": {
+      "imports": ["import React", "import { ", "from 'react'", "from \"react\""],
+      "dependencies": ["react", "@types/react"],
+      "file_extensions": [".jsx", ".tsx"],
+      "config_files": ["package.json"]
+    },
+    "versions": {
+      "18.x": {
+        "best_practices": ["hooks-preferred", "functional-components", "strict-mode"],
+        "anti_patterns": ["class-components-new-code", "deprecated-lifecycle-methods"],
+        "context_7_cache": "/context-cache/react-18-docs.md",
+        "documentation_urls": ["https://react.dev/learn", "https://react.dev/reference/react"]
+      },
+      "17.x": {
+        "best_practices": ["hooks-preferred", "functional-components"],
+        "anti_patterns": ["class-components-new-code"],
+        "context_7_cache": "/context-cache/react-17-docs.md",
+        "documentation_urls": ["https://17.reactjs.org/docs/getting-started.html"]
+      }
+    },
+    "project_overrides": {
+      "legacy_support": "allow-class-components-in-existing-files",
+      "testing_exceptions": "allow-enzyme-in-test-files"
+    },
+    "official_sdks": ["react", "@types/react"],
+    "features": ["Component composition", "Hooks", "JSX", "Virtual DOM", "State management"],
+    "documentation": ["https://react.dev/learn", "https://react.dev/reference/react"],
+    "red_flags": ["class-components-new-code", "deprecated-lifecycle-methods", "direct-dom-manipulation"],
+    "official_benefits": ["Virtual DOM performance", "Component reusability", "Rich ecosystem", "Developer tools"]
+  },
+  "fastapi": {
+    "library_type": "backend_framework",
+    "detection_patterns": {
+      "imports": ["from fastapi", "import fastapi", "FastAPI"],
+      "dependencies": ["fastapi", "uvicorn"],
+      "file_extensions": [".py"],
+      "config_files": ["requirements.txt", "pyproject.toml"]
+    },
+    "versions": {
+      "0.100+": {
+        "best_practices": ["dependency-injection", "async-preferred", "pydantic-v2"],
+        "anti_patterns": ["synchronous-endpoints", "manual-validation"],
+        "context_7_cache": "/context-cache/fastapi-latest-docs.md",
+        "documentation_urls": ["https://fastapi.tiangolo.com/", "https://fastapi.tiangolo.com/tutorial/"]
+      }
+    },
+    "project_overrides": {
+      "microservices": "allow-multiple-fastapi-apps",
+      "legacy_migration": "allow-flask-compatibility-layer"
+    },
+    "official_sdks": ["fastapi", "uvicorn"],
+    "features": ["Automatic API documentation", "Type hints", "Async support", "Dependency injection", "OAuth2 support"],
+    "documentation": ["https://fastapi.tiangolo.com/", "https://fastapi.tiangolo.com/tutorial/"],
+    "red_flags": ["synchronous-endpoints", "manual-validation", "custom-authentication"],
+    "official_benefits": ["Automatic OpenAPI generation", "Type safety", "High performance", "Easy testing"]
+  },
   "cognee": {
+    "library_type": "knowledge_graph_service",
+    "detection_patterns": {
+      "imports": ["import cognee", "from cognee"],
+      "dependencies": ["cognee"],
+      "file_extensions": [".py"],
+      "config_files": ["requirements.txt", "docker-compose.yml"]
+    },
+    "versions": {
+      "latest": {
+        "best_practices": ["official-container", "fastapi-integration", "jwt-auth"],
+        "anti_patterns": ["custom-rest-server", "manual-jwt-implementation"],
+        "context_7_cache": "/context-cache/cognee-docs.md",
+        "documentation_urls": ["https://cognee.ai/docs", "https://github.com/cognee-ai/cognee"]
+      }
+    },
+    "project_overrides": {
+      "development": "allow-local-setup-without-docker",
+      "custom_storage": "allow-custom-storage-backends"
+    },
     "official_container": "cognee/cognee:main",
     "features": [
       "REST API",
@@ -38,6 +115,25 @@
     ]
   },
   "supabase": {
+    "library_type": "backend_service",
+    "detection_patterns": {
+      "imports": ["from supabase", "import supabase", "@supabase/supabase-js"],
+      "dependencies": ["supabase", "@supabase/supabase-js"],
+      "file_extensions": [".py", ".js", ".ts"],
+      "config_files": ["requirements.txt", "package.json"]
+    },
+    "versions": {
+      "2.x": {
+        "best_practices": ["typed-client", "row-level-security", "realtime-subscriptions"],
+        "anti_patterns": ["direct-sql-without-rls", "client-side-secrets"],
+        "context_7_cache": "/context-cache/supabase-v2-docs.md",
+        "documentation_urls": ["https://supabase.com/docs", "https://supabase.com/docs/guides/api"]
+      }
+    },
+    "project_overrides": {
+      "self_hosted": "allow-direct-postgres-access",
+      "migration_phase": "allow-mixed-auth-systems"
+    },
     "official_sdks": [
       "@supabase/supabase-js",
       "supabase-py",
@@ -70,6 +166,25 @@
     ]
   },
   "claude": {
+    "library_type": "ai_service",
+    "detection_patterns": {
+      "imports": ["from anthropic", "import anthropic", "@anthropic-ai/sdk"],
+      "dependencies": ["anthropic", "@anthropic-ai/sdk"],
+      "file_extensions": [".py", ".js", ".ts"],
+      "config_files": ["requirements.txt", "package.json"]
+    },
+    "versions": {
+      "0.25+": {
+        "best_practices": ["structured-outputs", "streaming-responses", "token-counting"],
+        "anti_patterns": ["custom-http-client", "manual-retry-logic"],
+        "context_7_cache": "/context-cache/anthropic-latest-docs.md",
+        "documentation_urls": ["https://docs.anthropic.com", "https://github.com/anthropics/anthropic-sdk-python"]
+      }
+    },
+    "project_overrides": {
+      "enterprise": "allow-custom-endpoint-configuration",
+      "research": "allow-experimental-model-access"
+    },
     "official_sdks": [
       "@anthropic-ai/sdk",
       "anthropic-sdk-python"
@@ -99,6 +214,25 @@
     ]
   },
   "openai": {
+    "library_type": "ai_service",
+    "detection_patterns": {
+      "imports": ["from openai", "import openai", "OpenAI"],
+      "dependencies": ["openai", "openai-python"],
+      "file_extensions": [".py", ".js", ".ts"],
+      "config_files": ["requirements.txt", "package.json"]
+    },
+    "versions": {
+      "1.x": {
+        "best_practices": ["async-client", "structured-outputs", "streaming-responses"],
+        "anti_patterns": ["v0-compatibility-mode", "manual-rate-limiting"],
+        "context_7_cache": "/context-cache/openai-v1-docs.md",
+        "documentation_urls": ["https://platform.openai.com/docs", "https://github.com/openai/openai-python"]
+      }
+    },
+    "project_overrides": {
+      "azure_openai": "allow-azure-endpoint-configuration",
+      "fine_tuning": "allow-custom-model-references"
+    },
     "official_sdks": [
       "openai",
       "openai-python"
@@ -128,6 +262,25 @@
     ]
   },
   "github": {
+    "library_type": "version_control_service",
+    "detection_patterns": {
+      "imports": ["from github", "import github", "@octokit/rest", "PyGithub"],
+      "dependencies": ["PyGithub", "github3.py", "@octokit/rest"],
+      "file_extensions": [".py", ".js", ".ts"],
+      "config_files": ["requirements.txt", "package.json"]
+    },
+    "versions": {
+      "2.x": {
+        "best_practices": ["token-authentication", "pagination-handling", "rate-limit-respect"],
+        "anti_patterns": ["password-authentication", "manual-pagination"],
+        "context_7_cache": "/context-cache/github-api-docs.md",
+        "documentation_urls": ["https://docs.github.com/en/rest", "https://github.com/PyGithub/PyGithub"]
+      }
+    },
+    "project_overrides": {
+      "enterprise": "allow-github-enterprise-endpoints",
+      "webhook_processing": "allow-webhook-signature-validation"
+    },
     "official_sdks": [
       "@octokit/rest",
       "PyGithub",
@@ -158,6 +311,25 @@
     ]
   },
   "docker": {
+    "library_type": "containerization_platform",
+    "detection_patterns": {
+      "imports": ["import docker", "from docker"],
+      "dependencies": ["docker", "docker-py"],
+      "file_extensions": [".py"],
+      "config_files": ["requirements.txt", "Dockerfile", "docker-compose.yml"]
+    },
+    "versions": {
+      "6.x": {
+        "best_practices": ["context-managers", "resource-cleanup", "health-checks"],
+        "anti_patterns": ["shell-commands", "subprocess-calls"],
+        "context_7_cache": "/context-cache/docker-py-docs.md",
+        "documentation_urls": ["https://docker-py.readthedocs.io", "https://docs.docker.com/engine/api/"]
+      }
+    },
+    "project_overrides": {
+      "ci_cd": "allow-docker-in-docker-patterns",
+      "development": "allow-development-only-configurations"
+    },
     "official_sdks": [
       "docker-py",
       "docker"
@@ -187,6 +359,25 @@
     ]
   },
   "kubernetes": {
+    "library_type": "container_orchestration",
+    "detection_patterns": {
+      "imports": ["from kubernetes", "import kubernetes"],
+      "dependencies": ["kubernetes", "kubernetes-client"],
+      "file_extensions": [".py"],
+      "config_files": ["requirements.txt", "kubeconfig", "*.yaml"]
+    },
+    "versions": {
+      "28.x": {
+        "best_practices": ["resource-management", "watch-capabilities", "namespace-isolation"],
+        "anti_patterns": ["kubectl-shell-commands", "manual-yaml-generation"],
+        "context_7_cache": "/context-cache/kubernetes-python-docs.md",
+        "documentation_urls": ["https://kubernetes.io/docs/reference/using-api/client-libraries/", "https://github.com/kubernetes-client/python"]
+      }
+    },
+    "project_overrides": {
+      "local_development": "allow-kubectl-proxy-usage",
+      "cluster_management": "allow-admin-level-operations"
+    },
     "official_sdks": [
       "kubernetes",
       "kubernetes-client"

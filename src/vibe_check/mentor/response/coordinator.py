@@ -38,6 +38,7 @@ class ResponseCoordinator:
         persona: PersonaData,
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
+        project_context: Optional[Any] = None,
     ) -> ContributionData:
         """
         Generate a contribution from a persona based on their characteristics.
@@ -60,9 +61,9 @@ class ResponseCoordinator:
             # Fallback for unknown personas
             return self._generate_fallback_contribution(persona, session.topic, detected_patterns)
         
-        # Generate contribution using the specific persona generator
+        # Generate contribution using the specific persona generator with project context
         contribution_type, content, confidence = generator.generate_response(
-            session.topic, detected_patterns, session.contributions, context
+            session.topic, detected_patterns, session.contributions, context, project_context
         )
 
         contribution = ContributionData(
