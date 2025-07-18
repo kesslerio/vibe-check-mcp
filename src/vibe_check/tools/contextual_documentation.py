@@ -102,14 +102,24 @@ class LibraryDetectionEngine:
             if file_extension in patterns.get("file_extensions", []):
                 confidence += 0.2
             
-            # Check for specific patterns
-            if library == "react" and file_extension in [".jsx", ".tsx"]:
-                if "useState" in content or "useEffect" in content:
-                    confidence += 0.3
-            
-            if library == "fastapi" and file_extension == ".py":
-                if "@app.get" in content or "@app.post" in content:
-                    confidence += 0.4
+            # Check for library-specific content patterns from knowledge base
+            version_data = patterns.get("versions", {})
+            if version_data:
+                # Use first available version for pattern matching
+                version_patterns = next(iter(version_data.values()), {})
+                specific_patterns = version_patterns.get("specific_patterns", {})
+                
+                # Check for React hooks
+                if library == "react" and file_extension in [".jsx", ".tsx"]:
+                    react_hooks = ["useState", "useEffect", "useContext", "useReducer", "useMemo", "useCallback"]
+                    if any(hook in content for hook in react_hooks):
+                        confidence += 0.3
+                
+                # Check for FastAPI decorators
+                if library == "fastapi" and file_extension == ".py":
+                    fastapi_decorators = ["@app.get", "@app.post", "@app.put", "@app.delete", "@router."]
+                    if any(decorator in content for decorator in fastapi_decorators):
+                        confidence += 0.4
             
             if confidence > 0.3:  # Minimum confidence threshold
                 detected[library] = min(confidence, 1.0)
@@ -216,7 +226,15 @@ class LibraryDetectionEngine:
                         continue
                     
                     try:
-                        content = file_path.read_text(encoding='utf-8', errors='ignore')
+                        # Try UTF-8 first, fall back to latin-1 for binary files
+                        try:
+                            content = file_path.read_text(encoding='utf-8')
+                        except UnicodeDecodeError:
+                            try:
+                                content = file_path.read_text(encoding='latin-1')
+                            except UnicodeDecodeError:
+                                logger.warning(f"Skipping file with encoding issues: {file_path}")
+                                continue
                         
                         # Detect libraries in this file
                         file_detected = self.detect_libraries_from_content(
@@ -303,8 +321,10 @@ class ProjectDocumentationParser:
         if "architecture" in content.lower() or "design decision" in content.lower():
             context["architecture_decisions"] = self._extract_architecture_decisions(content)
         
-        # Extract technology stack
-        tech_mentions = re.findall(r'\b(react|fastapi|postgres|docker|kubernetes|supabase)\b', content.lower())
+        # Extract technology stack using knowledge base libraries
+        knowledge_base = self._load_integration_knowledge_base()
+        tech_pattern = r'\b(' + '|'.join(knowledge_base.keys()) + r')\b'
+        tech_mentions = re.findall(tech_pattern, content.lower())
         if tech_mentions:
             context["technology_stack"] = list(set(tech_mentions))
         
@@ -421,13 +441,27 @@ class ContextualDocumentationManager:
         return []
 
 
-# Global instance for MCP tools
-_context_manager = None
+# Project-aware context manager cache
+_context_managers: Dict[str, ContextualDocumentationManager] = {}
 
 
 def get_context_manager(project_root: str = ".") -> ContextualDocumentationManager:
-    """Get or create global context manager instance"""
-    global _context_manager
-    if _context_manager is None:
-        _context_manager = ContextualDocumentationManager(project_root)
-    return _context_manager
+    """Get or create context manager instance for specific project"""
+    # Normalize project root to absolute path for consistent caching
+    from pathlib import Path
+    abs_project_root = str(Path(project_root).resolve())
+    
+    if abs_project_root not in _context_managers:
+        _context_managers[abs_project_root] = ContextualDocumentationManager(project_root)
+    return _context_managers[abs_project_root]
+
+
+def clear_context_manager_cache() -> None:
+    """Clear global context manager cache for testing/cleanup"""
+    global _context_managers
+    _context_managers.clear()
+
+
+def get_cached_projects() -> List[str]:
+    """Get list of projects currently cached"""
+    return list(_context_managers.keys())

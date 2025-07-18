@@ -5,13 +5,16 @@ Generates responses from the senior engineer perspective,
 focusing on maintainability, best practices, and proven solutions.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from ...models.config import ConfidenceScores, ExperienceStrings
 from ...models.session import ContributionData
 from ...patterns.handlers.infrastructure import InfrastructurePatternHandler
 from ...patterns.handlers.custom_solution import CustomSolutionHandler
 from .base_generator import BasePersonaGenerator
+
+if TYPE_CHECKING:
+    from ....tools.contextual_documentation import AnalysisContext
 
 
 class SeniorEngineerGenerator(BasePersonaGenerator):
@@ -27,7 +30,8 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
     ) -> Tuple[str, str, float]:
         """Get base response for senior engineer with project context awareness"""
         # Check if we have project context and detected libraries
-        if project_context and hasattr(project_context, 'library_docs'):
+        from ....tools.contextual_documentation import AnalysisContext
+        if isinstance(project_context, AnalysisContext):
             detected_libraries = list(project_context.library_docs.keys())
             if detected_libraries:
                 # Provide library-aware advice
@@ -55,7 +59,8 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
             # Add library-specific guidance if available
             enhancement = f"Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
             
-            if project_context and hasattr(project_context, 'library_docs'):
+            from ....tools.contextual_documentation import AnalysisContext
+            if isinstance(project_context, AnalysisContext):
                 detected_libraries = list(project_context.library_docs.keys())
                 if detected_libraries:
                     enhancement += f" Given your use of {', '.join(detected_libraries[:2])}, there might be existing integrations or official libraries."
@@ -76,7 +81,8 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
             enhancement = f"For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
             
             # Add project-specific advice if context available
-            if project_context and hasattr(project_context, 'project_conventions'):
+            from ....tools.contextual_documentation import AnalysisContext
+            if isinstance(project_context, AnalysisContext):
                 conventions = project_context.project_conventions
                 if conventions.get('technology_stack'):
                     enhancement += f" In your tech stack ({', '.join(conventions['technology_stack'][:2])}), there are likely established patterns."

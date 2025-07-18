@@ -5,12 +5,15 @@ Generates responses from the product engineer perspective,
 focusing on user value, rapid delivery, and pragmatic solutions.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from ...models.config import ConfidenceScores, ExperienceStrings
 from ...models.session import ContributionData
 from ...patterns.handlers.product_engineer import ProductEngineerHandler
 from .base_generator import BasePersonaGenerator
+
+if TYPE_CHECKING:
+    from ....tools.contextual_documentation import AnalysisContext
 
 
 class ProductEngineerGenerator(BasePersonaGenerator):
@@ -42,7 +45,8 @@ class ProductEngineerGenerator(BasePersonaGenerator):
             enhancement = f"For '{topic}', let's focus on what users actually need rather than what's technically interesting to build."
             
             # Add project-aware enhancement
-            if project_context and hasattr(project_context, 'library_docs'):
+            from ....tools.contextual_documentation import AnalysisContext
+            if isinstance(project_context, AnalysisContext):
                 detected_libraries = list(project_context.library_docs.keys())
                 if detected_libraries:
                     enhancement += f" Your current stack ({', '.join(detected_libraries[:2])}) probably has simple solutions we should try first."

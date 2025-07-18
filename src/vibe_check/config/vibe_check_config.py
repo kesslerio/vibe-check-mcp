@@ -190,9 +190,72 @@ class VibeCheckConfigLoader:
     
     def _dict_to_config(self, data: Dict[str, Any]) -> VibeCheckConfig:
         """Convert dictionary to VibeCheckConfig dataclass"""
-        # This is a simplified version - in a full implementation,
-        # you would recursively convert nested dictionaries
-        return VibeCheckConfig()  # For now, return default
+        try:
+            # Parse context_loading section
+            context_loading_data = data.get("context_loading", {})
+            
+            # Parse library detection config
+            lib_detection_data = context_loading_data.get("library_detection", {})
+            library_detection = LibraryDetectionConfig(
+                languages=lib_detection_data.get("languages"),
+                depth=lib_detection_data.get("depth", "imports_only"),
+                max_files_to_scan=lib_detection_data.get("max_files_to_scan", 1000),
+                timeout_seconds=lib_detection_data.get("timeout_seconds", 30),
+                exclude_patterns=lib_detection_data.get("exclude_patterns")
+            )
+            
+            # Parse project docs config
+            proj_docs_data = context_loading_data.get("project_docs", {})
+            project_docs = ProjectDocsConfig(
+                paths=proj_docs_data.get("paths"),
+                exclude_patterns=proj_docs_data.get("exclude_patterns"),
+                max_file_size_kb=proj_docs_data.get("max_file_size_kb", 500)
+            )
+            
+            # Parse performance config
+            perf_data = context_loading_data.get("performance", {})
+            performance = PerformanceConfig(
+                max_files_to_scan=perf_data.get("max_files_to_scan", 1000),
+                timeout_seconds=perf_data.get("timeout_seconds", 30),
+                lazy_loading=perf_data.get("lazy_loading", True),
+                parallel_processing=perf_data.get("parallel_processing", True),
+                cache_size_mb=perf_data.get("cache_size_mb", 100)
+            )
+            
+            # Create context loading config
+            context_loading = ContextLoadingConfig(
+                enabled=context_loading_data.get("enabled", True),
+                cache_duration_minutes=context_loading_data.get("cache_duration_minutes", 60),
+                library_detection=library_detection,
+                project_docs=project_docs,
+                performance=performance
+            )
+            
+            # Parse library overrides
+            libraries = {}
+            for lib_name, lib_data in data.get("libraries", {}).items():
+                libraries[lib_name] = LibraryOverride(
+                    version=lib_data.get("version", "latest"),
+                    patterns=lib_data.get("patterns", []),
+                    exceptions=lib_data.get("exceptions", []),
+                    architecture=lib_data.get("architecture")
+                )
+            
+            # Parse project patterns and exceptions
+            project_patterns = data.get("project_patterns", {})
+            exceptions = data.get("exceptions", [])
+            
+            return VibeCheckConfig(
+                context_loading=context_loading,
+                libraries=libraries,
+                project_patterns=project_patterns,
+                exceptions=exceptions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error parsing config dictionary: {e}")
+            logger.info("Falling back to default configuration")
+            return VibeCheckConfig()
     
     def validate_config(self, config: VibeCheckConfig) -> List[str]:
         """Validate configuration and return list of errors"""
