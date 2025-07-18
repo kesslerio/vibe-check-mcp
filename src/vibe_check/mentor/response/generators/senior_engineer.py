@@ -22,9 +22,21 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
         topic: str,
         patterns: List[Dict[str, Any]],
         previous_contributions: List[ContributionData],
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
-        """Get base response for senior engineer"""
+        """Get base response for senior engineer with project context awareness"""
+        # Check if we have project context and detected libraries
+        if project_context and hasattr(project_context, 'library_docs'):
+            detected_libraries = list(project_context.library_docs.keys())
+            if detected_libraries:
+                # Provide library-aware advice
+                lib_context = f"I see you're working with {', '.join(detected_libraries[:3])}."
+                base_response = CustomSolutionHandler.get_senior_engineer_insight(topic)
+                contribution_type, content, confidence = base_response
+                enhanced_content = f"{lib_context} {content}"
+                return (contribution_type, enhanced_content, confidence)
+        
         # Default to custom solution handler
         return CustomSolutionHandler.get_senior_engineer_insight(topic)
     
@@ -32,13 +44,22 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
         self,
         base_response: Tuple[str, str, float],
         topic: str,
-        patterns: List[Dict[str, Any]]
+        patterns: List[Dict[str, Any]],
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
-        """Enhance response based on detected patterns"""
+        """Enhance response based on detected patterns and project context"""
         # Check for infrastructure-without-implementation pattern
         if self.has_pattern(patterns, "infrastructure_without_implementation"):
             infra_response = InfrastructurePatternHandler.get_senior_engineer_response()
+            
+            # Add library-specific guidance if available
             enhancement = f"Specifically for '{topic}', I'd recommend checking if there's an official SDK or documented API that handles this use case."
+            
+            if project_context and hasattr(project_context, 'library_docs'):
+                detected_libraries = list(project_context.library_docs.keys())
+                if detected_libraries:
+                    enhancement += f" Given your use of {', '.join(detected_libraries[:2])}, there might be existing integrations or official libraries."
+            
             return self._enhance_content(infra_response, enhancement)
         
         return base_response
@@ -46,12 +67,20 @@ class SeniorEngineerGenerator(BasePersonaGenerator):
     def _enhance_response_for_keywords(
         self,
         base_response: Tuple[str, str, float],
-        topic: str
+        topic: str,
+        project_context: Optional[Any] = None
     ) -> Tuple[str, str, float]:
-        """Enhance response based on topic keywords"""
+        """Enhance response based on topic keywords and project context"""
         integration_keywords = ["api", "integration", "service"]
         if self.has_topic_keywords(topic, integration_keywords):
             enhancement = f"For integrations like '{topic}', I always check the official documentation first - it often shows simpler approaches than what we initially consider."
+            
+            # Add project-specific advice if context available
+            if project_context and hasattr(project_context, 'project_conventions'):
+                conventions = project_context.project_conventions
+                if conventions.get('technology_stack'):
+                    enhancement += f" In your tech stack ({', '.join(conventions['technology_stack'][:2])}), there are likely established patterns."
+            
             return self._enhance_content(base_response, enhancement)
         
         return base_response

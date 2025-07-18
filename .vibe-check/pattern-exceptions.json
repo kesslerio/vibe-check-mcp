@@ -1,0 +1,13 @@
+{
+  "approved_patterns": [
+    "custom-auth-required-for-compliance",
+    "legacy-components-in-maintenance-mode"
+  ],
+  "temporary_exceptions": [
+    "migration-phase-mixed-patterns"
+  ],
+  "reasoning": {
+    "custom-auth-required-for-compliance": "GDPR requirements mandate custom authentication flow",
+    "legacy-components-in-maintenance-mode": "Gradual migration strategy approved by architecture team"
+  }
+}

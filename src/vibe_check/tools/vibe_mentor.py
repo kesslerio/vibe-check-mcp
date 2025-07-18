@@ -74,6 +74,7 @@ class VibeMentorEngine:
         persona: PersonaData,
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
+        project_context: Optional[Any] = None,
     ) -> ContributionData:
         """Generate a contribution from a persona based on their characteristics"""
         
@@ -83,7 +84,7 @@ class VibeMentorEngine:
                 from .vibe_mentor_enhanced import EnhancedVibeMentorEngine
                 enhanced_engine = EnhancedVibeMentorEngine(self)
                 return enhanced_engine.generate_contribution(
-                    session, persona, detected_patterns, context
+                    session, persona, detected_patterns, context, project_context
                 )
             except ImportError as e:
                 logger.warning(f"Enhanced reasoning not available: {str(e)}, falling back to basic mode")
@@ -92,9 +93,9 @@ class VibeMentorEngine:
                 logger.error(f"Enhanced reasoning failed: {str(e)}, falling back to basic mode")
                 self._enhanced_mode = False
 
-        # Use modular response coordinator
+        # Use modular response coordinator with project context
         return self.response_coordinator.generate_contribution(
-            session, persona, detected_patterns, context
+            session, persona, detected_patterns, context, project_context
         )
 
     # Delegate state management to StateTracker
