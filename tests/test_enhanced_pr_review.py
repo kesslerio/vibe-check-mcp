@@ -221,6 +221,44 @@ class TestEnhancedPRReview:
         assert 'api' in priority_types
         assert 'config' in priority_types
         assert 'sql' in priority_types
+    
+    def test_missing_filename_key_handling(self):
+        """Test that analyzer handles missing 'filename' key gracefully."""
+        analyzer = FileTypeAnalyzer()
+        
+        # Test files with various key configurations
+        test_files = [
+            {"filename": "src/components/Button.tsx"},  # Normal case
+            {"name": "src/api/routes.py"},  # Uses 'name' instead of 'filename'
+            {"path": "tests/test_button.spec.ts"},  # Neither 'filename' nor 'name'
+            {},  # Empty dict
+            {"filename": "config/database.json", "name": "db.json"},  # Both keys (filename takes precedence)
+        ]
+        
+        # Should not raise KeyError
+        result = analyzer.analyze_files(test_files)
+        
+        # Verify the analysis completed successfully
+        assert 'type_specific_analysis' in result
+        assert 'review_focus_summary' in result
+        assert 'priority_checks' in result
+        
+        # Check that files were processed with appropriate fallbacks
+        all_files = []
+        for file_type_data in result['type_specific_analysis'].values():
+            all_files.extend(file_type_data['files'])
+        
+        # Should have processed all files with appropriate names
+        assert "src/components/Button.tsx" in all_files  # Normal filename
+        assert "src/api/routes.py" in all_files  # Used 'name' fallback
+        assert "unknown" in all_files  # Used 'unknown' fallback for missing keys
+        assert "config/database.json" in all_files  # Used 'filename' when both present
+        
+        # Verify priority checks also handle missing keys gracefully
+        for check in result['priority_checks']:
+            assert isinstance(check['files'], list)
+            for filename in check['files']:
+                assert isinstance(filename, str)  # All filenames should be strings
 
 
 if __name__ == "__main__":
