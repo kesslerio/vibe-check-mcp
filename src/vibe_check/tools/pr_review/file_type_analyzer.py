@@ -177,8 +177,20 @@ class FileTypeAnalyzer:
         for file_type, file_list in file_type_groups.items():
             guidelines = self.REVIEW_GUIDELINES.get(file_type, {})
             
+            # Extract filenames with logging for fallbacks
+            files = []
+            for f in file_list:
+                filename = f.get('filename')
+                if not filename:
+                    filename = f.get('name', 'unknown')
+                    if filename != 'unknown':
+                        logger.debug(f"Using 'name' fallback for file: {filename}")
+                    else:
+                        logger.debug("No filename or name found, using 'unknown'")
+                files.append(filename)
+            
             analysis['type_specific_analysis'][file_type] = {
-                'files': [f['filename'] for f in file_list],
+                'files': files,
                 'count': len(file_list),
                 'focus_areas': guidelines.get('focus_areas', []),
                 'common_issues': guidelines.get('common_issues', [])
@@ -193,10 +205,19 @@ class FileTypeAnalyzer:
             
             # Identify priority checks
             if file_type in ['api', 'config', 'sql']:
+                # Extract filenames with logging for security-sensitive files
+                security_files = []
+                for f in file_list:
+                    filename = f.get('filename')
+                    if not filename:
+                        filename = f.get('name', 'unknown')
+                        logger.debug(f"Using fallback filename for security-sensitive file: {filename}")
+                    security_files.append(filename)
+                
                 analysis['priority_checks'].append({
                     'type': file_type,
                     'reason': 'Security-sensitive file type',
-                    'files': [f['filename'] for f in file_list]
+                    'files': security_files
                 })
         
         return analysis
