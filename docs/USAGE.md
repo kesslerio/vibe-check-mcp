@@ -448,6 +448,52 @@ The system creates a `.vibe-check/` directory structure for project-specific con
 
 The contextual documentation system makes every analysis project-aware, providing specific, actionable recommendations based on your actual technology stack instead of generic patterns.
 
+### Error Scenarios and Troubleshooting
+
+#### Library Detection Failures
+When library detection fails, you'll see:
+
+```json
+{
+  "libraries": {},
+  "scan_duration_ms": 100,
+  "files_scanned": 0,
+  "detection_confidence": 0.0,
+  "errors": ["Error scanning /path/to/file: Permission denied"]
+}
+```
+
+**Common causes and solutions:**
+- **Permission errors**: Ensure vibe-check has read access to project files
+- **Large projects timing out**: Increase `timeout_seconds` in `.vibe-check/config.json`
+- **No supported files found**: Check that your project contains `.py`, `.js`, `.ts`, `.tsx` files
+
+#### Context Loading Issues
+When project context cannot be loaded:
+
+```
+⚠️ Context loading failed: Integration knowledge base not found
+📋 Falling back to generic analysis mode
+```
+
+**Solutions:**
+- Verify the `data/integration_knowledge_base.json` file exists
+- Check file permissions on the vibe-check installation directory
+- Try re-installing vibe-check to restore missing files
+
+#### Configuration Problems
+Invalid `.vibe-check/config.json` will show:
+
+```
+❌ Configuration error: Invalid JSON in .vibe-check/config.json
+📋 Using default configuration settings
+```
+
+**To fix:**
+1. Validate JSON syntax using `jsonlint` or similar tool
+2. Compare with the example configuration in documentation
+3. Delete `.vibe-check/config.json` to regenerate defaults
+
 ### System Tools
 - `claude_cli_status` - Check Claude CLI availability
 - `claude_cli_diagnostics` - Diagnose Claude CLI issues
