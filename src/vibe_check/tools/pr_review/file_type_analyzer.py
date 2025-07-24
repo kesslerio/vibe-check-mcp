@@ -178,7 +178,7 @@ class FileTypeAnalyzer:
             guidelines = self.REVIEW_GUIDELINES.get(file_type, {})
             
             analysis['type_specific_analysis'][file_type] = {
-                'files': [f['filename'] for f in file_list],
+                'files': [f.get('filename', f.get('name', 'unknown')) for f in file_list],
                 'count': len(file_list),
                 'focus_areas': guidelines.get('focus_areas', []),
                 'common_issues': guidelines.get('common_issues', [])
@@ -196,7 +196,7 @@ class FileTypeAnalyzer:
                 analysis['priority_checks'].append({
                     'type': file_type,
                     'reason': 'Security-sensitive file type',
-                    'files': [f['filename'] for f in file_list]
+                    'files': [f.get('filename', f.get('name', 'unknown')) for f in file_list]
                 })
         
         return analysis
