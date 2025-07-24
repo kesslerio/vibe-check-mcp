@@ -2,7 +2,7 @@
 
 **Your AI coding safety net with senior engineer collaborative reasoning - because getting 90% done and then stuck for weeks sucks.**
 
-Vibe Check MCP v0.4.4 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
+Vibe Check MCP v0.4.6 stops you from building yourself into a corner with AI-generated code. It's like having a **team of senior engineers** watching over your shoulder, ready to **interrupt bad decisions in real-time** and catch expensive mistakes before you waste days on unfixable problems.
 
 ## 🧠 Senior Engineer Collaborative Reasoning
 
@@ -28,7 +28,7 @@ Get feedback from **multiple engineering perspectives simultaneously**:
 - Writing complex parsers when libraries handle it
 - **The Cognee Case Study**: Prevented 2+ weeks of custom development when official Docker containers existed
 
-[![Version](https://img.shields.io/badge/Version-0.4.4-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.4)
+[![Version](https://img.shields.io/badge/Version-0.4.6-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.6)
 [![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
@@ -101,6 +101,48 @@ Vibe Check MCP provides **three modes of analysis** to catch engineering anti-pa
 
 **Validated Results**: 87.5% detection accuracy, 0% false positives in comprehensive testing.
 
+## 🎯 **NEW: Project-Aware Contextual Analysis**
+
+**Say goodbye to generic advice! Vibe Check now understands your specific technology stack and provides library-specific recommendations.**
+
+### ❌ Before (Generic)
+```
+User: "Should I build a custom authentication system?"
+Vibe Check: "Generally, avoid custom auth. Use established libraries."
+```
+
+### ✅ After (Project-Aware)
+```
+User: "Should I build a custom authentication system?"
+Vibe Check: "I see you're using FastAPI + Supabase. Supabase has built-in auth with 
+JWT tokens and Row Level Security. Use the @supabase/auth-js client for 
+frontend auth state management. This eliminates the need for custom auth entirely."
+```
+
+### 🏗️ **3-Layer Contextual System**
+
+1. **🔍 Library Detection Engine**
+   - Automatically scans your project files and dependencies
+   - Detects: FastAPI, React, Supabase, GitHub integrations, OpenAI usage
+   - Confidence scoring: 95% FastAPI, 87% Supabase, 92% React
+
+2. **📖 Project Documentation Parser**
+   - Reads your README.md, CONTRIBUTING.md, docs/
+   - Extracts team conventions and architecture decisions
+   - Understands your specific patterns and exceptions
+
+3. **🧠 Context-Aware Analysis**
+   - Senior Engineer: "For FastAPI + Supabase, use built-in RLS auth"
+   - Product Engineer: "Supabase auth integrates with React via @supabase/auth-js"
+   - AI Engineer: "Leverage Supabase's user embeddings for ML features"
+
+### 🛠️ **New MCP Tools**
+- `detect_project_libraries` - Scan your codebase for tech stack
+- `load_project_context` - Get comprehensive project analysis
+- `create_vibe_check_directory_structure` - Setup `.vibe-check/` config
+
+**📖 [Full Contextual Documentation Guide →](docs/features/contextual-documentation-system.md)**
+
 ## ⚡ Quick Start
 
 ### Prerequisites
@@ -127,10 +169,10 @@ claude mcp add vibe-check-npm -- npx vibe-check-mcp --stdio
 
 **Benefits:**
 - ✅ No local installation required
-- ✅ Always runs latest version (v0.4.4+)
+- ✅ Always runs latest version (v0.4.6+)
 - ✅ Automatic Python dependency management (aiohttp, PyYAML, etc.)
 - ✅ Cross-platform compatibility
-- ✅ Reliable MCP server connection (fixed in v0.4.4)
+- ✅ Reliable MCP server connection (fixed in v0.4.6)
 - ✅ Optional GitHub token for private repository analysis
 
 ### 🎯 **Option 2: Smithery (Recommended for Production)**
@@ -281,7 +323,7 @@ claude "Quick vibe check: analyze this text for any engineering anti-patterns"
 # Check Claude Code version and MCP integration
 claude --version
 
-# Test the mentor feature (Enhanced in v0.4.5)
+# Test the mentor feature (Enhanced in v0.4.6)
 claude "Should I build a custom HTTP client for the Stripe API?"
 
 # Test fast pattern detection
@@ -400,7 +442,7 @@ See **[MCP Deployment Guide](docs/MCP_DEPLOYMENT_GUIDE.md)** for complete setup 
 
 ## 🎯 Real-World Impact
 
-### **🧠 Senior Engineer Mentoring** (Enhanced in v0.4.5)
+### **🧠 Senior Engineer Mentoring** (Enhanced in v0.4.6)
 - **Before**: Make expensive architectural decisions alone
 - **After**: Get multi-persona feedback before committing to approaches
 - **Impact**: Interrupt mode has already prevented multiple engineering disasters in our own development
@@ -447,8 +489,8 @@ Built with [FastMCP](https://github.com/jlowin/fastmcp) and designed for seamles
 
 **Ready to prevent your next engineering failure?** 
 
-Install **Vibe Check MCP v0.4.5** and get your context-aware senior engineer mentor that actually prevents disasters before they happen.
+Install **Vibe Check MCP v0.4.6** and get your context-aware senior engineer mentor that actually prevents disasters before they happen.
 
-🚀 **[Get v0.4.5 Now](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.5)** | 📖 **[Release Notes](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.5)** | 🧠 **[Try the Mentor Feature](#-senior-engineer-mentoring-enhanced-in-v045)**
+🚀 **[Get v0.4.6 Now](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.6)** | 📖 **[Release Notes](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.4.6)** | 🧠 **[Try the Mentor Feature](#-senior-engineer-mentoring-enhanced-in-v046)**
 
 **Stop building the wrong thing. Start building the right thing faster.**

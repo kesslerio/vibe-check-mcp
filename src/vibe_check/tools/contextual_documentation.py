@@ -279,6 +279,46 @@ class ProjectDocumentationParser:
     
     def __init__(self, config: VibeCheckConfig):
         self.config = config
+        self._knowledge_base_cache = None
+    
+    def _load_integration_knowledge_base(self) -> Dict[str, Any]:
+        """Load integration knowledge base (cached)"""
+        if self._knowledge_base_cache is None:
+            try:
+                # Navigate to project root and find data directory
+                current_file = Path(__file__)
+                project_root = current_file.parent.parent.parent
+                knowledge_base_path = project_root / "data" / "integration_knowledge_base.json"
+                
+                # Use resolve() for more robust path handling
+                knowledge_base_path = knowledge_base_path.resolve()
+                
+                if not knowledge_base_path.exists():
+                    logger.error(f"Integration knowledge base not found at: {knowledge_base_path}")
+                    self._knowledge_base_cache = {}
+                    return self._knowledge_base_cache
+                
+                with open(knowledge_base_path, 'r', encoding='utf-8') as f:
+                    self._knowledge_base_cache = json.load(f)
+                    
+                if not isinstance(self._knowledge_base_cache, dict):
+                    logger.error("Integration knowledge base is not a valid dictionary")
+                    self._knowledge_base_cache = {}
+                    
+            except FileNotFoundError as e:
+                logger.error(f"Integration knowledge base file not found: {e}")
+                self._knowledge_base_cache = {}
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in integration knowledge base: {e}")
+                self._knowledge_base_cache = {}
+            except PermissionError as e:
+                logger.error(f"Permission denied reading integration knowledge base: {e}")
+                self._knowledge_base_cache = {}
+            except Exception as e:
+                logger.error(f"Unexpected error loading integration knowledge base: {e}")
+                self._knowledge_base_cache = {}
+                
+        return self._knowledge_base_cache
     
     def parse_project_docs(self, project_root: str) -> Dict[str, Any]:
         """Parse project documentation files for context"""
