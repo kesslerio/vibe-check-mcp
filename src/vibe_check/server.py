@@ -1213,6 +1213,61 @@ def vibe_check_mentor(
         # Get mentor engine instance
         engine = get_mentor_engine()
         
+        # Check if workspace is configured
+        from .mentor.context_manager import get_context_cache, SecurityValidator
+        workspace = SecurityValidator.get_workspace_directory()
+        
+        # Load workspace files if available
+        workspace_context = ""
+        if workspace and (file_paths or query):
+            logger.info(f"Loading workspace context from: {workspace}")
+            context_cache = get_context_cache()
+            
+            # Generate session ID if not provided
+            if not session_id:
+                session_id = f"mentor-session-{int(time.time())}-{secrets.token_hex(4)}"
+            
+            # Auto-discover or use provided file paths
+            discovered_workspace, discovered_files = context_cache.auto_discover_context(
+                query=query,
+                file_paths=file_paths,
+                working_directory=working_directory or workspace
+            )
+            
+            # Load files into context
+            if discovered_files or file_paths:
+                file_contexts, file_errors = context_cache.add_files_to_session(
+                    session_id=session_id,
+                    file_paths=file_paths or discovered_files,
+                    working_directory=discovered_workspace or workspace,
+                    query=query
+                )
+                
+                # Format file contexts for inclusion
+                if file_contexts:
+                    workspace_info = []
+                    for fc in file_contexts[:5]:  # Limit to 5 files
+                        info = [f"\n=== {fc.path} ({fc.language}) ==="]
+                        if fc.classes:
+                            info.append(f"Classes: {', '.join(fc.classes[:5])}")
+                        if fc.functions:
+                            info.append(f"Functions: {', '.join(fc.functions[:5])}")
+                        if fc.relevant_lines:
+                            for category, lines in fc.relevant_lines.items():
+                                if lines:
+                                    info.append(f"{category}: {len(lines)} matches")
+                        workspace_info.append('\n'.join(info))
+                    
+                    workspace_context = '\n'.join(workspace_info)
+                    logger.info(f"Loaded {len(file_contexts)} files from workspace")
+                
+                if file_errors:
+                    logger.warning(f"File loading errors: {file_errors}")
+        
+        # Combine workspace context with provided context
+        if workspace_context:
+            context = f"{context or ''}\n\n--- Workspace Files ---\n{workspace_context}"
+        
         # Step 1: Extract business context BEFORE pattern detection
         from .core.business_context_extractor import BusinessContextExtractor, ContextType
         context_extractor = BusinessContextExtractor()
