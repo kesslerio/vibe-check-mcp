@@ -39,6 +39,7 @@ class ResponseCoordinator:
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
         project_context: Optional[Any] = None,
+        file_contexts: Optional[List[Any]] = None,
     ) -> ContributionData:
         """
         Generate a contribution from a persona based on their characteristics.

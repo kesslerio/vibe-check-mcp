@@ -55,7 +55,7 @@ class VibeMentorEngine:
         self.session_manager = SessionManager()
         self.response_coordinator = ResponseCoordinator() 
         self.pattern_detector = PatternDetector()
-        self._enhanced_mode = False  # Flag to enable enhanced reasoning - DISABLED to fix generic responses
+        self._enhanced_mode = True  # Re-enabled for better context-aware responses (Issue fix)
 
     # Delegate session management to SessionManager
     def create_session(
@@ -75,6 +75,7 @@ class VibeMentorEngine:
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
         project_context: Optional[Any] = None,
+        file_contexts: Optional[List[Any]] = None,
     ) -> ContributionData:
         """Generate a contribution from a persona based on their characteristics"""
         
@@ -84,7 +85,7 @@ class VibeMentorEngine:
                 from .vibe_mentor_enhanced import EnhancedVibeMentorEngine
                 enhanced_engine = EnhancedVibeMentorEngine(self)
                 return enhanced_engine.generate_contribution(
-                    session, persona, detected_patterns, context, project_context
+                    session, persona, detected_patterns, context, project_context, file_contexts
                 )
             except ImportError as e:
                 logger.warning(f"Enhanced reasoning not available: {str(e)}, falling back to basic mode")

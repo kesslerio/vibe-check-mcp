@@ -226,14 +226,22 @@ class LibraryDetectionEngine:
                         continue
                     
                     try:
-                        # Try UTF-8 first, fall back to latin-1 for binary files
+                        # Try UTF-8 first with proper error handling
                         try:
                             content = file_path.read_text(encoding='utf-8')
-                        except UnicodeDecodeError:
-                            try:
-                                content = file_path.read_text(encoding='latin-1')
-                            except UnicodeDecodeError:
-                                logger.warning(f"Skipping file with encoding issues: {file_path}")
+                        except UnicodeDecodeError as e:
+                            # Log the specific encoding error for debugging
+                            logger.debug(f"UTF-8 decode failed for {file_path}: {e}")
+                            # Only try latin-1 for text files, not binary
+                            if file_path.suffix in ['.py', '.txt', '.md', '.rst', '.js', '.ts', '.java']:
+                                try:
+                                    content = file_path.read_text(encoding='latin-1')
+                                    logger.info(f"Successfully read {file_path} with latin-1 encoding")
+                                except UnicodeDecodeError as e2:
+                                    logger.warning(f"Skipping {file_path} - encoding error: {e2}")
+                                    continue
+                            else:
+                                logger.warning(f"Skipping non-text file {file_path}")
                                 continue
                         
                         # Detect libraries in this file
