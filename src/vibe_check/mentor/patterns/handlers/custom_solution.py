@@ -5,9 +5,12 @@ Handles custom solution patterns and API client decisions,
 promoting standard solutions over custom implementations.
 """
 
+import logging
 from typing import Tuple
 
 from ...models.config import ConfidenceScores
+
+logger = logging.getLogger(__name__)
 from .base import PatternHandler
 
 
@@ -33,7 +36,15 @@ class CustomSolutionHandler(PatternHandler):
         ):
             # Extract options if present (e.g., "Option A", "Option B", etc.)
             import re
-            options_match = re.findall(r'option [a-c]|approach [a-c]|[a-c]\)', topic.lower())
+            try:
+                # Validate and compile pattern safely
+                pattern = re.compile(r'option [a-c]|approach [a-c]|[a-c]\)', re.IGNORECASE)
+                options_match = pattern.findall(topic.lower())
+            except re.error as e:
+                # Handle regex compilation error gracefully
+                logger.warning(f"Regex pattern error in CustomSolutionHandler: {e}")
+                options_match = []
+            
             if options_match:
                 return (
                     "insight",

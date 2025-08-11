@@ -26,25 +26,21 @@ MAX_FEATURES = 5  # Maximum features to extract
 MAX_DECISION_POINTS = 3  # Maximum decision points to track
 EXCLUDED_ENDINGS = [' for', ' with', ' by', ' in', ' on']
 REGEX_TIMEOUT = 1.0  # seconds
+DEFAULT_CONFIDENCE_THRESHOLD = 0.7  # Default confidence for decisions
+MIN_CONTRIB_WORD_LENGTH = 4  # Minimum word length for contribution detection
+CACHE_COST_REDUCTION_MIN = 50  # Minimum cache cost reduction percentage
+CACHE_COST_REDUCTION_MAX = 90  # Maximum cache cost reduction percentage
 
 # Configuration for performance tuning
 @dataclass
 class MentorConfig:
     enable_caching: bool = True
     max_cache_size: int = 128
-    confidence_threshold: float = 0.7
+    confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD
     max_response_length: int = 2000
 
 
-@dataclass
-class TechnicalContext:
-    """Extracted technical context from query"""
-    technologies: List[str]
-    frameworks: List[str]
-    patterns: List[str]
-    problem_type: str  # integration, architecture, implementation, debugging
-    specific_features: List[str]
-    decision_points: List[str]
+# TechnicalContext is imported from response_strategies to avoid duplication
 
 
 class ContextExtractor:
@@ -101,8 +97,13 @@ class ContextExtractor:
         if len(text) > MAX_QUERY_LENGTH:
             text = text[:MAX_QUERY_LENGTH]
         
-        # Basic sanitization - remove potentially problematic characters
-        text = re.sub(r'[^\w\s\-\.\?\!]', ' ', text)
+        # Enhanced sanitization to prevent ReDoS attacks
+        # Only allow safe characters and limit consecutive special chars
+        text = re.sub(r'[^\w\s\-\.\?\!,;:\'"()]', ' ', text)
+        # Prevent repeated special characters that could cause regex issues
+        text = re.sub(r'([^\w\s])\1{2,}', r'\1\1', text)
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text)
         return text.lower().strip()
     
     @classmethod
@@ -184,17 +185,20 @@ class ContextExtractor:
                     problem_type = ptype
                     break
         
+        # Pre-compile feature patterns for performance (compile once, use many times)
+        if not hasattr(cls, '_feature_patterns_compiled'):
+            cls._feature_patterns_compiled = [
+                re.compile(r'(?:implement|build|create|add)\s+(\w+(?:\s+\w+)?)', re.IGNORECASE),
+                re.compile(r'(\w+(?:\s+\w+)?)\s+(?:feature|functionality|capability)', re.IGNORECASE),
+                re.compile(r'custom\s+(\w+(?:\s+\w+)?)', re.IGNORECASE),
+                re.compile(r'(?:implementing|building|creating)\s+(\w+(?:\s+\w+)?)', re.IGNORECASE)
+            ]
+        
         # Extract specific features mentioned using constants
         features = []
-        feature_patterns = [
-            r'(?:implement|build|create|add)\s+(\w+(?:\s+\w+)?)',
-            r'(\w+(?:\s+\w+)?)\s+(?:feature|functionality|capability)',
-            r'custom\s+(\w+(?:\s+\w+)?)',
-            r'(?:implementing|building|creating)\s+(\w+(?:\s+\w+)?)'
-        ]
-        for pattern in feature_patterns:
+        for pattern in cls._feature_patterns_compiled:
             try:
-                matches = re.findall(pattern, combined_text, re.IGNORECASE)
+                matches = pattern.findall(combined_text)
                 # Filter using constants instead of magic numbers
                 filtered_matches = [
                     m for m in matches 
@@ -206,16 +210,19 @@ class ContextExtractor:
                 # Handle regex errors gracefully
                 continue
         
+        # Pre-compile decision patterns for performance
+        if not hasattr(cls, '_decision_patterns_compiled'):
+            cls._decision_patterns_compiled = [
+                re.compile(r'(\w+)\s+vs\s+(\w+)', re.IGNORECASE),
+                re.compile(r'should\s+i\s+(\w+(?:\s+\w+)?)', re.IGNORECASE),
+                re.compile(r'(?:use|choose|pick)\s+(\w+(?:\s+\w+)?)', re.IGNORECASE)
+            ]
+        
         # Extract decision points with error handling
         decisions = []
-        decision_patterns = [
-            r'(\w+)\s+vs\s+(\w+)',
-            r'should\s+i\s+(\w+(?:\s+\w+)?)',
-            r'(?:use|choose|pick)\s+(\w+(?:\s+\w+)?)'
-        ]
-        for pattern in decision_patterns:
+        for pattern in cls._decision_patterns_compiled:
             try:
-                matches = re.findall(pattern, combined_text, re.IGNORECASE)
+                matches = pattern.findall(combined_text)
                 if matches and isinstance(matches[0], tuple):
                     decisions.extend([f"{m[0]} vs {m[1]}" for m in matches])
                 else:
@@ -435,7 +442,7 @@ class EnhancedPersonaReasoning:
                 "insight",
                 f"For {ai_tech} integration, leverage these AI-specific patterns: "
                 f"1) Use their official SDK - it handles streaming, token counting, and retry logic, "
-                f"2) Implement prompt caching to reduce costs by 50-90%, "
+                f"2) Implement prompt caching to reduce costs by {CACHE_COST_REDUCTION_MIN}-{CACHE_COST_REDUCTION_MAX}%, "
                 f"3) Use structured outputs (JSON mode) for reliable parsing, "
                 f"4) Set up prompt version control from day 1, "
                 f"5) Monitor token usage per user to prevent abuse. "
@@ -590,7 +597,7 @@ class EnhancedVibeMentorEngine:
         for contrib in contributions:
             # Simple reference detection based on keyword overlap
             contrib_words = contrib.content.lower().split()[:10]  # First 10 words
-            if any(word in content_lower for word in contrib_words if len(word) > 4):
+            if any(word in content_lower for word in contrib_words if len(word) > MIN_CONTRIB_WORD_LENGTH):
                 references.append(f"{contrib.persona_id}_{contrib.type}")
         
         return references
