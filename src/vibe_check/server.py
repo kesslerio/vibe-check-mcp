@@ -1217,6 +1217,16 @@ def vibe_check_mentor(
         from .mentor.context_manager import get_context_cache, SecurityValidator
         workspace = SecurityValidator.get_workspace_directory()
         
+        # Warn if workspace not configured but query suggests code analysis
+        workspace_warning = ""
+        if not workspace and any(indicator in query.lower() for indicator in 
+                                ['typescript', 'eslint', 'any type', 'code', 'file', 
+                                 'function', 'class', 'variable', 'import']):
+            logger.warning("⚠️ WORKSPACE not configured - vibe_check_mentor cannot read actual code files")
+            logger.warning("   To enable code analysis, configure with: -e WORKSPACE=\"/path/to/project\"")
+            logger.warning("   Currently providing generic advice without seeing your actual code")
+            workspace_warning = "\n\n⚠️ **Note**: WORKSPACE not configured. To enable code-specific advice, reconfigure with:\n```bash\nclaude mcp add vibe-check-local -e WORKSPACE=\"/path/to/project\" ...\n```"
+        
         # Load workspace files if available
         workspace_context = ""
         if workspace and (file_paths or query):
@@ -1620,7 +1630,7 @@ def vibe_check_mentor(
                 "can_continue": session.next_contribution_needed
             },
             "reasoning_depth": reasoning_depth,
-            "formatted_output": engine.format_session_output(session)
+            "formatted_output": engine.format_session_output(session) + workspace_warning
         }
         
         # Log formatted output for debugging
@@ -2061,6 +2071,15 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         
         logger.info("🚀 Starting Vibe Check MCP Server...")
         logger.info(f"📌 Version: {version}")
+        
+        # Check and log WORKSPACE configuration
+        workspace_env = os.environ.get('WORKSPACE')
+        if workspace_env:
+            logger.info(f"✅ WORKSPACE configured: {workspace_env}")
+        else:
+            logger.warning("⚠️ WORKSPACE environment variable not set")
+            logger.warning("   vibe_check_mentor will provide generic advice without code analysis")
+            logger.warning("   To enable: claude mcp add ... -e WORKSPACE=\"/path/to/project\" ...")
         
         # Configuration validation (Issue #98)
         logger.info("🔍 Validating configuration for Claude CLI and MCP integration...")
