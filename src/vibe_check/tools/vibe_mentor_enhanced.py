@@ -538,12 +538,33 @@ class EnhancedVibeMentorEngine:
         persona: PersonaData,
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
-        project_context: Optional[Any] = None
+        project_context: Optional[Any] = None,
+        file_contexts: Optional[List[Any]] = None
     ) -> ContributionData:
         """Generate context-aware contribution from persona"""
         
         # Extract technical context - this is the key enhancement
         tech_context = self.context_extractor.extract_context(session.topic, context)
+        
+        # NEW: Incorporate actual file contents if provided
+        if file_contexts:
+            # Enhance context with actual code information
+            code_references = []
+            for fc in file_contexts[:3]:  # Analyze first 3 files
+                # Add function/class information to technical context
+                if fc.functions:
+                    tech_context.specific_features.extend([f"function:{f}" for f in fc.functions[:5]])
+                if fc.classes:
+                    tech_context.specific_features.extend([f"class:{c}" for c in fc.classes[:3]])
+                
+                # Look for relevant code patterns
+                if hasattr(fc, 'relevant_lines') and fc.relevant_lines.get('direct_mentions'):
+                    for line_num, line in fc.relevant_lines['direct_mentions'][:2]:
+                        code_references.append(f"Line {line_num} in {fc.path}: {line.strip()}")
+            
+            # Add code references to context for persona reasoning
+            if code_references:
+                context = (context or "") + "\n\nActual code being discussed:\n" + "\n".join(code_references)
         
         # ENHANCEMENT: Use technical context as primary driver for response generation
         # Patterns are now optional enhancement, not required for good responses

@@ -21,7 +21,7 @@ import secrets
 import time
 import random
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # Configuration Constants
 DEFAULT_MAX_DIFF_SIZE = 50000  # Maximum PR diff size in characters (50KB)
@@ -1160,7 +1160,9 @@ def vibe_check_mentor(
     continue_session: bool = False,
     mode: str = "standard",
     phase: str = "planning",
-    confidence_threshold: float = 0.7
+    confidence_threshold: float = 0.7,
+    file_paths: Optional[List[str]] = None,
+    working_directory: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     🧠 Senior engineer collaborative reasoning - Get multi-perspective feedback on technical decisions.
@@ -1198,6 +1200,8 @@ def vibe_check_mentor(
         mode: Interaction mode - interrupt/standard (default: standard)
         phase: Development phase - planning/implementation/review (default: planning)
         confidence_threshold: Minimum confidence to trigger interrupt (default: 0.7)
+        file_paths: Optional list of file paths to analyze (max 10 files, 1MB each)
+        working_directory: Optional working directory for resolving relative paths
         
     Returns:
         Collaborative reasoning analysis with multi-perspective insights or quick interrupt
@@ -1248,6 +1252,61 @@ def vibe_check_mentor(
                 # For review requests, focus on constructive feedback
                 logger.info("High confidence review request - providing constructive analysis")
                 # Continue with review-oriented analysis
+        
+        # Step 2.5: Auto-discover and load file contents (NEW: Enhanced codebase-aware)
+        file_contexts = []
+        file_errors = []
+        
+        # Import context manager
+        from .mentor.context_manager import get_context_cache
+        context_cache = get_context_cache()
+        
+        # Auto-discover working directory and files if not provided
+        discovered_dir, discovered_files = context_cache.auto_discover_context(
+            query=query,
+            file_paths=file_paths,
+            working_directory=working_directory
+        )
+        
+        # Use discovered values if originals weren't provided
+        if not working_directory and discovered_dir:
+            working_directory = discovered_dir
+            logger.info(f"Auto-discovered working directory: {working_directory}")
+        
+        if not file_paths and discovered_files:
+            file_paths = discovered_files
+            logger.info(f"Auto-discovered files from query: {file_paths}")
+        
+        # Load files if we have any (either provided or discovered)
+        if file_paths:
+            logger.info(f"Loading {len(file_paths)} files for codebase-aware analysis")
+            
+            # Generate session ID if not provided
+            if not session_id:
+                session_id = f"mentor-session-{int(time.time())}-{random.randint(10000000, 99999999)}"
+            
+            # Add files to session
+            file_contexts, file_errors = context_cache.add_files_to_session(
+                session_id=session_id,
+                file_paths=file_paths,
+                working_directory=working_directory,
+                query=query
+            )
+            
+            if file_contexts:
+                logger.info(f"Successfully loaded {len(file_contexts)} files with {sum(len(fc.functions) for fc in file_contexts)} functions")
+                # Enhance context with actual code
+                code_snippets = []
+                for fc in file_contexts[:3]:  # Include snippets from first 3 files
+                    if fc.relevant_lines.get('direct_mentions'):
+                        for line_num, line in fc.relevant_lines['direct_mentions'][:3]:
+                            code_snippets.append(f"{fc.path}:{line_num}: {line.strip()}")
+                
+                if code_snippets:
+                    context = (context or "") + "\n\nRelevant code from provided files:\n" + "\n".join(code_snippets)
+            
+            if file_errors:
+                logger.warning(f"Failed to load some files: {file_errors}")
         
         # Step 3: Load project context for contextual analysis
         project_context = None
@@ -1444,7 +1503,8 @@ def vibe_check_mentor(
                     persona=persona,
                     detected_patterns=detected_patterns,
                     context=context,
-                    project_context=project_context
+                    project_context=project_context,
+                    file_contexts=file_contexts
                 )
                 
                 session.contributions.append(contribution)
@@ -1738,6 +1798,66 @@ def create_vibe_check_directory_structure(
             ]
         }
 
+
+@mcp.tool()
+def register_project_for_vibe_check(
+    project_name: str,
+    project_path: str
+) -> Dict[str, Any]:
+    """
+    📁 Register a project for auto-discovery by vibe_check_mentor.
+    
+    Once registered, vibe_check_mentor will automatically find this project
+    when the project name is mentioned in queries, eliminating the need to
+    specify file_paths and working_directory every time.
+    
+    Args:
+        project_name: Short name for the project (e.g., "lead_enrichment")
+        project_path: Full path to the project directory
+        
+    Returns:
+        Registration status and current registry
+    """
+    try:
+        from .mentor.context_manager import get_context_cache
+        context_cache = get_context_cache()
+        
+        # Register the project
+        context_cache.register_project(project_name, project_path)
+        
+        # Load current registry to show all registered projects
+        registry = context_cache.load_project_registry()
+        
+        return {
+            "status": "success",
+            "message": f"Project '{project_name}' registered successfully",
+            "registered_projects": registry,
+            "usage_example": f"""
+Now you can use vibe_check_mentor without specifying paths:
+
+vibe_check_mentor(
+    query="Should I fix the deduplication in {project_name} by disabling aggressive mode?",
+    # No need for file_paths or working_directory!
+)
+
+The tool will automatically:
+1. Detect '{project_name}' in the query
+2. Use the registered path: {project_path}
+3. Extract file names like 'universal_mapper.py' from the query
+4. Load and analyze the actual code
+            """
+        }
+    except Exception as e:
+        logger.error(f"Failed to register project: {e}")
+        return {
+            "status": "error",
+            "error_message": str(e),
+            "recommendations": [
+                "Verify the project_path exists and is accessible",
+                "Ensure project_name doesn't contain special characters",
+                "Check write permissions for ~/.vibe-check/project_registry.json"
+            ]
+        }
 
 @mcp.tool()
 def server_status() -> Dict[str, Any]:
