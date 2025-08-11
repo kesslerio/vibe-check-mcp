@@ -18,6 +18,7 @@ from ..mentor.patterns.handlers.base import PatternHandler
 
 # Import strategy pattern components
 from ..strategies.response_strategies import get_strategy_manager, TechnicalContext
+from .semantic_engine import SemanticEngine, QueryIntent
 
 # Constants for improved maintainability
 MIN_FEATURE_LENGTH = 3
@@ -252,13 +253,17 @@ class ContextExtractor:
 class EnhancedPersonaReasoning:
     """Generate context-aware responses for each persona"""
     
-    @staticmethod
+    def __init__(self):
+        """Initialize with semantic engine for better response generation"""
+        self.semantic_engine = SemanticEngine()
+    
     def generate_senior_engineer_response(
+        self,
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
         query: str
     ) -> Tuple[str, str, float]:
-        """Generate specific senior engineer advice using strategy pattern - FULLY REFACTORED"""
+        """Generate specific senior engineer advice using semantic understanding"""
         
         # Use strategy manager for all response generation
         strategy_manager = get_strategy_manager()
@@ -288,19 +293,47 @@ class EnhancedPersonaReasoning:
         
         # ENHANCEMENT: Give specific advice based on technology, even without patterns
         
-        # Technology + Framework combinations
+        # Use semantic engine for intelligent response generation
+        try:
+            # Process query with semantic understanding
+            context_str = self._build_context_string(tech_context, patterns)
+            semantic_result = self.semantic_engine.process_query(query, context_str)
+            
+            # Get the semantically appropriate response
+            if semantic_result['success'] and semantic_result['response']:
+                # Determine contribution type based on intent
+                intent_type = semantic_result['intent']['type']
+                contribution_type = self._map_intent_to_contribution_type(intent_type)
+                
+                return (
+                    contribution_type,
+                    semantic_result['response'],
+                    semantic_result['response_confidence']
+                )
+        except Exception as e:
+            # Fall back to strategy manager on error
+            pass
+        
+        # Technology + Framework combinations (fallback)
         if tech_context.technologies and tech_context.frameworks:
             tech = tech_context.technologies[0]
             framework = tech_context.frameworks[0]
+            # Use semantic engine even for fallback
+            fallback_query = f"ship {tech} with {framework} quickly"
+            semantic_result = self.semantic_engine.process_query(fallback_query, None)
+            if semantic_result['success']:
+                return (
+                    "suggestion",
+                    semantic_result['response'],
+                    semantic_result['response_confidence']
+                )
+            # Ultimate fallback
             return (
                 "suggestion",
-                f"Here's how I'd ship {tech} + {framework} this week: "
-                f"1) Use {tech}'s quickstart template - they usually have one for {framework}, "
-                f"2) Deploy a working prototype to Vercel/Netlify/Railway today, "
-                f"3) Get 5 real users testing by Friday. "
-                f"I've launched 50+ features - the ones that succeed iterate from real feedback, "
-                f"not architectural perfection. Ship the 20% that delivers 80% value.",
-                ConfidenceScores.VERY_HIGH
+                f"For {tech} + {framework}: Start with the official quickstart, "
+                f"deploy a working prototype today, and get user feedback immediately. "
+                f"Real usage beats perfect architecture.",
+                ConfidenceScores.MEDIUM
             )
         
         # Technology-specific MVP advice (even without frameworks)
@@ -529,6 +562,39 @@ class EnhancedPersonaReasoning:
             "We're in an AI-augmented development era - use these tools as force multipliers.",
             ConfidenceScores.MODERATE
         )
+    
+    def _build_context_string(self, tech_context: TechnicalContext, patterns: List[Dict[str, Any]]) -> str:
+        """Build context string for semantic analysis"""
+        context_parts = []
+        
+        if tech_context.technologies:
+            context_parts.append(f"technologies: {', '.join(tech_context.technologies)}")
+        if tech_context.frameworks:
+            context_parts.append(f"frameworks: {', '.join(tech_context.frameworks)}")
+        if tech_context.problem_type:
+            context_parts.append(f"problem type: {tech_context.problem_type}")
+        if tech_context.specific_features:
+            context_parts.append(f"features: {', '.join(tech_context.specific_features[:3])}")
+        if patterns:
+            pattern_names = [p.get('name', '') for p in patterns[:3] if p.get('name')]
+            if pattern_names:
+                context_parts.append(f"detected patterns: {', '.join(pattern_names)}")
+        
+        return ' | '.join(context_parts)
+    
+    def _map_intent_to_contribution_type(self, intent_type: str) -> str:
+        """Map semantic intent to contribution type"""
+        mapping = {
+            "tool_evaluation": "challenge",
+            "technical_debt": "concern",
+            "decision": "suggestion",
+            "debugging": "insight",
+            "implementation": "suggestion",
+            "integration": "observation",
+            "architecture": "synthesis",
+            "general": "observation"
+        }
+        return mapping.get(intent_type, "observation")
 
 
 class EnhancedVibeMentorEngine:
