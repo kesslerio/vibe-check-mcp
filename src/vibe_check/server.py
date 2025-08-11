@@ -20,6 +20,7 @@ import argparse
 import secrets
 import time
 import random
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -1990,7 +1991,21 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
+        # Load and display version
+        version_file = Path(__file__).parent.parent.parent / "VERSION"
+        package_json = Path(__file__).parent.parent.parent / "package.json"
+        
+        version = "unknown"
+        if version_file.exists():
+            version = version_file.read_text().strip()
+        elif package_json.exists():
+            import json
+            with open(package_json) as f:
+                package_data = json.load(f)
+                version = package_data.get("version", "unknown")
+        
         logger.info("🚀 Starting Vibe Check MCP Server...")
+        logger.info(f"📌 Version: {version}")
         
         # Configuration validation (Issue #98)
         logger.info("🔍 Validating configuration for Claude CLI and MCP integration...")
