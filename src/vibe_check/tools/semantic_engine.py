@@ -391,7 +391,7 @@ class SemanticResponseMatcher:
         # First try to get responses from the suggested category
         category_responses = self.responses.get(intent.suggested_response_category, [])
         
-        if not category_responses and not self.response_vectors:
+        if not category_responses and self.response_vectors is None:
             return self._get_fallback_response(intent), 0.5
         
         # Use semantic similarity to find best match
