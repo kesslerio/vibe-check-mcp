@@ -21,7 +21,7 @@ from vibe_check.tools.analyze_issue import (
     analyze_issue,
     get_github_analyzer
 )
-from vibe_check.tools.vibe_check_framework import VibeCheckMode, VibeLevel, VibeCheckResult
+from vibe_check.tools.legacy.vibe_check_framework import VibeCheckMode, VibeLevel, VibeCheckResult
 from vibe_check.core.educational_content import DetailLevel
 from vibe_check.core.pattern_detector import DetectionResult
 

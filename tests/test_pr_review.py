@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from vibe_check.tools.pr_review import PRReviewTool
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
 import json
 
 

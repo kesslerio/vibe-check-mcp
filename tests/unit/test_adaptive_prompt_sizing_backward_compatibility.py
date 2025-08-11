@@ -15,7 +15,7 @@ Tests verify:
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.vibe_check.tools.pr_review import PRReviewTool
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
 
 
 class TestAdaptivePromptSizingBackwardCompatibility:

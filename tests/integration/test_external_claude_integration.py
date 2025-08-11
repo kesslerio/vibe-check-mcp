@@ -22,8 +22,8 @@ import pytest
 
 # Import integration components
 from vibe_check.server import mcp
-from vibe_check.tools.external_claude_cli import ExternalClaudeCli
-from vibe_check.tools.pr_review import PRReviewTool
+from vibe_check.tools.analyze_llm_backup import ExternalClaudeCli
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
 
 
 class TestExternalClaudeIntegration:

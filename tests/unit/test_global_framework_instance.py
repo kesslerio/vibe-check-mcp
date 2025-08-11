@@ -15,7 +15,7 @@ import os
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from vibe_check.tools.vibe_check_framework import get_vibe_check_framework
+from vibe_check.tools.legacy.vibe_check_framework import get_vibe_check_framework
 
 
 class TestGlobalVibeCheckFramework:

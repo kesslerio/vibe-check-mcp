@@ -22,8 +22,8 @@ from pathlib import Path
 import pytest
 
 # Import the classes under test
-from vibe_check.tools.pr_review import PRReviewTool
-from vibe_check.tools.external_claude_cli import ExternalClaudeCli, ClaudeCliResult
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
+from vibe_check.tools.analyze_llm_backup import ExternalClaudeCli, ClaudeCliResult
 
 
 class TestPRReviewExternalClaude:

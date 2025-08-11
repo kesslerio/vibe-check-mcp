@@ -18,7 +18,7 @@ from github import GithubException
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from vibe_check.tools.vibe_check_framework import (
+from vibe_check.tools.legacy.vibe_check_framework import (
     VibeCheckFramework,
     VibeCheckMode,
     VibeLevel,

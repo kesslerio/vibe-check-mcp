@@ -247,9 +247,7 @@ class TestInputValidationSecurity:
 
     def test_regex_complexity_limits(self):
         """Test limits on regex complexity to prevent ReDoS"""
-        from vibe_check.tools.vibe_mentor_enhanced import EnhancedVibeCheckMentor
-        
-        mentor = EnhancedVibeCheckMentor()
+        from vibe_check.tools.vibe_mentor_enhanced import ContextExtractor
         
         # Complex regex patterns that could cause ReDoS
         complex_patterns = [
@@ -266,7 +264,7 @@ class TestInputValidationSecurity:
             start_time = time.time()
             
             try:
-                result = mentor._validate_input(test_input[:500])  # Limit length
+                result = ContextExtractor._validate_input(test_input[:500])  # Limit length
                 
                 end_time = time.time()
                 duration = end_time - start_time
