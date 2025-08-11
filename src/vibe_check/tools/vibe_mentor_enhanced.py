@@ -537,7 +537,8 @@ class EnhancedVibeMentorEngine:
         session: CollaborativeReasoningSession,
         persona: PersonaData,
         detected_patterns: List[Dict[str, Any]],
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        project_context: Optional[Any] = None
     ) -> ContributionData:
         """Generate context-aware contribution from persona"""
         
@@ -555,10 +556,23 @@ class EnhancedVibeMentorEngine:
             content=content,
             type=contribution_type,
             confidence=confidence,
-            reference_ids=self.base_engine._find_references(content, session.contributions),
+            reference_ids=self._find_references(content, session.contributions),
         )
         
         return contribution
+    
+    def _find_references(self, content: str, contributions: List[ContributionData]) -> List[str]:
+        """Find contributions that this content references"""
+        references = []
+        content_lower = content.lower()
+        
+        for contrib in contributions:
+            # Simple reference detection based on keyword overlap
+            contrib_words = contrib.content.lower().split()[:10]  # First 10 words
+            if any(word in content_lower for word in contrib_words if len(word) > 4):
+                references.append(f"{contrib.persona_id}_{contrib.type}")
+        
+        return references
     
     def _reason_as_persona_enhanced(
         self,

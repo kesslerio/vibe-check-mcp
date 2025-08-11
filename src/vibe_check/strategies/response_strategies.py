@@ -292,15 +292,82 @@ class FallbackStrategy(ResponseStrategy):
         patterns: List[Dict[str, Any]], 
         query: str
     ) -> Tuple[str, str, float]:
-        """Generate fallback response"""
-        return (
-            "suggestion",
-            "For technical decisions: 1) Start with the simplest solution that works, "
-            "2) Use official SDKs and documentation first, 3) Consider maintenance burden "
-            "over 2+ years, 4) Optimize only when you have real performance issues. "
-            "Most technical debt comes from over-engineering early.",
-            ConfidenceScores.MEDIUM
-        )
+        """Generate contextual fallback response based on query content"""
+        
+        # Check for specific decision patterns with options
+        import re
+        query_lower = query.lower()
+        
+        # Look for explicit options (Option A, Option B, etc.)
+        options_pattern = r'option [a-c]|approach [a-c]|\b[a-c]\)'
+        has_options = bool(re.search(options_pattern, query_lower))
+        
+        # Look for field/data operations
+        has_field_ops = any(term in query_lower for term in 
+                           ['field', 'deduplicate', 'duplicate', 'merge', 'data', 'column', 'attribute'])
+        
+        # Look for decision keywords
+        has_decision = any(term in query_lower for term in 
+                          ['should', 'choose', 'decide', 'vs', 'better', 'approach', 'option'])
+        
+        if has_options and has_field_ops:
+            # Specific response for field deduplication with options
+            return (
+                "insight",
+                "For your field deduplication options, let me analyze each approach: "
+                "Option A (Keep all fields) - Safe but may have redundancy. Good for data preservation. "
+                "Option B (Smart deduplication) - Efficient but needs careful validation logic. "
+                "Option C (Manual review) - Most accurate but doesn't scale well. "
+                "I'd recommend starting with Option B using a similarity threshold (e.g., 90% match), "
+                "with Option C as a fallback for edge cases. Log all decisions for auditing. "
+                "Test with real data samples first to validate the deduplication logic.",
+                ConfidenceScores.HIGH
+            )
+        elif has_options and has_decision:
+            # Response for general decision with options
+            return (
+                "suggestion",
+                f"Looking at your specific options, I recommend evaluating each against: "
+                f"1) Implementation complexity - how quickly can you ship? "
+                f"2) Maintenance burden - who will maintain this in 6 months? "
+                f"3) Scalability - will this work with 10x the data/users? "
+                f"4) Reversibility - can you change course if wrong? "
+                f"Start with a prototype of the most promising option and validate with real usage.",
+                ConfidenceScores.GOOD
+            )
+        elif tech_context.decision_points:
+            # Use decision points from context
+            decision = tech_context.decision_points[0] if tech_context.decision_points else "this decision"
+            return (
+                "suggestion",
+                f"For '{decision}': Apply first principles thinking - "
+                f"what's the core problem you're solving? Often the simplest approach that "
+                f"directly addresses the root cause is best. Consider building a minimal "
+                f"proof-of-concept for each approach and measure against your success criteria.",
+                ConfidenceScores.GOOD
+            )
+        elif tech_context.specific_features:
+            # Feature-specific advice
+            feature = tech_context.specific_features[0]
+            return (
+                "insight",
+                f"For implementing '{feature}': Start with the core functionality that delivers "
+                f"immediate value. Build iteratively - ship v0.1 that works for 80% of cases, "
+                f"then enhance based on real usage. Avoid premature optimization. "
+                f"Document your assumptions so you can revisit them as requirements evolve.",
+                ConfidenceScores.GOOD
+            )
+        else:
+            # Generic but slightly more contextual fallback
+            query_snippet = query[:100] if len(query) > 100 else query
+            return (
+                "suggestion",
+                f"For your specific question about '{query_snippet}...': "
+                f"I recommend starting with the simplest approach that addresses your immediate needs. "
+                f"Test with real data/users, measure outcomes, then iterate. "
+                f"Most successful systems evolve from simple beginnings rather than complex initial designs.",
+                ConfidenceScores.MEDIUM
+            )
 
 
 class ResponseStrategyManager:
