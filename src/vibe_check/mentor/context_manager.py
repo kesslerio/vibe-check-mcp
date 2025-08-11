@@ -87,14 +87,38 @@ class SecurityValidator:
     """Validates file paths for security"""
     
     @staticmethod
+    def get_workspace_directory() -> Optional[str]:
+        """
+        Get the configured workspace directory from environment variable.
+        
+        Returns:
+            Workspace directory path or None if not configured
+        """
+        workspace = os.environ.get('WORKSPACE')
+        if workspace:
+            workspace_path = Path(workspace).resolve()
+            if workspace_path.exists() and workspace_path.is_dir():
+                logger.info(f"Using configured WORKSPACE: {workspace_path}")
+                return str(workspace_path)
+            else:
+                logger.warning(f"WORKSPACE environment variable points to invalid directory: {workspace}")
+        return None
+    
+    @staticmethod
     def validate_path(file_path: str, working_directory: str = None) -> Tuple[bool, str, Optional[str]]:
         """
         Validate a file path for security issues.
+        Uses WORKSPACE environment variable if set, otherwise uses provided working_directory.
         
         Returns:
             Tuple of (is_valid, resolved_path, error_message)
         """
         try:
+            # Prefer WORKSPACE environment variable over provided working_directory
+            workspace = SecurityValidator.get_workspace_directory()
+            if workspace:
+                working_directory = workspace
+            
             # Convert to Path object
             path = Path(file_path)
             
@@ -253,7 +277,9 @@ class CodeParser:
             'classes': [],
             'functions': [],
             'imports': [],
-            'exports': []
+            'exports': [],
+            'interfaces': [],
+            'types': []
         }
         
         # Regex-based extraction for JS/TS
@@ -261,6 +287,102 @@ class CodeParser:
         result['functions'] = re.findall(r'(?:function|const|let|var)\s+(\w+)\s*=?\s*(?:\([^)]*\)|async)', content)
         result['imports'] = re.findall(r'import\s+.*?\s+from\s+["\']([^"\']+)["\']', content)
         result['exports'] = re.findall(r'export\s+(?:default\s+)?(?:class|function|const|let|var)\s+(\w+)', content)
+        # TypeScript specific
+        result['interfaces'] = re.findall(r'interface\s+(\w+)', content)
+        result['types'] = re.findall(r'type\s+(\w+)\s*=', content)
+        
+        return result
+    
+    @staticmethod
+    def parse_go_file(content: str) -> Dict[str, Any]:
+        """
+        Parse Go file to extract structure.
+        """
+        result = {
+            'functions': [],
+            'types': [],
+            'interfaces': [],
+            'imports': [],
+            'packages': []
+        }
+        
+        # Go-specific patterns
+        result['functions'] = re.findall(r'func\s+(?:\(.*?\)\s+)?(\w+)\s*\(', content)
+        result['types'] = re.findall(r'type\s+(\w+)\s+struct', content)
+        result['interfaces'] = re.findall(r'type\s+(\w+)\s+interface', content)
+        result['imports'] = re.findall(r'import\s+(?:\(([^)]+)\)|"([^"]+)")', content, re.MULTILINE | re.DOTALL)
+        result['packages'] = re.findall(r'^package\s+(\w+)', content, re.MULTILINE)
+        
+        return result
+    
+    @staticmethod
+    def parse_rust_file(content: str) -> Dict[str, Any]:
+        """
+        Parse Rust file to extract structure.
+        """
+        result = {
+            'functions': [],
+            'structs': [],
+            'enums': [],
+            'traits': [],
+            'impls': [],
+            'mods': [],
+            'uses': []
+        }
+        
+        # Rust-specific patterns
+        result['functions'] = re.findall(r'(?:pub\s+)?fn\s+(\w+)', content)
+        result['structs'] = re.findall(r'(?:pub\s+)?struct\s+(\w+)', content)
+        result['enums'] = re.findall(r'(?:pub\s+)?enum\s+(\w+)', content)
+        result['traits'] = re.findall(r'(?:pub\s+)?trait\s+(\w+)', content)
+        result['impls'] = re.findall(r'impl(?:\s+<.*?>)?\s+(\w+)', content)
+        result['mods'] = re.findall(r'(?:pub\s+)?mod\s+(\w+)', content)
+        result['uses'] = re.findall(r'use\s+([^;]+);', content)
+        
+        return result
+    
+    @staticmethod
+    def parse_java_file(content: str) -> Dict[str, Any]:
+        """
+        Parse Java file to extract structure.
+        """
+        result = {
+            'classes': [],
+            'interfaces': [],
+            'methods': [],
+            'imports': [],
+            'packages': []
+        }
+        
+        # Java-specific patterns
+        result['classes'] = re.findall(r'(?:public\s+)?(?:abstract\s+)?class\s+(\w+)', content)
+        result['interfaces'] = re.findall(r'(?:public\s+)?interface\s+(\w+)', content)
+        result['methods'] = re.findall(r'(?:public|private|protected)\s+(?:static\s+)?(?:\w+(?:<.*?>)?\s+)?(\w+)\s*\(', content)
+        result['imports'] = re.findall(r'import\s+([^;]+);', content)
+        result['packages'] = re.findall(r'^package\s+([^;]+);', content, re.MULTILINE)
+        
+        return result
+    
+    @staticmethod
+    def parse_generic_file(content: str) -> Dict[str, Any]:
+        """
+        Generic parser for other programming languages.
+        Uses common patterns across many languages.
+        """
+        result = {
+            'functions': [],
+            'classes': [],
+            'comments': [],
+            'todos': []
+        }
+        
+        # Common patterns across languages
+        # Functions: function, func, fn, def, sub
+        result['functions'] = re.findall(r'(?:function|func|fn|def|sub)\s+(\w+)', content, re.IGNORECASE)
+        # Classes: class, struct, type
+        result['classes'] = re.findall(r'(?:class|struct|type)\s+(\w+)', content, re.IGNORECASE)
+        # TODO comments
+        result['todos'] = re.findall(r'(?://|#|/\*)\s*(TODO|FIXME|HACK|XXX|BUG|DEPRECATED)[:)]?\s*(.{0,100})', content, re.IGNORECASE)
         
         return result
     
@@ -406,6 +528,27 @@ class ContextCache:
                 file_context.classes = parsed['classes']
                 file_context.functions = parsed['functions']
                 file_context.imports = parsed['imports']
+            elif language == 'go':
+                parsed = self._code_parser.parse_go_file(content)
+                file_context.functions = parsed['functions']
+                file_context.classes = parsed['types']  # Go types are similar to classes
+                file_context.imports = [imp for group in parsed['imports'] for imp in (group[0].split('\n') if group[0] else [group[1]]) if imp]
+            elif language == 'rust':
+                parsed = self._code_parser.parse_rust_file(content)
+                file_context.functions = parsed['functions']
+                file_context.classes = parsed['structs']  # Rust structs are similar to classes
+                file_context.imports = parsed['uses']
+            elif language == 'java':
+                parsed = self._code_parser.parse_java_file(content)
+                file_context.classes = parsed['classes']
+                file_context.functions = parsed['methods']
+                file_context.imports = parsed['imports']
+            else:
+                # Use generic parser for other languages
+                parsed = self._code_parser.parse_generic_file(content)
+                file_context.classes = parsed['classes']
+                file_context.functions = parsed['functions']
+                # No imports in generic parser
             
             # Extract relevant context if query provided
             if query:

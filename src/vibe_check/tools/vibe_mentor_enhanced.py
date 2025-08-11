@@ -7,8 +7,11 @@ Extracts technologies, frameworks, and specific problems to give targeted guidan
 
 import re
 import functools
+import logging
 from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 # Import existing structures
 from ..mentor.models.persona import PersonaData
@@ -18,6 +21,26 @@ from ..mentor.patterns.handlers.base import PatternHandler
 
 # Import strategy pattern components
 from ..strategies.response_strategies import get_strategy_manager, TechnicalContext
+from .semantic_engine import SemanticEngine, QueryIntent
+
+# Import MCP sampling components
+try:
+    from ..mentor.mcp_sampling import (
+        MCPSamplingClient,
+        SamplingConfig,
+        ResponseQuality,
+        PromptBuilder,
+        ResponseCache
+    )
+    from ..mentor.hybrid_router import (
+        HybridRouter,
+        RouteDecision,
+        RouteOptimizer
+    )
+    MCP_SAMPLING_AVAILABLE = True
+except ImportError:
+    MCP_SAMPLING_AVAILABLE = False
+    logger.warning("MCP sampling components not available")
 
 # Constants for improved maintainability
 MIN_FEATURE_LENGTH = 3
@@ -252,13 +275,17 @@ class ContextExtractor:
 class EnhancedPersonaReasoning:
     """Generate context-aware responses for each persona"""
     
-    @staticmethod
+    def __init__(self):
+        """Initialize with semantic engine for better response generation"""
+        self.semantic_engine = SemanticEngine()
+    
     def generate_senior_engineer_response(
+        self,
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
         query: str
     ) -> Tuple[str, str, float]:
-        """Generate specific senior engineer advice using strategy pattern - FULLY REFACTORED"""
+        """Generate specific senior engineer advice using semantic understanding"""
         
         # Use strategy manager for all response generation
         strategy_manager = get_strategy_manager()
@@ -288,19 +315,47 @@ class EnhancedPersonaReasoning:
         
         # ENHANCEMENT: Give specific advice based on technology, even without patterns
         
-        # Technology + Framework combinations
+        # Use semantic engine for intelligent response generation
+        try:
+            # Process query with semantic understanding
+            context_str = self._build_context_string(tech_context, patterns)
+            semantic_result = self.semantic_engine.process_query(query, context_str)
+            
+            # Get the semantically appropriate response
+            if semantic_result['success'] and semantic_result['response']:
+                # Determine contribution type based on intent
+                intent_type = semantic_result['intent']['type']
+                contribution_type = self._map_intent_to_contribution_type(intent_type)
+                
+                return (
+                    contribution_type,
+                    semantic_result['response'],
+                    semantic_result['response_confidence']
+                )
+        except Exception as e:
+            # Fall back to strategy manager on error
+            pass
+        
+        # Technology + Framework combinations (fallback)
         if tech_context.technologies and tech_context.frameworks:
             tech = tech_context.technologies[0]
             framework = tech_context.frameworks[0]
+            # Use semantic engine even for fallback
+            fallback_query = f"ship {tech} with {framework} quickly"
+            semantic_result = self.semantic_engine.process_query(fallback_query, None)
+            if semantic_result['success']:
+                return (
+                    "suggestion",
+                    semantic_result['response'],
+                    semantic_result['response_confidence']
+                )
+            # Ultimate fallback
             return (
                 "suggestion",
-                f"Here's how I'd ship {tech} + {framework} this week: "
-                f"1) Use {tech}'s quickstart template - they usually have one for {framework}, "
-                f"2) Deploy a working prototype to Vercel/Netlify/Railway today, "
-                f"3) Get 5 real users testing by Friday. "
-                f"I've launched 50+ features - the ones that succeed iterate from real feedback, "
-                f"not architectural perfection. Ship the 20% that delivers 80% value.",
-                ConfidenceScores.VERY_HIGH
+                f"For {tech} + {framework}: Start with the official quickstart, "
+                f"deploy a working prototype today, and get user feedback immediately. "
+                f"Real usage beats perfect architecture.",
+                ConfidenceScores.MEDIUM
             )
         
         # Technology-specific MVP advice (even without frameworks)
@@ -529,15 +584,68 @@ class EnhancedPersonaReasoning:
             "We're in an AI-augmented development era - use these tools as force multipliers.",
             ConfidenceScores.MODERATE
         )
+    
+    def _build_context_string(self, tech_context: TechnicalContext, patterns: List[Dict[str, Any]]) -> str:
+        """Build context string for semantic analysis"""
+        context_parts = []
+        
+        if tech_context.technologies:
+            context_parts.append(f"technologies: {', '.join(tech_context.technologies)}")
+        if tech_context.frameworks:
+            context_parts.append(f"frameworks: {', '.join(tech_context.frameworks)}")
+        if tech_context.problem_type:
+            context_parts.append(f"problem type: {tech_context.problem_type}")
+        if tech_context.specific_features:
+            context_parts.append(f"features: {', '.join(tech_context.specific_features[:3])}")
+        if patterns:
+            pattern_names = [p.get('name', '') for p in patterns[:3] if p.get('name')]
+            if pattern_names:
+                context_parts.append(f"detected patterns: {', '.join(pattern_names)}")
+        
+        return ' | '.join(context_parts)
+    
+    def _map_intent_to_contribution_type(self, intent_type: str) -> str:
+        """Map semantic intent to contribution type"""
+        mapping = {
+            "tool_evaluation": "challenge",
+            "technical_debt": "concern",
+            "decision": "suggestion",
+            "debugging": "insight",
+            "implementation": "suggestion",
+            "integration": "observation",
+            "architecture": "synthesis",
+            "general": "observation"
+        }
+        return mapping.get(intent_type, "observation")
 
 
 class EnhancedVibeMentorEngine:
-    """Enhanced mentor engine with context-aware reasoning"""
+    """Enhanced mentor engine with context-aware reasoning and MCP sampling"""
     
-    def __init__(self, base_engine):
+    def __init__(self, base_engine, enable_mcp_sampling: bool = True):
         self.base_engine = base_engine
         self.context_extractor = ContextExtractor()
         self.enhanced_reasoning = EnhancedPersonaReasoning()
+        
+        # Initialize MCP sampling components if available
+        self.enable_mcp_sampling = enable_mcp_sampling and MCP_SAMPLING_AVAILABLE
+        if self.enable_mcp_sampling:
+            self.mcp_client = MCPSamplingClient()
+            self.hybrid_router = HybridRouter(
+                confidence_threshold=0.7,
+                enable_caching=True,
+                prefer_speed=False
+            )
+            self.dynamic_cache = ResponseCache(max_size=100)
+            self.route_optimizer = RouteOptimizer()
+            logger.info("MCP sampling enabled for dynamic response generation")
+        else:
+            self.mcp_client = None
+            self.hybrid_router = None
+            self.dynamic_cache = None
+            self.route_optimizer = None
+            if enable_mcp_sampling and not MCP_SAMPLING_AVAILABLE:
+                logger.warning("MCP sampling requested but components not available")
     
     def generate_contribution(
         self,
@@ -546,7 +654,8 @@ class EnhancedVibeMentorEngine:
         detected_patterns: List[Dict[str, Any]],
         context: Optional[str] = None,
         project_context: Optional[Any] = None,
-        file_contexts: Optional[List[Any]] = None
+        file_contexts: Optional[List[Any]] = None,
+        ctx: Optional[Any] = None  # FastMCP Context for sampling
     ) -> ContributionData:
         """Generate context-aware contribution from persona"""
         
@@ -575,8 +684,8 @@ class EnhancedVibeMentorEngine:
         
         # ENHANCEMENT: Use technical context as primary driver for response generation
         # Patterns are now optional enhancement, not required for good responses
-        contribution_type, content, confidence = self._reason_as_persona_enhanced(
-            persona, session.topic, tech_context, detected_patterns, session.contributions
+        content, contribution_type, confidence = self._reason_as_persona_enhanced(
+            persona, session.topic, tech_context, detected_patterns, session.contributions, ctx
         )
         
         contribution = ContributionData(
@@ -608,10 +717,21 @@ class EnhancedVibeMentorEngine:
         topic: str,
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
-        previous_contributions: List[ContributionData]
+        previous_contributions: List[ContributionData],
+        ctx: Optional[Any] = None  # FastMCP Context
     ) -> Tuple[str, str, float]:
-        """Generate enhanced persona reasoning with specific technical context"""
+        """Generate enhanced persona reasoning with specific technical context and optional MCP sampling"""
         
+        # Check if we should use dynamic generation
+        if self.enable_mcp_sampling and self.hybrid_router and ctx:
+            # Try dynamic generation via MCP sampling
+            dynamic_response = self._try_dynamic_generation(
+                persona, topic, tech_context, patterns, ctx
+            )
+            if dynamic_response:
+                return dynamic_response
+        
+        # Fall back to static responses
         if persona.id == "senior_engineer":
             return self.enhanced_reasoning.generate_senior_engineer_response(
                 tech_context, patterns, topic
@@ -629,3 +749,132 @@ class EnhancedVibeMentorEngine:
         return self.base_engine._reason_as_persona(
             persona, topic, patterns, previous_contributions, None
         )
+    
+    def _try_dynamic_generation(
+        self,
+        persona: PersonaData,
+        topic: str,
+        tech_context: TechnicalContext,
+        patterns: List[Dict[str, Any]],
+        ctx: Any
+    ) -> Optional[Tuple[str, str, float]]:
+        """Try to generate dynamic response via MCP sampling"""
+        
+        try:
+            # Prepare context for routing decision
+            context_dict = {
+                "technologies": tech_context.technologies,
+                "frameworks": tech_context.frameworks,
+                "patterns": [p.get("pattern_type", "") for p in patterns],
+                "problem_type": tech_context.problem_type
+            }
+            
+            # Classify intent
+            intent = "general"  # Default intent
+            if tech_context.problem_type:
+                intent = tech_context.problem_type
+            
+            # Make routing decision
+            route_metrics = self.hybrid_router.decide_route(
+                query=topic,
+                intent=intent,
+                context=context_dict,
+                has_workspace_context=bool(tech_context.file_references),
+                has_static_response=True
+            )
+            
+            # Only use dynamic for DYNAMIC decisions (not STATIC or HYBRID for now)
+            if route_metrics.decision != RouteDecision.DYNAMIC:
+                return None
+            
+            # Check cache first
+            if self.dynamic_cache:
+                cached = self.dynamic_cache.get(intent, topic, context_dict)
+                if cached:
+                    logger.debug("Using cached dynamic response")
+                    return cached["content"], "insight", cached["confidence"]
+            
+            # Build persona-specific prompt
+            system_prompt = self._build_persona_prompt(persona, intent, tech_context)
+            user_message = f"Query: {topic}"
+            
+            if tech_context.file_references:
+                user_message += f"\n\nRelevant files: {', '.join(tech_context.file_references[:3])}"
+            
+            # Request completion via MCP
+            import asyncio
+            response = asyncio.run(ctx.sample(
+                messages=user_message,
+                system_prompt=system_prompt,
+                temperature=0.7,
+                max_tokens=1000
+            ))
+            
+            if hasattr(response, 'text') and response.text:
+                content = response.text
+                
+                # Cache the response
+                if self.dynamic_cache:
+                    self.dynamic_cache.put(intent, topic, context_dict, {
+                        "content": content,
+                        "confidence": 0.85
+                    })
+                
+                # Record success
+                if self.route_optimizer:
+                    self.route_optimizer.record_outcome(
+                        query=topic,
+                        decision=RouteDecision.DYNAMIC,
+                        latency_ms=1000,  # Placeholder
+                        success=True
+                    )
+                
+                return content, "insight", 0.85
+        
+        except Exception as e:
+            logger.error(f"Dynamic generation failed: {e}")
+            if self.route_optimizer:
+                self.route_optimizer.record_outcome(
+                    query=topic,
+                    decision=RouteDecision.DYNAMIC,
+                    latency_ms=1000,
+                    success=False
+                )
+        
+        return None
+    
+    def _build_persona_prompt(self, persona: PersonaData, intent: str, tech_context: TechnicalContext) -> str:
+        """Build a persona-specific system prompt for MCP sampling"""
+        
+        prompt = f"""You are {persona.name}, {persona.background}.
+
+Expertise: {', '.join(persona.expertise)}
+Perspective: {persona.perspective}
+Communication style: {persona.communication['style']}
+Tone: {persona.communication['tone']}
+
+Provide specific, actionable advice for the query.
+Focus on practical solutions based on the actual context.
+Avoid generic responses - be specific to their situation.
+"""
+        
+        # Add technology context
+        if tech_context.technologies:
+            prompt += f"\nTechnologies mentioned: {', '.join(tech_context.technologies[:5])}"
+        
+        if tech_context.frameworks:
+            prompt += f"\nFrameworks in use: {', '.join(tech_context.frameworks[:3])}"
+        
+        # Add intent-specific guidance
+        intent_guidance = {
+            "architecture": "Focus on: Design trade-offs, scalability, maintainability",
+            "debugging": "Focus on: Root cause analysis, systematic approach",
+            "implementation": "Focus on: Step-by-step approach, error handling",
+            "integration": "Focus on: API compatibility, data flow, error handling",
+            "decision": "Focus on: Trade-offs, team capability, long-term impact"
+        }
+        
+        if intent in intent_guidance:
+            prompt += f"\n\n{intent_guidance[intent]}"
+        
+        return prompt

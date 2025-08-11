@@ -20,6 +20,7 @@ import argparse
 import secrets
 import time
 import random
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -1212,6 +1213,71 @@ def vibe_check_mentor(
         # Get mentor engine instance
         engine = get_mentor_engine()
         
+        # Check if workspace is configured
+        from .mentor.context_manager import get_context_cache, SecurityValidator
+        workspace = SecurityValidator.get_workspace_directory()
+        
+        # Warn if workspace not configured but query suggests code analysis
+        workspace_warning = ""
+        if not workspace and any(indicator in query.lower() for indicator in 
+                                ['typescript', 'eslint', 'any type', 'code', 'file', 
+                                 'function', 'class', 'variable', 'import']):
+            logger.warning("⚠️ WORKSPACE not configured - vibe_check_mentor cannot read actual code files")
+            logger.warning("   To enable code analysis, configure with: -e WORKSPACE=\"/path/to/project\"")
+            logger.warning("   Currently providing generic advice without seeing your actual code")
+            workspace_warning = "\n\n⚠️ **Note**: WORKSPACE not configured. To enable code-specific advice, reconfigure with:\n```bash\nclaude mcp add vibe-check-local -e WORKSPACE=\"/path/to/project\" ...\n```"
+        
+        # Load workspace files if available
+        workspace_context = ""
+        if workspace and (file_paths or query):
+            logger.info(f"Loading workspace context from: {workspace}")
+            context_cache = get_context_cache()
+            
+            # Generate session ID if not provided
+            if not session_id:
+                session_id = f"mentor-session-{int(time.time())}-{secrets.token_hex(4)}"
+            
+            # Auto-discover or use provided file paths
+            discovered_workspace, discovered_files = context_cache.auto_discover_context(
+                query=query,
+                file_paths=file_paths,
+                working_directory=working_directory or workspace
+            )
+            
+            # Load files into context
+            if discovered_files or file_paths:
+                file_contexts, file_errors = context_cache.add_files_to_session(
+                    session_id=session_id,
+                    file_paths=file_paths or discovered_files,
+                    working_directory=discovered_workspace or workspace,
+                    query=query
+                )
+                
+                # Format file contexts for inclusion
+                if file_contexts:
+                    workspace_info = []
+                    for fc in file_contexts[:5]:  # Limit to 5 files
+                        info = [f"\n=== {fc.path} ({fc.language}) ==="]
+                        if fc.classes:
+                            info.append(f"Classes: {', '.join(fc.classes[:5])}")
+                        if fc.functions:
+                            info.append(f"Functions: {', '.join(fc.functions[:5])}")
+                        if fc.relevant_lines:
+                            for category, lines in fc.relevant_lines.items():
+                                if lines:
+                                    info.append(f"{category}: {len(lines)} matches")
+                        workspace_info.append('\n'.join(info))
+                    
+                    workspace_context = '\n'.join(workspace_info)
+                    logger.info(f"Loaded {len(file_contexts)} files from workspace")
+                
+                if file_errors:
+                    logger.warning(f"File loading errors: {file_errors}")
+        
+        # Combine workspace context with provided context
+        if workspace_context:
+            context = f"{context or ''}\n\n--- Workspace Files ---\n{workspace_context}"
+        
         # Step 1: Extract business context BEFORE pattern detection
         from .core.business_context_extractor import BusinessContextExtractor, ContextType
         context_extractor = BusinessContextExtractor()
@@ -1564,7 +1630,7 @@ def vibe_check_mentor(
                 "can_continue": session.next_contribution_needed
             },
             "reasoning_depth": reasoning_depth,
-            "formatted_output": engine.format_session_output(session)
+            "formatted_output": engine.format_session_output(session) + workspace_warning
         }
         
         # Log formatted output for debugging
@@ -1990,7 +2056,30 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
+        # Load and display version
+        version_file = Path(__file__).parent.parent.parent / "VERSION"
+        package_json = Path(__file__).parent.parent.parent / "package.json"
+        
+        version = "unknown"
+        if version_file.exists():
+            version = version_file.read_text().strip()
+        elif package_json.exists():
+            import json
+            with open(package_json) as f:
+                package_data = json.load(f)
+                version = package_data.get("version", "unknown")
+        
         logger.info("🚀 Starting Vibe Check MCP Server...")
+        logger.info(f"📌 Version: {version}")
+        
+        # Check and log WORKSPACE configuration
+        workspace_env = os.environ.get('WORKSPACE')
+        if workspace_env:
+            logger.info(f"✅ WORKSPACE configured: {workspace_env}")
+        else:
+            logger.warning("⚠️ WORKSPACE environment variable not set")
+            logger.warning("   vibe_check_mentor will provide generic advice without code analysis")
+            logger.warning("   To enable: claude mcp add ... -e WORKSPACE=\"/path/to/project\" ...")
         
         # Configuration validation (Issue #98)
         logger.info("🔍 Validating configuration for Claude CLI and MCP integration...")
