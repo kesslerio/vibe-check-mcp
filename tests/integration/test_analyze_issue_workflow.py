@@ -19,7 +19,7 @@ from vibe_check.tools.analyze_issue import (
     GitHubIssueAnalyzer,
     analyze_issue
 )
-from vibe_check.tools.vibe_check_framework import VibeCheckMode, VibeLevel, VibeCheckResult
+from vibe_check.tools.legacy.vibe_check_framework import VibeCheckMode, VibeLevel, VibeCheckResult
 from vibe_check.core.educational_content import DetailLevel
 
 

@@ -8,7 +8,7 @@ with PR review and analysis tools.
 import pytest
 import subprocess
 from unittest.mock import patch, MagicMock
-from vibe_check.tools.pr_review import PRReviewTool
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
 
 
 class TestClaudeCodeIntegration:

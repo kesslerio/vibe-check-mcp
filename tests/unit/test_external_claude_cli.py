@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 # Import the class under test
-from vibe_check.tools.external_claude_cli import ExternalClaudeCli, ClaudeCliResult
+from vibe_check.tools.analyze_llm_backup import ExternalClaudeCli, ClaudeCliResult
 
 
 class TestExternalClaudeCli:

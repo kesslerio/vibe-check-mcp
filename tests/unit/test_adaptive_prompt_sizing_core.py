@@ -6,7 +6,7 @@ with minimal setup and maximum coverage of the key behaviors.
 """
 
 import pytest
-from src.vibe_check.tools.pr_review import PRReviewTool
+from vibe_check.tools.legacy.review_pr_monolithic_backup import PRReviewTool
 
 
 class TestAdaptivePromptSizingCore:

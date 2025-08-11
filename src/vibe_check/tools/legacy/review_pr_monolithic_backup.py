@@ -28,10 +28,10 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
 # Import Claude CLI debug/verbose config
-from ..utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
+from ...utils import CLAUDE_CLI_DEBUG, CLAUDE_CLI_VERBOSE
 
 # Import external Claude CLI integration
-from .analyze_external import ExternalClaudeCli
+from ..analyze_llm_backup import ExternalClaudeCli
 
 logger = logging.getLogger(__name__)
 
