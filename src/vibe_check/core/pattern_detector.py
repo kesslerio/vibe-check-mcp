@@ -95,7 +95,16 @@ class PatternDetector:
             
         Returns:
             List of DetectionResult objects for detected patterns
+        
+        Raises:
+            ValueError: If content is None or not a string
         """
+        # Validate input content
+        if content is None:
+            raise ValueError("Content cannot be None")
+        if not isinstance(content, str):
+            raise TypeError(f"Content must be string, got {type(content)}")
+        
         detected_patterns = []
         
         # Combine content and context
