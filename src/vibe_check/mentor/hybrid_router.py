@@ -388,9 +388,11 @@ class RouteOptimizer:
     Optimizes routing decisions based on historical performance
     """
     
-    def __init__(self):
+    def __init__(self, max_history_size: int = 1000, max_patterns: int = 500):
         self.history: List[Dict[str, Any]] = []
         self.pattern_performance: Dict[str, Dict[str, float]] = {}
+        self.max_history_size = max_history_size
+        self.max_patterns = max_patterns
     
     def record_outcome(
         self,
@@ -412,8 +414,23 @@ class RouteOptimizer:
         
         self.history.append(outcome)
         
+        # Enforce history size limit (remove oldest entries)
+        if len(self.history) > self.max_history_size:
+            # Keep only the most recent entries
+            self.history = self.history[-self.max_history_size:]
+        
         # Update pattern performance
         self._update_pattern_performance(query, decision, success)
+        
+        # Enforce pattern limit (remove least used patterns)
+        if len(self.pattern_performance) > self.max_patterns:
+            # Sort by total usage and keep most used patterns
+            sorted_patterns = sorted(
+                self.pattern_performance.items(),
+                key=lambda x: x[1].get("static_total", 0) + x[1].get("dynamic_total", 0),
+                reverse=True
+            )
+            self.pattern_performance = dict(sorted_patterns[:self.max_patterns])
     
     def _update_pattern_performance(
         self,
