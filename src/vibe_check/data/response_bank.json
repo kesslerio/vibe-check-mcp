@@ -1,0 +1,167 @@
+{
+  "tool_decisions": [
+    {
+      "context": "tool causing more problems warnings errors failing",
+      "response": "When a tool increases complexity without clear benefits, it's time to reassess. Calculate the ROI: if you've spent more time fighting the tool than it would take to build a simpler solution, abandon it. I've killed many 'smart' integrations that became maintenance nightmares. The ts-migrate scenario is classic - if it's adding warnings instead of fixing them, you're going backwards. Document what didn't work and move on.",
+      "key_phrases": ["increased warnings", "more problems", "not working", "abandon", "ts-migrate", "failing tool"]
+    },
+    {
+      "context": "evaluating whether to continue with problematic integration",
+      "response": "Give a tool 3 iterations to prove value: initial setup, one major integration, and one debugging session. If it's still fighting you after that, the relationship won't improve. That ts-migrate adding 500 warnings? That's your signal - it's not solving your problem. Sometimes the best migration is a gradual manual one. Trust your instincts - developer ergonomics matter more than features.",
+      "key_phrases": ["should continue", "worth it", "keep trying", "give up", "evaluation"]
+    },
+    {
+      "context": "migration tool making things worse",
+      "response": "Migration tools promise automation but often deliver complexity. If your 'helper' tool is creating more work (like ts-migrate adding warnings), abandon it immediately. I've seen teams waste months on bad migration tools. The manual approach is often faster: migrate critical paths first, leave working code alone, and use TypeScript's incremental adoption. You don't need 100% coverage on day one.",
+      "key_phrases": ["migration", "automated tool", "worse after", "more warnings", "ts-migrate"]
+    },
+    {
+      "context": "sunk cost fallacy with tools",
+      "response": "The time you've already spent on a failing tool is gone - don't throw good time after bad. If you're asking 'should I abandon this', you probably should. I abandoned a 2-week Kubernetes migration when I realized Fly.io would solve our needs in 2 hours. The best engineers know when to quit and try a different approach.",
+      "key_phrases": ["already spent", "time invested", "sunk cost", "keep going", "abandon"]
+    }
+  ],
+  "technical_debt": [
+    {
+      "context": "deciding on refactoring priority with limited time",
+      "response": "Refactor when the cost of change exceeds the cost of cleanup. Track how many times you've worked around the same issue. After the third workaround, refactoring becomes cheaper than continued patches. Focus on code that changes frequently first - that's where debt hurts most. Ignore debt in stable, working code that nobody touches.",
+      "key_phrases": ["refactor", "technical debt", "cleanup", "worth fixing", "priority"]
+    },
+    {
+      "context": "legacy system modernization decision",
+      "response": "Don't modernize for the sake of it. Modernize when: 1) You can't hire developers who know the tech, 2) Security updates are unavailable, 3) It blocks critical features. Otherwise, wrap it in a modern API and leave it alone. I've seen perfectly good COBOL systems outlive three 'modern' rewrites.",
+      "key_phrases": ["legacy", "modernize", "old system", "rewrite", "migration"]
+    },
+    {
+      "context": "consolidating duplicate implementations",
+      "response": "Three implementations of the same thing? That's two too many. But consolidate gradually: first, stop creating new versions. Second, migrate new features to one implementation. Third, slowly migrate existing code during regular work. Never do a 'big bang' consolidation - it always takes 3x longer than estimated.",
+      "key_phrases": ["duplicate", "consolidate", "multiple versions", "unify", "merge implementations"]
+    }
+  ],
+  "architecture_decisions": [
+    {
+      "context": "microservices vs monolith for startup",
+      "response": "Start with a monolith. Every successful microservices architecture I've seen evolved from a monolith that grew too big. You don't know your service boundaries yet. Build a well-modularized monolith, and when a module needs independent scaling or deployment, then extract it. Premature microservices killed more startups than bad code ever did.",
+      "key_phrases": ["microservices", "monolith", "architecture", "startup", "which architecture"]
+    },
+    {
+      "context": "build vs buy authentication system",
+      "response": "Never build auth. Use Auth0, Clerk, Supabase Auth, or AWS Cognito. Authentication seems simple but hides endless complexity: password resets, 2FA, session management, security patches. I've built auth three times in my career - each time was a mistake. The $99/month you save building it yourself will cost you $10K in engineering time within 6 months.",
+      "key_phrases": ["build auth", "authentication", "login system", "build vs buy", "custom auth"]
+    },
+    {
+      "context": "choosing between similar frameworks",
+      "response": "Pick the one your team knows best. The 5% performance difference between React and Vue doesn't matter. Your team's productivity does. If you're all Python developers, use Django/FastAPI. If you're JavaScript natives, use Next.js. The best framework is the one you can ship with. I've seen expert PHP teams outperform novice Go teams every time.",
+      "key_phrases": ["which framework", "react vs vue", "choose framework", "best framework", "framework decision"]
+    },
+    {
+      "context": "API design REST vs GraphQL vs gRPC",
+      "response": "REST for public APIs - everyone understands it. GraphQL for complex frontends with varied data needs - saves round trips. gRPC for internal microservices - best performance. Don't mix paradigms in one project. I've seen teams add GraphQL to fix bad REST design - they ended up with two bad APIs instead of one good one.",
+      "key_phrases": ["REST", "GraphQL", "gRPC", "API design", "which API"]
+    }
+  ],
+  "debugging_strategies": [
+    {
+      "context": "systematic debugging approach for complex issues",
+      "response": "Start with binary search: cut the problem space in half repeatedly. Disable half the features - does it still break? Then the bug's in the active half. Most bugs hide where data transforms: API boundaries, serialization, type conversions. Check those first. Add logging at every transformation point. The bug is rarely where you think it is.",
+      "key_phrases": ["debug", "find bug", "troubleshoot", "not working", "systematic"]
+    },
+    {
+      "context": "performance debugging and optimization",
+      "response": "Measure first, optimize second. Add timing logs: log the start and end of every major operation. The slowdown is never where you expect. I once spent days optimizing a database query only to find the real issue was JSON serialization. Use real production data for testing - dev data hides performance issues.",
+      "key_phrases": ["slow", "performance", "optimize", "bottleneck", "latency"]
+    },
+    {
+      "context": "debugging integration failures",
+      "response": "Integration bugs are always about assumptions. Log the exact request you're sending and the exact response you receive - raw, not parsed. 90% of integration issues are: wrong auth headers, incorrect content-type, or mismatched data formats. Test with curl first - if curl works but your code doesn't, the bug's in your code.",
+      "key_phrases": ["integration", "API not working", "third party", "external service", "connection failed"]
+    },
+    {
+      "context": "race condition and async debugging",
+      "response": "Race conditions hide in success. Add random delays to expose them: sleep(Math.random() * 100ms) before critical sections. If that breaks things, you have a race condition. For async issues, log with timestamps and request IDs. The pattern will emerge. Most race conditions happen at boundaries: startup, shutdown, or state transitions.",
+      "key_phrases": ["race condition", "async", "concurrent", "timing issue", "intermittent"]
+    }
+  ],
+  "implementation_approaches": [
+    {
+      "context": "shipping MVP features quickly",
+      "response": "Ship the walking skeleton first: the simplest end-to-end flow that provides value. No abstractions, no optimization, just working code. You'll learn more from 10 users on a basic version than 6 months of perfect architecture. Real usage reveals real requirements. That feature you think is critical? Users might never click it.",
+      "key_phrases": ["ship quickly", "mvp", "implement fast", "deliver soon", "quick release"]
+    },
+    {
+      "context": "incremental feature development",
+      "response": "Build features in thin vertical slices, not horizontal layers. Don't build a complete database layer, then API, then UI. Build one complete user action end-to-end, deploy it, then build the next. This way, you always have something shippable, and you learn what's actually needed vs. what you imagined.",
+      "key_phrases": ["incremental", "iterative", "feature development", "how to build", "development approach"]
+    },
+    {
+      "context": "dealing with unclear requirements",
+      "response": "Unclear requirements are a feature, not a bug. Build the smallest possible interpretation and show it. The feedback will clarify requirements better than any meeting. 'I'll know it when I see it' is actually valid - so show them something quickly. Prototype in hours, not weeks.",
+      "key_phrases": ["unclear requirements", "vague spec", "don't understand", "ambiguous", "requirements"]
+    }
+  ],
+  "integration_patterns": [
+    {
+      "context": "third party API integration approach",
+      "response": "Always use the official SDK first. If there's no SDK, check if there's an OpenAPI spec to generate one. Only write custom HTTP clients as a last resort. Wrap any third-party code in your own interface - it makes switching providers easier. I've swapped payment processors in 2 hours because of good abstraction.",
+      "key_phrases": ["API integration", "third party", "SDK", "client library", "external API"]
+    },
+    {
+      "context": "webhook implementation patterns",
+      "response": "Webhooks will fail. Design for it: 1) Always respond 200 immediately and process async, 2) Implement idempotency - webhooks will arrive multiple times, 3) Add a manual retry mechanism, 4) Log everything with correlation IDs. Most webhook issues are timeout-related. Process async and you'll eliminate 90% of problems.",
+      "key_phrases": ["webhook", "callback", "event handling", "async notification", "real-time events"]
+    },
+    {
+      "context": "service integration testing",
+      "response": "Test integrations with three levels: 1) Unit tests with mocked responses, 2) Integration tests against a sandbox/staging API, 3) Smoke tests in production with real data. Record and replay real API responses for testing. VCR/Wiremock are your friends. Never test exclusively against mocks - they lie about reality.",
+      "key_phrases": ["integration testing", "API testing", "mock services", "test external", "service testing"]
+    }
+  ],
+  "deployment_operations": [
+    {
+      "context": "deployment strategy for safety",
+      "response": "Deploy gradually: canary → 10% → 50% → 100%. If you can't do gradual rollouts, deploy during low traffic and stay online for 2 hours. Most issues appear within 15 minutes. Always have a rollback plan that takes less than 5 minutes to execute. The feature flag is your friend - deploy code dark, then enable via flag.",
+      "key_phrases": ["deployment", "release", "rollout", "production", "deploy strategy"]
+    },
+    {
+      "context": "monitoring and alerting setup",
+      "response": "Alert on user-facing symptoms, not causes. Alert on 'checkout failing' not 'CPU at 80%'. You'll get fewer false positives and catch real issues. Set up three alerts minimum: 1) Error rate spike, 2) Response time degradation, 3) Business metric drop (signups, purchases). Everything else is a dashboard, not an alert.",
+      "key_phrases": ["monitoring", "alerting", "observability", "metrics", "alerts"]
+    }
+  ],
+  "team_productivity": [
+    {
+      "context": "code review best practices",
+      "response": "Review for correctness, not style - that's what linters are for. Focus on: 1) Does it solve the problem? 2) Will it break something? 3) Can the next developer understand it? Stylistic nitpicks kill momentum. I approve PRs with 'LGTM, few nits' and let authors decide if they're worth fixing. Ship momentum matters more than perfect code.",
+      "key_phrases": ["code review", "PR review", "review process", "pull request", "feedback"]
+    },
+    {
+      "context": "dealing with technical disagreements",
+      "response": "Disagree and commit. Set a time box: debate for 30 minutes, then the person doing the work decides. Document the decision and revisit in 3 months with data. Most technical debates are about predictions - reality will prove who was right. I've been wrong about 'critical' architectural decisions that ended up not mattering at all.",
+      "key_phrases": ["disagreement", "technical debate", "team conflict", "architecture disagreement", "design dispute"]
+    }
+  ],
+  "error_recovery": [
+    {
+      "context": "production incident response",
+      "response": "First, stop the bleeding - rollback or feature flag off. Then diagnose. Never debug in production under pressure. Rollback gives you time to think. Post-incident: write a blameless postmortem focusing on system failures, not people. The person who caused the incident is the expert on preventing it next time.",
+      "key_phrases": ["incident", "production issue", "outage", "emergency", "crisis"]
+    },
+    {
+      "context": "data corruption recovery",
+      "response": "Stop writes immediately. Assess the scope - how much data, how critical? If you have backups, restore to a point before corruption. If not, write a script to identify corrupted records (they usually have patterns). Fix in staging first. Always add checksums/validation after a corruption incident - it's the vaccine against recurrence.",
+      "key_phrases": ["data corruption", "data loss", "database issue", "corrupt data", "data recovery"]
+    }
+  ],
+  "general_advice": [
+    {
+      "context": "general engineering wisdom",
+      "response": "Focus on solving the immediate problem. Perfect is the enemy of good. The code you write today will be replaced or deleted within 2 years. Make it work, make it maintainable, and move on. The business value you deliver matters more than the code quality you achieve.",
+      "key_phrases": ["general", "advice", "help", "what should", "best practice"]
+    },
+    {
+      "context": "when stuck or blocked",
+      "response": "When stuck for more than 30 minutes, change approach. Take a walk, explain it to someone (or a rubber duck), or work on something else. Your subconscious will solve it. Most breakthroughs happen away from the keyboard. I've solved more bugs in the shower than at my desk.",
+      "key_phrases": ["stuck", "blocked", "can't figure out", "not working", "frustrated"]
+    }
+  ]
+}
