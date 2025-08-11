@@ -34,6 +34,24 @@ text = text.replace(f"{{{var}}}", str(kwargs[var]))
 
 ## Security Fixes Implemented
 
+### Enhanced Security Features (Edge Case Improvements)
+
+**Configurable Rate Limiter Cleanup**
+- Made bucket cleanup thresholds configurable (`max_buckets`, `retain_buckets`)  
+- Added monitoring logs for cleanup operations
+- Prevents memory exhaustion with customizable limits
+
+**MIME Type Validation Enhancement**
+- Added MIME type validation alongside extension checking
+- 20+ supported MIME types for safe file access
+- Graceful fallback when python-magic is unavailable
+- Enhanced security against file type spoofing attacks
+
+**Enhanced Template Error Logging**  
+- Detailed error context logging for template rendering failures
+- Includes template content preview, variable names, and error types
+- Improved debugging capabilities while maintaining security
+
 ### 1. Safe Template Rendering (Jinja2 Sandbox)
 
 **File:** `mcp_sampling_secure.py`

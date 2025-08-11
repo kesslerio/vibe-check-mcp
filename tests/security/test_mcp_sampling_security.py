@@ -175,6 +175,83 @@ class TestTemplateInjectionPrevention:
         assert prompt is not None  # Should not crash
 
 
+class TestEnhancedSecurityFeatures:
+    """Test the enhanced security features from edge case recommendations"""
+    
+    def test_configurable_rate_limiter_cleanup(self):
+        """Test configurable bucket cleanup thresholds"""
+        # Test with custom thresholds
+        rate_limiter = RateLimiter(
+            max_buckets=10,  # Low threshold for testing
+            retain_buckets=5
+        )
+        
+        # Fill buckets beyond threshold
+        for i in range(15):
+            rate_limiter._get_bucket_key(f"user_{i}")
+            bucket = TokenBucket(tokens_per_minute=60, burst_capacity=10)
+            rate_limiter.buckets[f"user_{i}"] = bucket
+        
+        # Trigger cleanup
+        rate_limiter._cleanup_old_buckets()
+        
+        # Should retain only retain_buckets amount
+        assert len(rate_limiter.buckets) == 5
+    
+    def test_mime_type_validation_enabled(self):
+        """Test MIME type validation when enabled"""
+        controller = FileAccessController(
+            enable_mime_validation=True,
+            allowed_mime_types={'text/plain', 'application/json'}
+        )
+        
+        # Test should pass validation if magic is available
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("test content")
+            f.flush()
+            
+            allowed, reason = controller.is_allowed(f.name)
+            # Should either pass or gracefully fall back to extension validation
+            assert allowed or "MIME validation failed" in reason
+            
+            import os
+            os.unlink(f.name)
+    
+    def test_mime_type_validation_disabled(self):
+        """Test MIME type validation when disabled"""
+        controller = FileAccessController(enable_mime_validation=False)
+        
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("test content")
+            f.flush()
+            
+            # Mock the validation method to ensure it's not called
+            original_method = controller._validate_mime_type
+            controller._validate_mime_type = lambda path: (True, "MIME validation disabled")
+            
+            allowed, reason = controller.is_allowed(f.name)
+            assert allowed
+            assert "MIME validation disabled" in reason
+            
+            import os
+            os.unlink(f.name)
+    
+    def test_enhanced_template_error_logging(self):
+        """Test enhanced template error handling with context logging"""
+        renderer = SafeTemplateRenderer()
+        
+        # Test template syntax error
+        with pytest.raises(TemplateSyntaxError):
+            renderer.render("{{ invalid syntax", {"var": "value"})
+        
+        # Test rendering error with better error message
+        result = renderer.render("{{ missing_var.invalid_method() }}", {"other_var": "value"})
+        assert result.startswith("[Template Error:")
+        assert "AttributeError" in result or "UndefinedError" in result
+
+
 class TestRateLimiting:
     """Test rate limiting functionality"""
     

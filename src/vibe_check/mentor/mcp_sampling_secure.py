@@ -33,6 +33,13 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from jinja2 import Environment, BaseLoader, TemplateSyntaxError, select_autoescape
 from jinja2.sandbox import SandboxedEnvironment
 
+# MIME type detection for enhanced security
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+
 # Import MCP types for sampling
 try:
     from mcp.types import (
@@ -186,11 +193,15 @@ class RateLimiter:
         self,
         requests_per_minute: int = 60,
         burst_capacity: int = 10,
-        per_user: bool = True
+        per_user: bool = True,
+        max_buckets: int = 1000,  # configurable threshold for cleanup
+        retain_buckets: int = 500  # how many buckets to keep during cleanup
     ):
         self.requests_per_minute = requests_per_minute
         self.burst_capacity = burst_capacity
         self.per_user = per_user
+        self.max_buckets = max_buckets
+        self.retain_buckets = retain_buckets
         self.buckets: Dict[str, TokenBucket] = {}
         self._cleanup_interval = 300  # Clean up old buckets every 5 minutes
         self._last_cleanup = time.time()
@@ -234,13 +245,19 @@ class RateLimiter:
     
     def _cleanup_old_buckets(self):
         """Remove inactive buckets to prevent memory leak"""
-        # For simplicity, we'll keep this basic
-        # In production, track last access time per bucket
-        if len(self.buckets) > 1000:
-            # Keep only the most recent 500 buckets
+        # Use configurable thresholds for cleanup
+        if len(self.buckets) > self.max_buckets:
+            # Keep only the most recent buckets based on retain_buckets setting
             keys = list(self.buckets.keys())
-            for key in keys[:-500]:
+            buckets_to_remove = len(keys) - self.retain_buckets
+            for key in keys[:buckets_to_remove]:
                 del self.buckets[key]
+            
+            # Log cleanup for monitoring
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Rate limiter cleanup: removed {buckets_to_remove} old buckets, "
+                       f"retained {self.retain_buckets} active buckets")
         
         self._last_cleanup = time.time()
 
@@ -271,15 +288,59 @@ class FileAccessController:
         '.md', '.txt', '.rst', '.sql', '.sh', '.bash', '.zsh'
     }
     
+    # Allowed MIME types for enhanced security
+    ALLOWED_MIME_TYPES = {
+        # Text files
+        'text/plain', 'text/x-python', 'text/javascript', 'text/x-typescript',
+        'text/x-java-source', 'text/x-go', 'text/x-rust', 'text/x-c',
+        'text/x-c++', 'text/x-csharp', 'text/x-ruby', 'text/x-php',
+        'text/x-swift', 'text/x-kotlin', 'text/x-scala', 'text/x-clojure',
+        'text/x-elixir', 'text/x-ocaml', 'text/html', 'text/css',
+        'text/markdown', 'text/x-rst', 'text/x-sql', 'text/x-shellscript',
+        # Structured data
+        'application/json', 'application/yaml', 'text/yaml',
+        'application/toml', 'application/xml', 'text/xml',
+        # Configuration files
+        'application/x-yaml', 'text/x-yaml', 'text/x-toml',
+        # Documentation
+        'text/x-markdown', 'application/rtf'
+    }
+    
     def __init__(
         self,
         allowed_paths: Optional[Set[str]] = None,
         restricted_paths: Optional[Set[str]] = None,
-        allowed_extensions: Optional[Set[str]] = None
+        allowed_extensions: Optional[Set[str]] = None,
+        allowed_mime_types: Optional[Set[str]] = None,
+        enable_mime_validation: bool = True
     ):
         self.allowed_paths = allowed_paths or set()
         self.restricted_paths = self.RESTRICTED_PATHS | (restricted_paths or set())
         self.allowed_extensions = self.ALLOWED_EXTENSIONS | (allowed_extensions or set())
+        self.allowed_mime_types = self.ALLOWED_MIME_TYPES | (allowed_mime_types or set())
+        self.enable_mime_validation = enable_mime_validation and MAGIC_AVAILABLE
+    
+    def _validate_mime_type(self, file_path: Path) -> Tuple[bool, str]:
+        """Validate file MIME type for enhanced security"""
+        if not self.enable_mime_validation:
+            return True, "MIME validation disabled"
+        
+        try:
+            # Get MIME type using python-magic
+            mime_type = magic.from_file(str(file_path), mime=True)
+            
+            if mime_type in self.allowed_mime_types:
+                return True, f"MIME type allowed: {mime_type}"
+            else:
+                return False, f"MIME type not allowed: {mime_type}"
+                
+        except Exception as e:
+            # Log error but don't fail completely
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"MIME type detection failed for {file_path}: {e}")
+            # Fall back to extension-based validation only
+            return True, f"MIME validation failed, using extension only: {e}"
     
     def is_allowed(self, file_path: str) -> Tuple[bool, str]:
         """
@@ -332,7 +393,12 @@ class FileAccessController:
             if not allowed:
                 return False, "Path not in allowed directories"
         
-        return True, "Access allowed"
+        # Enhanced security: Validate MIME type
+        mime_allowed, mime_reason = self._validate_mime_type(path)
+        if not mime_allowed:
+            return False, f"MIME type validation failed: {mime_reason}"
+        
+        return True, f"Access allowed - {mime_reason}"
 
 
 # ============================================================================
@@ -428,11 +494,24 @@ class SafeTemplateRenderer:
             return template.render(**safe_vars)
             
         except TemplateSyntaxError as e:
-            logger.error(f"Template syntax error: {e}")
+            # Enhanced logging with template context
+            logger.error(
+                f"Template syntax error: {e}\n"
+                f"Template content (first 200 chars): {template_str[:200]}\n"
+                f"Variables provided: {list(variables.keys())}"
+            )
             raise
         except Exception as e:
-            logger.error(f"Template rendering error: {e}")
-            return "[Template Error]"
+            # Enhanced logging with full context for debugging
+            logger.error(
+                f"Template rendering error: {e}\n"
+                f"Template content (first 200 chars): {template_str[:200]}\n"
+                f"Variables: {list(variables.keys())}\n"
+                f"Error type: {type(e).__name__}\n"
+                f"Error details: {str(e)}"
+            )
+            # Return more informative error message while still being safe
+            return f"[Template Error: {type(e).__name__}]"
 
 
 # ============================================================================
