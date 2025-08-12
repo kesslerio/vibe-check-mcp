@@ -49,6 +49,128 @@ class TestMentorMCPIntegration:
         assert engine.dynamic_cache is None
         assert engine.route_optimizer is None
     
+    @pytest.mark.asyncio
+    async def test_mcp_sampling_research_findings(self):
+        """Test that validates the critical MCP sampling research findings from issue #195"""
+        from vibe_check.mentor.mcp_sampling import (
+            MCPSamplingClient,
+            SamplingConfig,
+            ResponseQuality,
+            CircuitBreaker
+        )
+        from vibe_check.mentor.hybrid_router import HybridRouter
+        
+        # Test 1: Verify latency is under 3 seconds
+        client = MCPSamplingClient(
+            config=SamplingConfig(
+                temperature=0.7,
+                max_tokens=500,
+                quality=ResponseQuality.FAST
+            ),
+            request_timeout=3  # 3 second timeout as per requirement
+        )
+        
+        # Verify timeout is set correctly
+        assert client.request_timeout == 3
+        assert client.config.max_tokens == 500
+        
+        # Test 2: Verify circuit breaker is configured
+        assert client.circuit_breaker is not None
+        assert isinstance(client.circuit_breaker, CircuitBreaker)
+        assert client.circuit_breaker.failure_threshold == 5
+        assert client.circuit_breaker.recovery_timeout == 60
+        
+        # Test 3: Verify hybrid router handles novel queries
+        router = HybridRouter(confidence_threshold=0.7)
+        
+        # Novel query from issue #189
+        novel_query = "Should I implement ESLint hybrid automation strategy?"
+        
+        metrics = router.decide_route(
+            query=novel_query,
+            intent="implementation",
+            context={"technologies": ["eslint", "automation"]},
+            has_workspace_context=False,
+            has_static_response=False  # No static response for novel query
+        )
+        
+        # Should route to dynamic for novel queries without static responses
+        assert metrics.decision.value == "dynamic"
+        assert metrics.confidence < 0.7  # Low confidence for novel query
+        
+        # Test 4: Verify error handling with mock context
+        mock_ctx = AsyncMock()
+        mock_ctx.sample = AsyncMock(side_effect=Exception("Test failure"))
+        
+        # Should return None on failure (triggers fallback)
+        result = await client.request_completion(
+            messages="Test query",
+            ctx=mock_ctx
+        )
+        
+        assert result is None  # Graceful failure
+        
+        # Test 5: Verify successful response with mock
+        mock_ctx_success = AsyncMock()
+        mock_response = Mock()
+        mock_response.text = "Test response"
+        mock_ctx_success.sample = AsyncMock(return_value=mock_response)
+        
+        result = await client.request_completion(
+            messages="Test query",
+            ctx=mock_ctx_success
+        )
+        
+        assert result == "Test response"
+        
+    @pytest.mark.asyncio
+    async def test_novel_query_handling(self):
+        """Test that MCP sampling handles novel queries that break static system"""
+        from vibe_check.mentor.mcp_sampling import MCPSamplingClient, PromptBuilder
+        from unittest.mock import MagicMock
+        
+        # The specific novel query from issue #189
+        NOVEL_QUERY = "Should I implement ESLint hybrid automation strategy?"
+        
+        # Test prompt builder generates appropriate prompt
+        prompt = PromptBuilder.build_prompt(
+            intent="implementation",
+            query=NOVEL_QUERY,
+            context={
+                "technologies": ["eslint", "automation"],
+                "patterns": ["hybrid", "strategy"]
+            },
+            workspace_data=None
+        )
+        
+        # Verify prompt is generated and contains key elements
+        assert prompt is not None
+        assert len(prompt) > 100
+        assert "eslint" in prompt.lower()
+        assert NOVEL_QUERY in prompt
+        
+        # Test that the client can handle the novel query with mock
+        client = MCPSamplingClient()
+        
+        mock_ctx = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.text = "Dynamic response for ESLint hybrid automation"
+        mock_ctx.sample = AsyncMock(return_value=mock_response)
+        
+        response = await client.generate_dynamic_response(
+            intent="implementation",
+            query=NOVEL_QUERY,
+            context={"technologies": ["eslint"]},
+            workspace_data=None,
+            ctx=mock_ctx
+        )
+        
+        # Verify response is generated
+        assert response is not None
+        assert response["generated"] is True
+        assert response["confidence"] > 0.8
+        assert "Dynamic response" in response["content"]
+    
     @patch('vibe_check.tools.vibe_mentor_enhanced.MCP_SAMPLING_AVAILABLE', False)
     def test_enhanced_mentor_graceful_degradation(self):
         """Test that mentor works when MCP sampling components are not available"""

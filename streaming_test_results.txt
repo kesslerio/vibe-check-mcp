@@ -1,0 +1,12 @@
+MCP STREAMING TEST RESULTS
+========================================
+
+Streaming Supported: NO
+
+Details:
+- FastMCP Context.sample() returns a complete response object
+- No streaming parameters in method signature
+- MCP protocol supports streaming in spec but FastMCP doesn't implement it yet
+- Would need transport-level changes (WebSocket/SSE) for true streaming
+
+Recommendation: Proceed without streaming for now, revisit when FastMCP adds support
