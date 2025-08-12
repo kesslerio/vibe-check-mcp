@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 import time
 
-from vibe_check.mentor.mcp_sampling_secure import (
+from vibe_check.mentor.deprecated.mcp_sampling_secure import (
     QueryInput,
     FilePathInput,
     WorkspaceDataInput,
@@ -23,7 +23,7 @@ from vibe_check.mentor.mcp_sampling_secure import (
     sanitize_code_for_llm
 )
 
-from vibe_check.mentor.mcp_sampling_migration import (
+from vibe_check.mentor.deprecated.mcp_sampling_migration import (
     SecurePromptBuilder,
     SecureMCPSamplingClient
 )
