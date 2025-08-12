@@ -6,18 +6,50 @@ After focused research and practical testing, MCP sampling is **ready for produc
 
 ## 1. Streaming Support
 
-**Supported: NO**
+**Supported: NO** (FastMCP limitation, not protocol limitation)
 
 ### Details:
 - FastMCP's `Context.sample()` returns a complete response object, not a stream
 - No streaming parameters available in the current method signature
-- MCP protocol specification supports streaming, but FastMCP hasn't implemented it yet
-- Would require transport-level changes (WebSocket/SSE) for true streaming support
+- **Important**: MCP protocol DOES support streaming via SSE and Streamable HTTP
+- FastMCP v2.3 has transport-level streaming but not content-level streaming for `Context.sample()`
+- This is an implementation gap in FastMCP, not a protocol limitation
 
-### Workarounds:
-- Use smaller prompts for faster initial responses
-- Implement pseudo-streaming with progress indicators for perceived responsiveness
-- Cache partial results for common query patterns
+### Available Workarounds:
+
+#### 1. Progress Notifications (Recommended)
+```python
+# FastMCP supports progress notifications for long operations
+await ctx.report_progress(0, 100, "Starting analysis...")
+await ctx.report_progress(50, 100, "Processing query...")
+await ctx.report_progress(100, 100, "Complete!")
+```
+
+#### 2. Chunked Response Pattern
+```python
+# Break large operations into smaller Context.sample() calls
+for section in ["intro", "analysis", "conclusion"]:
+    result = await ctx.sample(f"Generate {section}")
+    await ctx.report_progress(step, total, f"Generated {section}")
+```
+
+#### 3. Resource Subscriptions
+```python
+# Use MCP resources with update notifications for real-time data
+@mcp.resource("stream://{id}")
+async def stream_resource(id: str) -> str:
+    return current_data[id]
+```
+
+### Alternative Solutions:
+- TypeScript MCP implementations have better streaming support
+- Monitor FastMCP GitHub for updates (issue tracking streaming enhancement)
+- Use transport-level streaming for server-to-client notifications with `transport="streamable-http"`
+
+### Impact on vibe-check-mcp:
+- Not critical since P95 latency is only 1.6s (well under 3s target)
+- Implement progress notifications for better perceived responsiveness
+- Consider chunked responses for very large queries in future
 
 ## 2. Latency Characteristics
 
