@@ -56,6 +56,9 @@ class VibeMentorEngine:
         self.response_coordinator = ResponseCoordinator() 
         self.pattern_detector = PatternDetector()
         self._enhanced_mode = True  # Re-enabled for better context-aware responses (Issue fix)
+        
+        # Backward compatibility attributes
+        self.DEFAULT_PERSONAS = DEFAULT_PERSONAS
 
     # Delegate session management to SessionManager
     def create_session(
@@ -83,10 +86,25 @@ class VibeMentorEngine:
         if self._enhanced_mode:
             try:
                 from .vibe_mentor_enhanced import EnhancedVibeMentorEngine
+                import asyncio
                 enhanced_engine = EnhancedVibeMentorEngine(self)
-                return enhanced_engine.generate_contribution(
-                    session, persona, detected_patterns, context, project_context, file_contexts
-                )
+                
+                # Handle async call properly
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # If we're in an async context, we can't use run_until_complete
+                        logger.warning("Cannot run async enhanced mode from async context, falling back to basic mode")
+                        self._enhanced_mode = False
+                    else:
+                        return loop.run_until_complete(enhanced_engine.generate_contribution(
+                            session, persona, detected_patterns, context, project_context, file_contexts
+                        ))
+                except RuntimeError:
+                    # No event loop running, create one
+                    return asyncio.run(enhanced_engine.generate_contribution(
+                        session, persona, detected_patterns, context, project_context, file_contexts
+                    ))
             except ImportError as e:
                 logger.warning(f"Enhanced reasoning not available: {str(e)}, falling back to basic mode")
                 self._enhanced_mode = False

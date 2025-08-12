@@ -20,7 +20,7 @@ from fastmcp import FastMCP
 from pydantic import BaseModel
 
 # Import the external Claude CLI wrapper
-from .analyze_external import ExternalClaudeCli, ClaudeCliResult
+from vibe_check.tools.analyze_issue import ExternalClaudeCli, ClaudeCliResult
 
 logger = logging.getLogger(__name__)
 

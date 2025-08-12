@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
-from timing_utils import PerformanceTimer
+from validation.timing_utils import PerformanceTimer
 
 
 class PatternDetector:

@@ -13,7 +13,6 @@ import os
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from vibe_check.tools.demo_tool import demo_analyze_text
 from vibe_check.server import analyze_text_demo, server_status
 
 
