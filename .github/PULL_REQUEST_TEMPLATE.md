@@ -48,6 +48,7 @@
 - [ ] Tests added/updated for new/modified functionality
 - [ ] Implementation details documented in PR description
 - [ ] Related issues referenced properly
+- [ ] **If you wrote code, is it actually being used?** (imported/called somewhere)
 
 ## Review Requirements
 <!-- DO NOT REMOVE - PR cannot be merged until these are satisfied -->
