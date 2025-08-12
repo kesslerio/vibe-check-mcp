@@ -9,22 +9,49 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
-def apply_security_patches():
+def apply_security_patches(use_optimized=True):
     """
     Apply security patches to the existing mcp_sampling module
     This function patches the module at runtime to use secure components
+    
+    Args:
+        use_optimized: If True, use optimized components for <10% overhead
     """
     try:
-        # Import both original and secure modules
+        # Import original module
         import vibe_check.mentor.mcp_sampling as original
-        from vibe_check.mentor.mcp_sampling_secure import (
-            SafeTemplateRenderer,
-            EnhancedSecretsScanner,
-            RateLimiter,
-            FileAccessController,
-            QueryInput,
-            WorkspaceDataInput
-        )
+        
+        if use_optimized:
+            # Use optimized components for performance
+            from vibe_check.mentor.mcp_sampling_optimized import (
+                SafeTemplateRenderer,
+                FastSecretsScanner as EnhancedSecretsScanner,
+                FastRateLimiter as RateLimiter,
+                FastFileAccessController as FileAccessController,
+                validate_query_fast,
+                validate_workspace_fast,
+                apply_optimized_patches
+            )
+            # Apply optimized patches directly
+            success = apply_optimized_patches()
+            if success:
+                logger.info("Applied optimized security patches (<10% overhead)")
+                return True
+            else:
+                logger.warning("Failed to apply optimized patches, falling back to standard")
+                use_optimized = False
+        
+        if not use_optimized:
+            # Fall back to standard secure components
+            from vibe_check.mentor.mcp_sampling_secure import (
+                SafeTemplateRenderer,
+                EnhancedSecretsScanner,
+                RateLimiter,
+                FileAccessController,
+                QueryInput,
+                WorkspaceDataInput
+            )
+        
         from vibe_check.mentor.mcp_sampling_migration import (
             SecurePromptTemplate,
             SecurePromptBuilder,

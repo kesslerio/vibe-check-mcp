@@ -40,6 +40,10 @@ except ImportError:
         print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
         sys.exit(1)
 
+# Apply security patches to mcp_sampling (Issue #194)
+from .mentor.mcp_sampling_patch import auto_apply
+auto_apply()
+
 from .tools.analyze_text_nollm import analyze_text_demo
 from .tools.large_prompt_demo import demo_large_prompt_analysis
 from .tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
