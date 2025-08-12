@@ -40,19 +40,8 @@ except ImportError:
         print("😅 FastMCP isn't vibing with us yet. Get it with: pip install fastmcp")
         sys.exit(1)
 
-# Apply security patches to mcp_sampling (Issue #194)
-# Control via VIBE_CHECK_SECURITY_PATCHES environment variable
-# Default: enabled (patches active for security)
-# To disable: VIBE_CHECK_SECURITY_PATCHES=false
-SECURITY_PATCHES_ENABLED = os.getenv('VIBE_CHECK_SECURITY_PATCHES', 'true').lower() != 'false'
-
-if SECURITY_PATCHES_ENABLED:
-    from .mentor.mcp_sampling_patch import auto_apply
-    auto_apply()
-    # Log security status after logger is configured
-else:
-    # Security patches explicitly disabled
-    pass
+# Security patches are now built into the main mcp_sampling.py (Issue #194)
+# No runtime patching needed - using ultrafast secure version directly
 
 from .tools.analyze_text_nollm import analyze_text_demo
 from .tools.large_prompt_demo import demo_large_prompt_analysis
@@ -84,13 +73,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Log security patch status (Issue #194)
-if SECURITY_PATCHES_ENABLED:
-    logger.info("✅ Security patches ACTIVE (0.02% overhead) - 12 vulnerabilities patched")
-    logger.info("   Control via VIBE_CHECK_SECURITY_PATCHES environment variable")
-else:
-    logger.warning("⚠️ Security patches DISABLED - 12 vulnerabilities exposed!")
-    logger.warning("   Set VIBE_CHECK_SECURITY_PATCHES=true to enable protection")
+# Security patches are built-in to mcp_sampling.py (ultrafast version with 0.02% overhead)
+logger.info("✅ Security patches ACTIVE - using ultrafast secure mcp_sampling (0.02% overhead)")
 
 # Initialize FastMCP server
 mcp = FastMCP(

@@ -1,0 +1,8 @@
+{
+  "template_rendering_overhead": 4.473184401502517,
+  "input_validation_overhead": 4747.743232787801,
+  "secrets_scanning_overhead": 101.4847116958032,
+  "full_processing_overhead": 30.235032112227362,
+  "average_overhead": 17.35410825686494,
+  "recommendation": "OPTIMIZE"
+}
