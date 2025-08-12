@@ -627,6 +627,12 @@ class EnhancedVibeMentorEngine:
         self.context_extractor = ContextExtractor()
         self.enhanced_reasoning = EnhancedPersonaReasoning()
         
+        # Initialize rate limiting for MCP calls
+        import time
+        self._last_mcp_calls = []  # Track timestamps of recent MCP calls
+        self._rate_limit = 10  # Maximum 10 requests per minute
+        self._rate_window = 60  # Rate window in seconds
+        
         # Initialize MCP sampling components if available
         self.enable_mcp_sampling = enable_mcp_sampling and MCP_SAMPLING_AVAILABLE
         if self.enable_mcp_sampling:
@@ -647,7 +653,7 @@ class EnhancedVibeMentorEngine:
             if enable_mcp_sampling and not MCP_SAMPLING_AVAILABLE:
                 logger.warning("MCP sampling requested but components not available")
     
-    def generate_contribution(
+    async def generate_contribution(
         self,
         session: CollaborativeReasoningSession,
         persona: PersonaData,
@@ -684,7 +690,7 @@ class EnhancedVibeMentorEngine:
         
         # ENHANCEMENT: Use technical context as primary driver for response generation
         # Patterns are now optional enhancement, not required for good responses
-        content, contribution_type, confidence = self._reason_as_persona_enhanced(
+        content, contribution_type, confidence = await self._reason_as_persona_enhanced(
             persona, session.topic, tech_context, detected_patterns, session.contributions, ctx
         )
         
@@ -711,7 +717,7 @@ class EnhancedVibeMentorEngine:
         
         return references
     
-    def _reason_as_persona_enhanced(
+    async def _reason_as_persona_enhanced(
         self,
         persona: PersonaData,
         topic: str,
@@ -725,7 +731,7 @@ class EnhancedVibeMentorEngine:
         # Check if we should use dynamic generation
         if self.enable_mcp_sampling and self.hybrid_router and ctx:
             # Try dynamic generation via MCP sampling
-            dynamic_response = self._try_dynamic_generation(
+            dynamic_response = await self._try_dynamic_generation(
                 persona, topic, tech_context, patterns, ctx
             )
             if dynamic_response:
@@ -750,7 +756,7 @@ class EnhancedVibeMentorEngine:
             persona, topic, patterns, previous_contributions, None
         )
     
-    def _try_dynamic_generation(
+    async def _try_dynamic_generation(
         self,
         persona: PersonaData,
         topic: str,
@@ -758,7 +764,22 @@ class EnhancedVibeMentorEngine:
         patterns: List[Dict[str, Any]],
         ctx: Any
     ) -> Optional[Tuple[str, str, float]]:
-        """Try to generate dynamic response via MCP sampling"""
+        """Try to generate dynamic response via MCP sampling with security measures"""
+        
+        # Check rate limiting
+        import time
+        current_time = time.time()
+        
+        # Clean old calls (older than rate window)
+        self._last_mcp_calls = [t for t in self._last_mcp_calls 
+                                if current_time - t < self._rate_window]
+        
+        # Check rate limit
+        if len(self._last_mcp_calls) >= self._rate_limit:
+            logger.warning(f"Rate limit exceeded for MCP sampling ({self._rate_limit}/{self._rate_window}s)")
+            return None
+        
+        self._last_mcp_calls.append(current_time)
         
         try:
             # Prepare context for routing decision
@@ -801,14 +822,37 @@ class EnhancedVibeMentorEngine:
             if tech_context.file_references:
                 user_message += f"\n\nRelevant files: {', '.join(tech_context.file_references[:3])}"
             
-            # Request completion via MCP
+            # Request completion via MCP with security measures
+            # Scan and redact secrets before sending to LLM
+            from ..mentor.mcp_sampling import SecretsScanner
+            scanner = SecretsScanner()
+            safe_message, secrets_found_msg = scanner.scan_and_redact(user_message)
+            safe_system_prompt, secrets_found_sys = scanner.scan_and_redact(system_prompt)
+            
+            if secrets_found_msg or secrets_found_sys:
+                logger.warning(f"Redacted {len(secrets_found_msg) + len(secrets_found_sys)} potential secrets")
+            
+            # Enforce maximum prompt length
+            MAX_PROMPT_LENGTH = 8000
+            if len(safe_message) + len(safe_system_prompt) > MAX_PROMPT_LENGTH:
+                logger.warning("Prompt too long, truncating")
+                safe_message = safe_message[:MAX_PROMPT_LENGTH - len(safe_system_prompt)]
+            
+            # Request with timeout for safety
             import asyncio
-            response = asyncio.run(ctx.sample(
-                messages=user_message,
-                system_prompt=system_prompt,
-                temperature=0.7,
-                max_tokens=1000
-            ))
+            try:
+                response = await asyncio.wait_for(
+                    ctx.sample(
+                        messages=safe_message,
+                        system_prompt=safe_system_prompt,
+                        temperature=0.7,
+                        max_tokens=1000
+                    ),
+                    timeout=30  # 30 second timeout
+                )
+            except asyncio.TimeoutError:
+                logger.error("MCP sampling timed out after 30 seconds")
+                return None
             
             if hasattr(response, 'text') and response.text:
                 content = response.text

@@ -233,7 +233,7 @@ class HybridRouter:
         self._stats["total_requests"] += 1
         
         # Check cache first
-        cache_key = self._get_cache_key(query, intent, context)
+        cache_key = self._get_cache_key(query, intent, context, has_workspace_context)
         if self.enable_caching and cache_key in self.decision_cache:
             self._stats["cache_hits"] += 1
             cached = self.decision_cache[cache_key]
@@ -332,11 +332,13 @@ class HybridRouter:
         
         return False
     
-    def _get_cache_key(self, query: str, intent: str, context: Dict[str, Any]) -> str:
+    def _get_cache_key(self, query: str, intent: str, context: Dict[str, Any], 
+                       has_workspace: bool = False) -> str:
         """Generate a cache key for the routing decision"""
-        # Simple key based on query start, intent, and tech count
+        # Include workspace context in the key to differentiate cached decisions
         tech_count = len(context.get("technologies", []))
-        return f"{query[:50]}|{intent}|{tech_count}"
+        workspace_flag = "W" if has_workspace else "N"
+        return f"{query[:50]}|{intent}|{tech_count}|{workspace_flag}"
     
     def get_stats(self) -> Dict[str, Any]:
         """Get routing statistics"""

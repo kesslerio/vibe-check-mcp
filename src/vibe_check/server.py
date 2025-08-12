@@ -1161,7 +1161,8 @@ def _get_phase_affirmation(phase: str, query: str) -> str:
         return phase_affirmations[phase][2]
 
 @mcp.tool()
-def vibe_check_mentor(
+async def vibe_check_mentor(
+    ctx,  # FastMCP Context for MCP sampling
     query: str,
     context: Optional[str] = None,
     session_id: Optional[str] = None,
@@ -1252,11 +1253,46 @@ def vibe_check_mentor(
                 working_directory=working_directory or workspace
             )
             
-            # Load files into context
+            # Load files into context with security validation
             if discovered_files or file_paths:
+                # Validate file paths to prevent path traversal
+                from pathlib import Path
+                
+                def is_safe_path(file_path: str, workspace_root: str) -> bool:
+                    """Check if file path is within workspace and not a symlink"""
+                    try:
+                        file_path_obj = Path(file_path)
+                        workspace_abs = Path(workspace_root).resolve()
+                        
+                        # Check if path is a symlink (potential attack vector)
+                        if file_path_obj.is_symlink():
+                            logger.warning(f"Rejected symlink: {file_path}")
+                            return False
+                        
+                        # Resolve to absolute path and check if within workspace
+                        file_abs = file_path_obj.resolve()
+                        
+                        # Double-check that resolved path is not a symlink
+                        if file_abs.is_symlink():
+                            logger.warning(f"Rejected symlink after resolution: {file_path}")
+                            return False
+                        
+                        # Ensure path is within workspace boundaries
+                        return file_abs.is_relative_to(workspace_abs)
+                    except Exception as e:
+                        logger.warning(f"Path validation error for {file_path}: {e}")
+                        return False
+                
+                # Filter out unsafe paths
+                paths_to_load = file_paths or discovered_files
+                safe_paths = [p for p in paths_to_load if is_safe_path(p, discovered_workspace or workspace)]
+                
+                if len(safe_paths) < len(paths_to_load):
+                    logger.warning(f"Rejected {len(paths_to_load) - len(safe_paths)} unsafe file paths")
+                
                 file_contexts, file_errors = context_cache.add_files_to_session(
                     session_id=session_id,
-                    file_paths=file_paths or discovered_files,
+                    file_paths=safe_paths,
                     working_directory=discovered_workspace or workspace,
                     query=query
                 )
@@ -1572,13 +1608,14 @@ def vibe_check_mentor(
                 persona = session.personas[i]
                 session.active_persona_id = persona.id
                 
-                contribution = engine.generate_contribution(
+                contribution = await engine.generate_contribution(
                     session=session,
                     persona=persona,
                     detected_patterns=detected_patterns,
                     context=context,
                     project_context=project_context,
-                    file_contexts=file_contexts
+                    file_contexts=file_contexts,
+                    ctx=ctx  # Pass FastMCP context for dynamic generation
                 )
                 
                 session.contributions.append(contribution)

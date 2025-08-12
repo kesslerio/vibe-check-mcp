@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2025-08-12
+
+### Added
+- **MCP Sampling Integration** (#189): Dynamic response generation for vibe_check_mentor
+  - Native MCP protocol support for LLM completions without API keys
+  - Hybrid routing between static (fast) and dynamic (flexible) responses
+  - Response caching with TTL support for performance optimization
+  - Circuit breaker pattern for graceful degradation
+  - Comprehensive security measures (secret redaction, rate limiting, injection prevention)
+
+### Technical Improvements
+- **Hybrid Router**: Intelligent routing based on confidence scoring
+  - High confidence queries use static responses (<100ms)
+  - Low confidence queries trigger dynamic generation (~2000ms)
+  - Configurable confidence threshold (default 0.7)
+  - Cache hit optimization reduces latency by 85%
+
+- **Security Enhancements**:
+  - Automatic secret detection and redaction (API keys, passwords, tokens)
+  - Prompt injection prevention with pattern matching
+  - Path validation to prevent symlink attacks
+  - Rate limiting (10 requests/minute per session)
+  - 30-second timeout protection with fallback
+
+- **Performance Metrics**:
+  - P95 latency: ~2000ms for dynamic generation
+  - Static response: <100ms
+  - Cache hit rate: 20% (with optimization opportunities)
+  - Circuit breaker recovery: 60 seconds
+
+### Changed
+- vibe_check_mentor now accepts `ctx` parameter for MCP sampling
+- Enhanced path validation with symlink prevention
+- Improved error handling with graceful fallback to static responses
+
+### Documentation
+- Added comprehensive MCP_SAMPLING.md technical documentation
+- Updated vibe_check_mentor API reference with ctx parameter
+- Added troubleshooting guide for common issues
+- Performance tuning recommendations
+
 ## [0.4.6] - 2025-07-16
 
 ### Fixed

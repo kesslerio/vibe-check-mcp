@@ -72,8 +72,9 @@ You're not alone. Vibe Check is specifically designed for **vibe coders** - peop
 
 Vibe Check MCP provides **three modes of analysis** to catch engineering anti-patterns before they become expensive mistakes:
 
-### **🧠 Senior Engineer Mentor**
+### **🧠 Senior Engineer Mentor** (Now with MCP Sampling!)
 - **Collaborative reasoning** with multiple engineering personas
+- **Dynamic response generation** via MCP sampling for context-specific advice
 - **Interrupt mode** that stops bad decisions in real-time
 - **Architecture guidance** for complex technical decisions
 - **Claude model selection** (Haiku/Sonnet/Opus) based on analysis needs
