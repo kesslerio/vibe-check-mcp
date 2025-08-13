@@ -108,7 +108,7 @@ class BasicTelemetryCollector:
                         circuit_breaker_state=self._get_circuit_breaker_state()
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to create metric record: {e}")
+                    logger.warning(f"Failed to create metric record: {e} (route={route_type}, latency={latency_ms})")
                     return  # Graceful failure
                 
                 # Add to recent metrics (thread-safe due to deque)
@@ -262,8 +262,10 @@ class BasicTelemetryCollector:
     def _get_circuit_breaker_status(self) -> Dict[str, Any]:
         """Get detailed circuit breaker status"""
         if self._circuit_breaker:
-            return self._circuit_breaker.get_status()
-        return {"state": "not_available"}
+            status = self._circuit_breaker.get_status()
+            status["last_checked"] = time.time()
+            return status
+        return {"state": "not_available", "last_checked": time.time()}
     
     def _get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""

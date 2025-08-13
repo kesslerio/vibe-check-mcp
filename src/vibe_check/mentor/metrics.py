@@ -73,7 +73,7 @@ class LatencyStats:
             self.p99 = self._percentile(sorted_latencies, 99)
     
     def _percentile(self, sorted_values: List[float], percentile: int) -> float:
-        """Calculate percentile from sorted values"""
+        """Calculate percentile using linear interpolation between values."""
         if not sorted_values:
             return 0.0
         
