@@ -41,7 +41,7 @@ except ImportError:
         sys.exit(1)
 
 # Security patches are now built directly into mcp_sampling.py (Issue #203)
-# The ultrafast version with 0.02% overhead is now the canonical implementation
+# The optimized version with minimal overhead is now the canonical implementation
 # No runtime patching needed - security is built-in by default
 
 from .tools.analyze_text_nollm import analyze_text_demo
@@ -75,7 +75,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Log security patch status (Issue #194)
-logger.info("✅ Security patches ACTIVE - using ultrafast secure mcp_sampling (0.02% overhead)")
+logger.info("✅ Security patches ACTIVE - using optimized secure mcp_sampling (minimal overhead)")
 logger.info("   12 vulnerabilities mitigated via built-in protections (PR #203)")
 
 # Initialize FastMCP server

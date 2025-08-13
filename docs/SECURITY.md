@@ -8,7 +8,7 @@ The Vibe Check MCP server includes runtime security patches that fix 12 critical
 
 The security patches have been highly optimized:
 - **Original overhead**: 30.2% (unacceptable)
-- **Optimized overhead**: 0.02% (0.008ms per request)
+- **Optimized overhead**: Minimal (sub-millisecond components)
 - **Performance improvement**: 1,510x faster
 
 This negligible overhead makes it safe to run patches in production by default.
@@ -66,7 +66,7 @@ The patches add these security layers:
 
 ### Rollback Procedure
 
-If issues arise (unlikely with 0.02% overhead):
+If issues arise (optimized for minimal overhead):
 
 1. **Immediate Rollback**:
    ```bash
@@ -87,7 +87,7 @@ To verify patches are active:
 python -m vibe_check.server 2>&1 | grep "Security patches"
 
 # Expected output when ACTIVE:
-# ✅ Security patches ACTIVE (0.02% overhead) - 12 vulnerabilities patched
+# ✅ Security patches ACTIVE (optimized performance) - 12 vulnerabilities patched
 
 # Expected output when DISABLED:
 # ⚠️ Security patches DISABLED - 12 vulnerabilities exposed!

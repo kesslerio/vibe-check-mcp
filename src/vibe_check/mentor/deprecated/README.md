@@ -4,7 +4,7 @@ These files were deprecated as part of PR #205 - Post-Deployment Simplification.
 
 ## Why Deprecated?
 
-After PR #203 successfully deployed security fixes with 0.02% overhead, we consolidated 7 different mcp_sampling implementations into a single canonical version. This follows the principle learned from the "security theater" incident: **built but not activated = worse than not built**.
+After PR #203 successfully deployed optimized security fixes, we consolidated 7 different mcp_sampling implementations into a single canonical version. This follows the principle learned from the "security theater" incident: **built but not activated = worse than not built**.
 
 ## Files
 
@@ -12,7 +12,7 @@ After PR #203 successfully deployed security fixes with 0.02% overhead, we conso
 - `mcp_sampling_optimized.py` - Performance optimization attempt
 - `mcp_sampling_patch.py` - Runtime patching mechanism (no longer needed)
 - `mcp_sampling_secure.py` - Initial secure version (30.2% overhead)
-- `mcp_sampling_ultrafast.py` - Final optimized version (0.02% overhead) - **THIS IS NOW THE MAIN VERSION**
+- `mcp_sampling_ultrafast.py` - Final optimized version with minimal overhead - **THIS IS NOW THE MAIN VERSION**
 
 ## Historical Context
 
