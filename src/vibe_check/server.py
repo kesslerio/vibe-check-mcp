@@ -41,7 +41,7 @@ except ImportError:
         sys.exit(1)
 
 # Security patches are now built directly into mcp_sampling.py (Issue #203)
-# The ultrafast version with 0.02% overhead is now the canonical implementation
+# The optimized version with minimal overhead is now the canonical implementation
 # No runtime patching needed - security is built-in by default
 
 from .tools.analyze_text_nollm import analyze_text_demo
@@ -62,6 +62,7 @@ from .tools.vibe_mentor import get_mentor_engine, _generate_summary
 from .tools.config_validation import validate_configuration, format_validation_results, log_validation_results, register_config_validation_tools
 from .tools.contextual_documentation import get_context_manager, AnalysisContext
 from .config.vibe_check_config import create_vibe_check_directory
+from .mentor.telemetry import get_telemetry_collector
 
 # Configure logging
 logging.basicConfig(
@@ -75,7 +76,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Log security patch status (Issue #194)
-logger.info("✅ Security patches ACTIVE - using ultrafast secure mcp_sampling (0.02% overhead)")
+logger.info("✅ Security patches ACTIVE - using optimized secure mcp_sampling (minimal overhead)")
 logger.info("   12 vulnerabilities mitigated via built-in protections (PR #203)")
 
 # Initialize FastMCP server
@@ -2067,6 +2068,52 @@ def server_status() -> Dict[str, Any]:
         ],
         "anti_pattern_prevention": "✅ Successfully applied in our own development"
     }
+
+@mcp.tool()
+def get_telemetry_summary() -> Dict[str, Any]:
+    """
+    📊 Get telemetry metrics from MCP sampling integration.
+    
+    Provides essential metrics for monitoring the vibe_check_mentor performance:
+    - Response latencies (P95, mean) for static vs dynamic routing
+    - Success/failure rates by route type
+    - Cache hit rates and effectiveness
+    - Circuit breaker status
+    - Overall system health
+    
+    This is the minimal telemetry implementation that focuses on actionable metrics
+    without over-engineering. Perfect for monitoring production performance.
+    
+    Returns:
+        Telemetry summary with performance metrics and component status
+    """
+    logger.info("Telemetry summary requested")
+    
+    try:
+        telemetry_collector = get_telemetry_collector()
+        summary = telemetry_collector.get_summary()
+        
+        # Convert to dictionary for JSON export
+        telemetry_data = summary.to_dict()
+        
+        logger.info(f"Telemetry summary generated: {telemetry_data['overview']['total_requests']} total requests")
+        return {
+            "status": "success",
+            "telemetry": telemetry_data,
+            "collection_info": {
+                "collector_type": "BasicTelemetryCollector",
+                "max_history": 1000,
+                "overhead_target": "< 5% latency impact"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate telemetry summary: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": "Telemetry collection failed - check server logs"
+        }
 
 def detect_transport_mode() -> str:
     """Auto-detect the best transport mode based on environment."""
