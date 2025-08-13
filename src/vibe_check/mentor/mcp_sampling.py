@@ -18,6 +18,10 @@ from typing import Dict, Any, List, Optional, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
+# Import telemetry components
+from .telemetry import get_telemetry_collector, track_latency, TelemetryContext
+from .metrics import RouteType
+
 # Import MCP types for sampling
 try:
     from mcp.types import (
@@ -500,7 +504,12 @@ class MCPSamplingClient:
         self.prompt_builder = PromptBuilder()
         self.circuit_breaker = CircuitBreaker()
         self.request_timeout = request_timeout  # Timeout in seconds
-        logger.info("MCP Sampling client initialized with circuit breaker")
+        
+        # Initialize telemetry integration
+        self.telemetry = get_telemetry_collector()
+        self.telemetry.set_circuit_breaker(self.circuit_breaker)
+        
+        logger.info("MCP Sampling client initialized with circuit breaker and telemetry")
     
     async def request_completion(
         self,
@@ -549,6 +558,7 @@ class MCPSamplingClient:
             logger.error(f"MCP sampling request failed: {e}")
             return None
     
+    @track_latency(RouteType.DYNAMIC, intent="dynamic_generation")
     async def generate_dynamic_response(
         self,
         intent: str,

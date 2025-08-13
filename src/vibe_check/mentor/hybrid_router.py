@@ -11,6 +11,10 @@ from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
 from enum import Enum
 
+# Import telemetry components
+from .telemetry import get_telemetry_collector
+from .metrics import RouteType
+
 logger = logging.getLogger(__name__)
 
 
@@ -205,6 +209,9 @@ class HybridRouter:
             "total_requests": 0
         }
         
+        # Initialize telemetry integration
+        self.telemetry = get_telemetry_collector()
+        
         logger.info(f"Hybrid router initialized: threshold={confidence_threshold}, cache={enable_caching}")
     
     def decide_route(
@@ -237,6 +244,17 @@ class HybridRouter:
         if self.enable_caching and cache_key in self.decision_cache:
             self._stats["cache_hits"] += 1
             cached = self.decision_cache[cache_key]
+            
+            # Record cache hit in telemetry
+            self.telemetry.record_response(
+                route_type=RouteType.CACHE_HIT,
+                latency_ms=1.0,  # Cache hits are very fast
+                success=True,
+                intent=intent,
+                query_length=len(query),
+                cache_hit=True
+            )
+            
             logger.debug(f"Using cached routing decision: {cached.decision.value}")
             return cached
         
@@ -263,24 +281,38 @@ class HybridRouter:
             decision = RouteDecision.DYNAMIC
             latency = 2000  # ~2 seconds for dynamic
             self._stats["dynamic_routes"] += 1
+            route_type = RouteType.DYNAMIC
             
         elif confidence >= self.confidence_threshold:
             # High confidence, use static
             decision = RouteDecision.STATIC
             latency = 50  # ~50ms for static
             self._stats["static_routes"] += 1
+            route_type = RouteType.STATIC
             
         elif confidence >= 0.4 and self.prefer_speed:
             # Medium confidence but preferring speed
             decision = RouteDecision.HYBRID
             latency = 500  # ~500ms for hybrid
             self._stats["hybrid_routes"] += 1
+            route_type = RouteType.HYBRID
             
         else:
             # Low confidence, use dynamic
             decision = RouteDecision.DYNAMIC
             latency = 2000  # ~2 seconds for dynamic
             self._stats["dynamic_routes"] += 1
+            route_type = RouteType.DYNAMIC
+        
+        # Record routing decision in telemetry
+        self.telemetry.record_response(
+            route_type=route_type,
+            latency_ms=latency,
+            success=True,
+            intent=intent,
+            query_length=len(query),
+            cache_hit=False
+        )
         
         # Create metrics
         metrics = RouteMetrics(
