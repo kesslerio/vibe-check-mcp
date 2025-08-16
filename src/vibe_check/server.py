@@ -1615,7 +1615,6 @@ async def vibe_check_mentor(
                     context=context,
                     project_context=project_context,
                     file_contexts=file_contexts,
-                    ctx=ctx  # Pass FastMCP context for dynamic generation
                 )
                 
                 session.contributions.append(contribution)
