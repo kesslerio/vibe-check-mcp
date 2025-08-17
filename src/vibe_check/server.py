@@ -1609,7 +1609,7 @@ async def vibe_check_mentor(
                 persona = session.personas[i]
                 session.active_persona_id = persona.id
                 
-                contribution = await engine.generate_contribution(
+                contribution = engine.generate_contribution(
                     session=session,
                     persona=persona,
                     detected_patterns=detected_patterns,
