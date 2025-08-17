@@ -19,7 +19,7 @@ from .mcp_sampling_secure import (
 )
 
 # Import original components for compatibility
-from .mcp_sampling import (
+from ..mcp_sampling import (
     MCPSamplingClient as OriginalMCPSamplingClient,
     PromptBuilder as OriginalPromptBuilder,
     PromptTemplate as OriginalPromptTemplate,

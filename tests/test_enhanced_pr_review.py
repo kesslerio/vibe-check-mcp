@@ -8,8 +8,8 @@ author awareness, and model selection capabilities.
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 
-from src.vibe_check.tools.pr_review.main import review_pull_request
-from src.vibe_check.tools.pr_review.file_type_analyzer import FileTypeAnalyzer
+from vibe_check.tools.pr_review.main import review_pull_request
+from vibe_check.tools.pr_review.file_type_analyzer import FileTypeAnalyzer
 
 
 class TestEnhancedPRReview:
@@ -176,14 +176,14 @@ class TestEnhancedPRReview:
     @pytest.mark.asyncio
     async def test_claude_integration_error_handling(self):
         """Test Claude integration error handling."""
-        with patch('src.vibe_check.tools.pr_review.claude_integration.ClaudeCliExecutor') as mock_executor:
+        with patch('vibe_check.tools.pr_review.claude_integration.ClaudeCliExecutor') as mock_executor:
             # Setup mock to simulate failure
             mock_instance = Mock()
             mock_instance.claude_cli_path = "claude"
             mock_instance.timeout_seconds = 60
             mock_executor.return_value = mock_instance
             
-            from src.vibe_check.tools.pr_review.claude_integration import ClaudeIntegration
+            from vibe_check.tools.pr_review.claude_integration import ClaudeIntegration
             integration = ClaudeIntegration()
             
             # Test timeout scenario

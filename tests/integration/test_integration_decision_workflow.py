@@ -18,7 +18,7 @@ src_path = Path(__file__).parent.parent.parent / "src"
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-from vibe_check.server import (
+from vibe_check.server.tools.integration_decisions import (
     check_integration_alternatives,
     analyze_integration_decision_text,
     integration_decision_framework

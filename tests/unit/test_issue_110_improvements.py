@@ -15,23 +15,23 @@ import time
 from unittest.mock import Mock, patch, AsyncMock
 from typing import Dict, Any
 
-from src.vibe_check.tools.async_analysis.validation import (
+from vibe_check.tools.async_analysis.validation import (
     AsyncAnalysisValidator,
     validate_async_analysis_request,
     validate_status_check_request
 )
-from src.vibe_check.tools.async_analysis.resource_monitor import (
+from vibe_check.tools.async_analysis.resource_monitor import (
     ResourceMonitor,
     ResourceLimits,
     ResourceUsage,
     JobResourceTracker
 )
-from src.vibe_check.tools.async_analysis.health_monitoring import (
+from vibe_check.tools.async_analysis.health_monitoring import (
     HealthMonitor,
     HealthCheckResult,
     SystemMetrics
 )
-from src.vibe_check.tools.async_analysis.graceful_degradation import (
+from vibe_check.tools.async_analysis.graceful_degradation import (
     GracefulDegradationManager,
     FallbackConfig,
     SystemAvailability
@@ -564,7 +564,7 @@ class TestIntegrationBehavior:
     @pytest.mark.asyncio
     async def test_validation_integration_with_degradation(self):
         """Test validation working with degradation manager."""
-        from src.vibe_check.tools.async_analysis.graceful_degradation import async_analysis_with_fallback
+        from vibe_check.tools.async_analysis.graceful_degradation import async_analysis_with_fallback
         
         # Test with invalid input - should be caught by validation
         with pytest.raises(Exception):  # Validation should prevent execution
@@ -572,8 +572,8 @@ class TestIntegrationBehavior:
     
     def test_resource_monitor_with_health_check(self):
         """Test resource monitor integration with health monitoring."""
-        from src.vibe_check.tools.async_analysis.resource_monitor import get_global_resource_monitor
-        from src.vibe_check.tools.async_analysis.health_monitoring import get_global_health_monitor
+        from vibe_check.tools.async_analysis.resource_monitor import get_global_resource_monitor
+        from vibe_check.tools.async_analysis.health_monitoring import get_global_health_monitor
         
         resource_monitor = get_global_resource_monitor()
         health_monitor = get_global_health_monitor()

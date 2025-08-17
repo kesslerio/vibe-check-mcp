@@ -1,0 +1,132 @@
+{
+  "timestamp": "2025-08-13 07:20:44",
+  "system_info": {
+    "python_version": "3.12.9 (main, Jun 14 2025, 12:21:40) [Clang 17.0.0 (clang-1700.0.13.5)]",
+    "cpu_count": "12",
+    "memory_gb": "32.0",
+    "platform": "darwin"
+  },
+  "results": [
+    {
+      "name": "Decorator Overhead",
+      "baseline_ms": 1.1482720891945064,
+      "with_telemetry_ms": 1.1634041590150446,
+      "overhead_percent": 1.3178122121868394,
+      "memory_mb": 0,
+      "throughput_per_sec": 0,
+      "passed": true,
+      "details": {
+        "additional_latency_ms": 0.015132069820538163,
+        "baseline_std": 0.011611991453350795,
+        "telemetry_std": 0.016789259625515,
+        "samples": 100
+      }
+    },
+    {
+      "name": "Record Response Performance",
+      "baseline_ms": 0.00021392630878835917,
+      "with_telemetry_ms": 0.0370335205225274,
+      "overhead_percent": 17211.344608467614,
+      "memory_mb": 0,
+      "throughput_per_sec": 27002563.782498147,
+      "passed": true,
+      "details": {
+        "recording_time_ms": 0.0370335205225274,
+        "samples": 1000,
+        "metrics_recorded": 1000
+      }
+    },
+    {
+      "name": "Concurrent Access",
+      "baseline_ms": 0,
+      "with_telemetry_ms": 0.0580264205345884,
+      "overhead_percent": 0,
+      "memory_mb": 0.078125,
+      "throughput_per_sec": 27185.7639900154,
+      "passed": true,
+      "details": {
+        "num_threads": 10,
+        "operations_per_thread": 100,
+        "total_operations": 1000,
+        "data_integrity": true,
+        "p95_latency": 0.06532468250952661,
+        "p99_latency": 0.07598332711495459
+      }
+    },
+    {
+      "name": "Memory Usage (1500 metrics)",
+      "baseline_ms": 0,
+      "with_telemetry_ms": 0.08845899719744921,
+      "overhead_percent": 0,
+      "memory_mb": 0.109375,
+      "throughput_per_sec": 0,
+      "passed": true,
+      "details": {
+        "metrics_stored": 1500,
+        "json_export_time_ms": 0.08845899719744921,
+        "json_size_chars": 1269,
+        "total_requests": 1500,
+        "route_types_tracked": 4
+      }
+    },
+    {
+      "name": "JSON Export Performance",
+      "baseline_ms": 0,
+      "with_telemetry_ms": 0.044543270487338305,
+      "overhead_percent": 0,
+      "memory_mb": 0,
+      "throughput_per_sec": 22450080.316492613,
+      "passed": true,
+      "details": {
+        "avg_json_size_chars": 1253,
+        "export_time_std": 0.0034985977438898885,
+        "samples": 50,
+        "max_export_time": 0.06524997297674417
+      }
+    },
+    {
+      "name": "Sustained Throughput",
+      "baseline_ms": 0,
+      "with_telemetry_ms": 0,
+      "overhead_percent": 0,
+      "memory_mb": -15.609375,
+      "throughput_per_sec": 12332.580460314444,
+      "passed": true,
+      "details": {
+        "test_duration_sec": 10.01347612508107,
+        "operations_completed": 123492,
+        "throughput_per_minute": 739954.8276188667,
+        "final_memory_mb": -15.609375
+      }
+    },
+    {
+      "name": "Cache Integration",
+      "baseline_ms": 0.0001858617179095745,
+      "with_telemetry_ms": 0.03697615349665284,
+      "overhead_percent": 19794.44298295063,
+      "memory_mb": 0,
+      "throughput_per_sec": 0,
+      "passed": false,
+      "details": {
+        "cache_operations": 2000,
+        "telemetry_records": 1000,
+        "baseline_std": 0.00018663249167708883,
+        "telemetry_std": 0.018982636736903116
+      }
+    }
+  ],
+  "overall_passed": false,
+  "summary": {
+    "total_tests": 7,
+    "passed_tests": 6,
+    "failed_tests": 1,
+    "max_overhead_percent": 19794.44298295063,
+    "max_memory_mb": 0.109375,
+    "max_throughput_per_sec": 27002563.782498147,
+    "meets_requirements": {
+      "overhead_under_5_percent": false,
+      "memory_under_10mb": true,
+      "throughput_over_1000_per_min": true
+    }
+  }
+}

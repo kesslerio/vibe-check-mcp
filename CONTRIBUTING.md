@@ -50,7 +50,12 @@ vibe-check-mcp/
 │   │   ├── analyze_*_llm.py    # LLM-powered analysis tools
 │   │   └── analyze_*_nollm.py  # Fast direct analysis tools
 │   ├── utils/               # Utilities and helpers
-│   └── server.py           # FastMCP server
+│   └── server/             # Modular FastMCP server
+│       ├── main.py         # Entry point
+│       ├── core.py         # FastMCP initialization
+│       ├── transport.py    # Transport detection
+│       ├── registry.py     # Tool registration
+│       └── tools/          # Tool implementations
 ├── docs/                   # Documentation
 │   ├── PRD.md             # Product Requirements
 │   ├── TECHNICAL.md       # Technical Implementation

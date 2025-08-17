@@ -11,14 +11,14 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 from typing import Dict, Any, List
 
-from src.vibe_check.tools.shared.pr_classifier import (
+from vibe_check.tools.shared.pr_classifier import (
     PrSizeClassifier, 
     PrSizeCategory, 
     PrSizeMetrics,
     classify_pr_size,
     should_use_chunked_analysis
 )
-from src.vibe_check.tools.pr_review.chunked_analyzer import (
+from vibe_check.tools.pr_review.chunked_analyzer import (
     FileChunker,
     ChunkedAnalyzer,
     FileChunk,

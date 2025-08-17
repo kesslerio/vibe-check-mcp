@@ -11,17 +11,17 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 from typing import Dict, Any, List
 
-from src.vibe_check.tools.async_analysis.config import AsyncAnalysisConfig, AsyncAnalysisMetrics
-from src.vibe_check.tools.async_analysis.queue_manager import (
+from vibe_check.tools.async_analysis.config import AsyncAnalysisConfig, AsyncAnalysisMetrics
+from vibe_check.tools.async_analysis.queue_manager import (
     AsyncAnalysisQueue, AnalysisJob, JobStatus
 )
-from src.vibe_check.tools.async_analysis.worker import (
+from vibe_check.tools.async_analysis.worker import (
     AsyncAnalysisWorker, AsyncWorkerManager, WorkerResult
 )
-from src.vibe_check.tools.async_analysis.status_tracker import (
+from vibe_check.tools.async_analysis.status_tracker import (
     StatusTracker, AnalysisPhase, AnalysisStatus
 )
-from src.vibe_check.tools.async_analysis.integration import (
+from vibe_check.tools.async_analysis.integration import (
     start_async_analysis, check_analysis_status, get_system_status
 )
 

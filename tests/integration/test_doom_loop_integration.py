@@ -9,7 +9,7 @@ import pytest
 import time
 from unittest.mock import patch, MagicMock
 
-from src.vibe_check.tools.doom_loop_analysis import (
+from vibe_check.tools.doom_loop_analysis import (
     analyze_text_for_doom_loops,
     get_session_health_analysis,
     reset_session_tracking,
@@ -94,10 +94,10 @@ class TestDoomLoopMCPIntegration:
 class TestLLMToolIntegration:
     """Test integration with LLM analysis tools"""
     
-    @patch('src.vibe_check.tools.analyze_llm.specialized_analyzers.analyze_text_llm')
+    @patch('vibe_check.tools.analyze_llm.specialized_analyzers.analyze_text_llm')
     async def test_llm_tool_doom_loop_enhancement(self, mock_analyze_text):
         """Test that LLM tools are enhanced with doom loop detection"""
-        from src.vibe_check.tools.analyze_llm.specialized_analyzers import analyze_github_issue_llm
+        from vibe_check.tools.analyze_llm.specialized_analyzers import analyze_github_issue_llm
         
         # Mock the external LLM call
         mock_analyze_text.return_value = {

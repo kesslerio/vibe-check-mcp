@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch, mock_open
 
-from src.vibe_check.tools.integration_decision_check import (
+from vibe_check.tools.integration_decision_check import (
     IntegrationKnowledgeBase,
     check_official_alternatives,
     analyze_integration_text,

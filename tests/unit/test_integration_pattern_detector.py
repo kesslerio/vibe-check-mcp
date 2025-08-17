@@ -9,12 +9,12 @@ import pytest
 from unittest.mock import patch, mock_open
 import json
 
-from src.vibe_check.core.integration_pattern_detector import (
+from vibe_check.core.integration_pattern_detector import (
     IntegrationPatternDetector,
     TechnologyDetection,
     IntegrationAnalysis
 )
-from src.vibe_check.tools.integration_pattern_analysis import (
+from vibe_check.tools.integration_pattern_analysis import (
     analyze_integration_patterns_fast,
     quick_technology_scan,
     analyze_effort_complexity
@@ -182,7 +182,7 @@ class TestIntegrationPatternDetector:
         detector = IntegrationPatternDetector()
         
         # Create mock technologies and patterns for testing
-        from src.vibe_check.core.pattern_detector import DetectionResult
+        from vibe_check.core.pattern_detector import DetectionResult
         
         # High warning scenario
         high_confidence_pattern = DetectionResult(
@@ -362,12 +362,12 @@ class TestPerformanceAndRealTimeUsage:
     
     def setup_method(self):
         """Reset detector state before each test"""
-        from src.vibe_check.tools.integration_pattern_analysis import reset_integration_detector
+        from vibe_check.tools.integration_pattern_analysis import reset_integration_detector
         reset_integration_detector()
     
     def teardown_method(self):
         """Clean up after each test"""
-        from src.vibe_check.tools.integration_pattern_analysis import reset_integration_detector
+        from vibe_check.tools.integration_pattern_analysis import reset_integration_detector
         reset_integration_detector()
     
     def test_quick_scan_performance(self):

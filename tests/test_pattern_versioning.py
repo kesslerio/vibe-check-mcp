@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Import components under test
-from src.vibe_check.core.pattern_detector import PatternDetector, DetectionResult
-from src.vibe_check.utils.version_utils import (
+from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_check.utils.version_utils import (
     parse_semantic_version,
     compare_versions,
     is_compatible_version,

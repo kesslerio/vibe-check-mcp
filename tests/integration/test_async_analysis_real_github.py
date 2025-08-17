@@ -11,13 +11,13 @@ import time
 import logging
 from typing import Dict, Any
 
-from src.vibe_check.tools.async_analysis.integration import (
+from vibe_check.tools.async_analysis.integration import (
     start_async_analysis,
     check_analysis_status,
     get_system_status
 )
-from src.vibe_check.tools.async_analysis.config import DEFAULT_ASYNC_CONFIG
-from src.vibe_check.tools.shared.github_abstraction import get_default_github_operations
+from vibe_check.tools.async_analysis.config import DEFAULT_ASYNC_CONFIG
+from vibe_check.tools.shared.github_abstraction import get_default_github_operations
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ import pytest
 import time
 from unittest.mock import AsyncMock, Mock, patch
 
-from src.vibe_check.tools.shared.circuit_breaker import (
+from vibe_check.tools.shared.circuit_breaker import (
     ClaudeCliCircuitBreaker,
     CircuitBreakerState,
     CircuitBreakerOpenError,
@@ -18,7 +18,7 @@ from src.vibe_check.tools.shared.circuit_breaker import (
     CircuitBreakerConfig,
     CircuitBreakerStats
 )
-from src.vibe_check.tools.shared.retry_logic import (
+from vibe_check.tools.shared.retry_logic import (
     RetryExecutor,
     RetryConfig,
     ExponentialBackoffStrategy,
@@ -26,7 +26,7 @@ from src.vibe_check.tools.shared.retry_logic import (
     FixedBackoffStrategy,
     claude_cli_with_retry
 )
-from src.vibe_check.tools.shared.health_monitor import (
+from vibe_check.tools.shared.health_monitor import (
     ClaudeCliHealthMonitor,
     HealthStatus,
     PerformanceMetrics,
@@ -94,7 +94,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_half_open_recovery(self):
         """Test circuit breaker recovery through half-open state."""
-        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=1)
+        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
         
         async def failing_function():
             raise Exception("Test failure")
@@ -110,7 +110,7 @@ class TestCircuitBreaker:
         assert cb.state == CircuitBreakerState.OPEN
         
         # Wait for recovery timeout
-        await asyncio.sleep(1.1)
+        await asyncio.sleep(0.15)
         
         # Next call should transition to half-open and succeed
         result = await cb.call(successful_function)
@@ -120,7 +120,7 @@ class TestCircuitBreaker:
     @pytest.mark.asyncio
     async def test_circuit_breaker_half_open_failure_reopens(self):
         """Test that failure in half-open state reopens circuit."""
-        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=1)
+        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
         
         async def failing_function():
             raise Exception("Test failure")
@@ -131,7 +131,7 @@ class TestCircuitBreaker:
                 await cb.call(failing_function)
         
         # Wait for recovery timeout
-        await asyncio.sleep(1.1)
+        await asyncio.sleep(0.15)
         
         # Call in half-open state should fail and reopen circuit
         with pytest.raises(ClaudeCliError):
@@ -414,7 +414,7 @@ class TestIntegration:
     @pytest.mark.asyncio
     async def test_end_to_end_integration(self):
         """Test complete integration with circuit breaker, retries, and health monitoring."""
-        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=1)
+        cb = ClaudeCliCircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
         monitor = ClaudeCliHealthMonitor(cb)
         
         call_count = 0
@@ -442,7 +442,7 @@ class TestIntegration:
         assert cb.state == CircuitBreakerState.OPEN
         
         # Wait for recovery and try again
-        await asyncio.sleep(1.1)
+        await asyncio.sleep(0.15)
         
         # This should succeed and close the circuit
         result = await claude_cli_with_retry(flaky_service, cb, max_retries=0)
@@ -461,15 +461,15 @@ async def test_circuit_breaker_with_timeout():
     cb = ClaudeCliCircuitBreaker(failure_threshold=2)
     
     async def slow_function():
-        await asyncio.sleep(2)  # This will timeout
+        await asyncio.sleep(0.2)  # This will timeout
         return "too slow"
     
-    config = RetryConfig(max_retries=1, base_delay=0.1)
+    config = RetryConfig(max_retries=1, base_delay=0.05)  # Shorter delay for faster test
     executor = RetryExecutor(cb, config)
     
     # Should timeout and be recorded as failure
     with pytest.raises(ClaudeCliError):
-        await executor.execute_with_retry(slow_function, timeout=0.5)
+        await executor.execute_with_retry(slow_function, timeout=0.05)  # Timeout shorter than sleep
     
     # The timeout should be recorded as a failure in circuit breaker stats
     assert cb.stats.total_calls > 0
