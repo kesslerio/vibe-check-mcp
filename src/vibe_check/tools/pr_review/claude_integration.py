@@ -17,7 +17,8 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from ..shared.claude_integration import analyze_content_async, ClaudeCliExecutor, ClaudeCliResult
+from ..shared.claude_integration import analyze_content_async, ClaudeCliResult
+from ..shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class ClaudeIntegration:
         Args:
             timeout_seconds: Default timeout for Claude CLI operations
         """
-        self.external_claude = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
+        self.external_claude = EnhancedClaudeCliExecutor(timeout_seconds=timeout_seconds)
         self.logger = logger
         self.model = None  # Will be set per analysis
     

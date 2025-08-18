@@ -12,7 +12,8 @@ import logging
 import sys
 from pathlib import Path
 
-from ..shared.claude_integration import ClaudeCliExecutor, ClaudeCliResult
+from ..shared.claude_integration import ClaudeCliResult
+from ..shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
 
 # Configure logging
 logging.basicConfig(
@@ -78,8 +79,8 @@ async def main():
     if not args.prompt and not args.input_file:
         parser.error("Either --prompt or --input-file must be specified")
     
-    # Initialize executor
-    executor = ClaudeCliExecutor(timeout_seconds=args.timeout)
+    # Initialize enhanced executor with context injection
+    executor = EnhancedClaudeCliExecutor(timeout_seconds=args.timeout)
     
     # Execute based on input type
     if args.input_file:
