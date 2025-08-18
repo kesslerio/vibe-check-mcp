@@ -544,9 +544,11 @@ def register_context7_tools(mcp: FastMCP):
                 
                 # For now, we'll simulate the Context7 documentation response for testing
                 if "/react" in library_id.lower():
-                    context7_docs = f"# React Documentation\n\nReact is a JavaScript library for building user interfaces.\n\n## Topic: {topic or 'General'}\n\nReact lets you build user interfaces out of individual pieces called components. Create your own React components like Thumbnail, LikeButton, and Video. Then combine them into entire screens, pages, and apps.\n\n### Key Concepts:\n- Components\n- Props\n- State\n- Hooks\n\n### Example:\n```jsx\nfunction Welcome(props) {{\n  return <h1>Hello, {{props.name}}!</h1>;\n}}\n```"
+                    context7_docs = f"# React Documentation\n\nReact is a JavaScript library for building user interfaces.\n\n## Topic: {topic or 'General'}\n\nReact lets you build user interfaces out of individual pieces called components. Create your own React components like Thumbnail, LikeButton, and Video. Then combine them into entire screens, pages, and apps.\n\n### Key Concepts:\n- Components\n- Props\n- State\n- Hooks\n\n### Example:\n```jsx\nfunction Welcome(props) {{  return <h1>Hello, {{props.name}}!</h1>;}}
+```"
                 elif "/fastapi" in library_id.lower():
-                    context7_docs = f"# FastAPI Documentation\n\nFastAPI is a modern Python web framework for building APIs with Python 3.7+ based on standard Python type hints.\n\n## Topic: {topic or 'General'}\n\nFastAPI gives you:\n- Automatic interactive API documentation\n- High performance\n- Easy to learn\n- Standards-based\n\n### Example:\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/\")\nasync def read_root():\n    return {{\"Hello\": \"World\"}}\n```"
+                    context7_docs = f"# FastAPI Documentation\n\nFastAPI is a modern Python web framework for building APIs with Python 3.7+ based on standard Python type hints.\n\n## Topic: {topic or 'General'}\n\nFastAPI gives you:\n- Automatic interactive API documentation\n- High performance\n- Easy to learn\n- Standards-based\n\n### Example:\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/")\nasync def read_root():\n    return {{"Hello": "World"}}
+```"
                 else:
                     # Fallback documentation
                     context7_docs = f"# {library_id} Documentation\n\nDocumentation for {library_id}.\n\n**Topic**: {topic or 'General'}\n\nThis is placeholder documentation retrieved from Context7 MCP server."
