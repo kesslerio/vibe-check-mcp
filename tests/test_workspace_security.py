@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # Import the components to test
-from src.vibe_check.mentor.context_manager import (
+from vibe_check.mentor.context_manager import (
     SecurityValidator,
     FileReader,
     CodeParser,
@@ -507,7 +507,7 @@ class APIClient {
             
             # Set workspace environment
             with patch.dict(os.environ, {'WORKSPACE': tmpdir}):
-                from src.vibe_check.tools.vibe_mentor_workspace import WorkspaceAwareMentorEngine
+                from vibe_check.tools.vibe_mentor_workspace import WorkspaceAwareMentorEngine
                 
                 engine = WorkspaceAwareMentorEngine()
                 

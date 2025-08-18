@@ -9,14 +9,14 @@ import pytest
 import time
 from unittest.mock import patch, MagicMock
 
-from src.vibe_check.core.doom_loop_detector import (
+from vibe_check.core.doom_loop_detector import (
     DoomLoopDetector,
     LoopSeverity,
     LoopPattern,
     SessionState,
     get_doom_loop_detector
 )
-from src.vibe_check.tools.doom_loop_analysis import (
+from vibe_check.tools.doom_loop_analysis import (
     analyze_text_for_doom_loops,
     get_session_health_analysis,
     reset_session_tracking,

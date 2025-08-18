@@ -9,8 +9,8 @@ import asyncio
 import pytest
 from unittest.mock import Mock, patch
 
-from src.vibe_check.tools.async_analysis.config import AsyncAnalysisConfig
-from src.vibe_check.tools.async_analysis.integration import start_async_analysis, check_analysis_status
+from vibe_check.tools.async_analysis.config import AsyncAnalysisConfig
+from vibe_check.tools.async_analysis.integration import start_async_analysis, check_analysis_status
 
 
 class TestAsyncAnalysisIntegration:
@@ -32,12 +32,12 @@ class TestAsyncAnalysisIntegration:
         assert config.should_use_async_processing(large_pr_data)
         
         # Mock successful async analysis start
-        with patch('src.vibe_check.tools.async_analysis.integration.get_global_queue') as mock_queue:
+        with patch('vibe_check.tools.async_analysis.integration.get_global_queue') as mock_queue:
             mock_queue_instance = Mock()
             mock_queue_instance.queue_analysis = Mock(return_value="async-job-123")
             mock_queue.return_value = mock_queue_instance
             
-            with patch('src.vibe_check.tools.async_analysis.integration._status_tracker') as mock_tracker:
+            with patch('vibe_check.tools.async_analysis.integration._status_tracker') as mock_tracker:
                 mock_tracker.get_comprehensive_status.return_value = {
                     "job_id": "async-job-123",
                     "status": "queued",
@@ -90,11 +90,11 @@ class TestAsyncAnalysisIntegration:
     async def test_status_checking_flow(self):
         """Test status checking for async analysis."""
         # Mock status checking
-        with patch('src.vibe_check.tools.async_analysis.integration.get_global_queue') as mock_queue:
+        with patch('vibe_check.tools.async_analysis.integration.get_global_queue') as mock_queue:
             mock_queue_instance = Mock()
             mock_queue.return_value = mock_queue_instance
             
-            with patch('src.vibe_check.tools.async_analysis.integration._status_tracker') as mock_tracker:
+            with patch('vibe_check.tools.async_analysis.integration._status_tracker') as mock_tracker:
                 # Test job in progress
                 mock_tracker.get_comprehensive_status.return_value = {
                     "job_id": "test-job-456",
@@ -166,7 +166,7 @@ class TestAsyncAnalysisIntegration:
     
     def test_immediate_analysis_quality(self):
         """Test quality of immediate analysis for large PRs."""
-        from src.vibe_check.tools.async_analysis.integration import _generate_immediate_analysis
+        from vibe_check.tools.async_analysis.integration import _generate_immediate_analysis
         
         # Test massive PR
         massive_pr = {

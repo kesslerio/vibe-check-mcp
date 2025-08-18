@@ -2,13 +2,13 @@
   "name": "vibe-check-mcp",
   "version": "0.5.1",
   "description": "Vibe Check MCP - Anti-pattern detection and mentoring for better engineering decisions",
-  "main": "src/vibe_check/server.py",
+  "main": "src/vibe_check/server/main.py",
   "bin": {
     "vibe-check-mcp": "bin/vibe-check-mcp"
   },
   "scripts": {
-    "start": "python -m vibe_check.server",
-    "test": "pytest",
+    "start": "PYTHONPATH=.:src python -m vibe_check.server",
+    "test": "PYTHONPATH=.:src pytest",
     "lint": "black src/ tests/ && mypy src/",
     "install-deps": "pip install -r requirements.txt"
   },

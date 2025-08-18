@@ -7,7 +7,7 @@ LLM analysis vs fast analysis based on PR size and complexity.
 
 import pytest
 from unittest.mock import AsyncMock, Mock
-from src.vibe_check.core.pr_filtering import (
+from vibe_check.core.pr_filtering import (
     should_use_llm_analysis,
     create_large_pr_response, 
     analyze_with_fallback,
@@ -36,7 +36,7 @@ class TestShouldUseLLMAnalysis:
     
     def test_large_pr_lines_skips_llm(self):
         """PRs with >1000 lines should skip LLM analysis."""
-        from src.vibe_check.core.pr_filtering import FilteringConfig
+        from vibe_check.core.pr_filtering import FilteringConfig
         
         pr_data = {
             'additions': 800,

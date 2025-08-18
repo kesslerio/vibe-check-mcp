@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 # Import the external Claude CLI wrapper
 try:
-    from src.vibe_check.tools.analyze_external import ExternalClaudeCli, ClaudeCliResult
+    from vibe_check.tools.analyze_external import ExternalClaudeCli, ClaudeCliResult
 except ImportError:
     # Handle import when running from different contexts
     try:

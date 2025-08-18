@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 
-from src.vibe_check.tools.contextual_documentation import (
+from vibe_check.tools.contextual_documentation import (
     LibraryDetectionEngine, 
     ProjectDocumentationParser,
     ContextualDocumentationManager,
@@ -19,7 +19,7 @@ from src.vibe_check.tools.contextual_documentation import (
     get_context_manager,
     clear_context_manager_cache
 )
-from src.vibe_check.config.vibe_check_config import VibeCheckConfig
+from vibe_check.config.vibe_check_config import VibeCheckConfig
 
 
 class TestLibraryDetectionEngine:

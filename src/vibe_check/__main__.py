@@ -5,7 +5,7 @@ Enables running the MCP server via: python -m vibe_check
 """
 
 import sys
-from .server import main as server_main
+from .server.main import main as server_main
 
 if __name__ == "__main__":
     # Check for server subcommand

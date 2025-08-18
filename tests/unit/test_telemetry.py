@@ -21,7 +21,7 @@ from unittest.mock import Mock, patch, MagicMock
 from typing import List
 import json
 
-from src.vibe_check.mentor.metrics import (
+from vibe_check.mentor.metrics import (
     ResponseMetrics,
     LatencyStats,
     RouteMetricsAggregate,
@@ -30,7 +30,7 @@ from src.vibe_check.mentor.metrics import (
     RouteType
 )
 
-from src.vibe_check.mentor.telemetry import (
+from vibe_check.mentor.telemetry import (
     BasicTelemetryCollector,
     get_telemetry_collector,
     track_latency,
@@ -792,7 +792,7 @@ class TestTrackLatencyDecorator:
     @pytest.fixture
     def fresh_collector(self):
         """Get a fresh collector and reset global state."""
-        from src.vibe_check.mentor.telemetry import _global_collector
+        from vibe_check.mentor.telemetry import _global_collector
         _global_collector.reset_metrics()
         return _global_collector
     
@@ -930,7 +930,7 @@ class TestTelemetryContext:
     @pytest.fixture
     def fresh_collector(self):
         """Get a fresh collector and reset global state."""
-        from src.vibe_check.mentor.telemetry import _global_collector
+        from vibe_check.mentor.telemetry import _global_collector
         _global_collector.reset_metrics()
         return _global_collector
     
