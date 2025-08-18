@@ -8,6 +8,7 @@ from .tools.github_integration import register_github_tools
 from .tools.integration_decisions import register_integration_decision_tools
 from .tools.productivity import register_productivity_tools
 from .tools.mentor.core import register_mentor_tools
+from .tools.context7_integration import register_context7_tools
 from vibe_check.tools.analyze_llm.tool_registry import register_llm_analysis_tools
 from vibe_check.tools.diagnostics_claude_cli import register_diagnostic_tools
 from vibe_check.tools.config_validation import register_config_validation_tools
@@ -25,6 +26,7 @@ def register_all_tools(mcp: FastMCP):
     register_integration_decision_tools(mcp)
     register_productivity_tools(mcp)
     register_mentor_tools(mcp)
+    register_context7_tools(mcp)
     register_llm_analysis_tools(mcp)
     register_diagnostic_tools(mcp)
     register_config_validation_tools(mcp)
