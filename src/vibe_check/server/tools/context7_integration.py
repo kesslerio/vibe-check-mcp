@@ -20,12 +20,18 @@ class Context7Manager:
     """Manages Context7 MCP server interactions with caching and fallback."""
     
     def __init__(self, max_cache_size: int = 1000, mcp_client: Optional[Any] = None):
+        if mcp_client and not hasattr(mcp_client, 'call_tool'):
+            raise ValueError("Invalid MCP client provided to Context7Manager")
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._cache_ttl = 3600  # 1 hour TTL
         self._timeout = 30  # 30 second timeout for Context7 calls
         self._max_cache_size = max_cache_size
         self._cache_hits = 0
         self._cache_misses = 0
+        self._context7_resolve_success = 0
+        self._context7_resolve_failure = 0
+        self._context7_docs_success = 0
+        self._context7_docs_failure = 0
         self._knowledge_base: Optional[Dict[str, Any]] = None
         self._mcp_client = mcp_client  # MCP client for Context7 API calls
         self._load_knowledge_base()
@@ -244,23 +250,27 @@ class Context7Manager:
             return library_mappings.get(library_name.lower())
         
         try:
-            logger.debug(f"Calling Context7 MCP tool to resolve: {library_name}")
+            logger.info(f"Calling Context7 MCP tool to resolve: {library_name}")
             result = await self._mcp_client.call_tool("mcp__Context7__resolve-library-id", libraryName=library_name)
             
             if result:
                 library_id = self._select_best_library_match(library_name, result)
                 if library_id:
                     logger.info(f"Context7 resolved {library_name} to {library_id}")
+                    self._context7_resolve_success += 1
                     return library_id
                 else:
                     logger.warning(f"Context7 found matches for {library_name} but none met selection criteria")
+                    self._context7_resolve_failure += 1
                     return None
             else:
                 logger.warning(f"Context7 returned no results for {library_name}")
+                self._context7_resolve_failure += 1
                 return None
                 
         except Exception as e:
             logger.error(f"Context7 MCP call failed for {library_name}: {e}")
+            self._context7_resolve_failure += 1
             return None
 
     async def _call_context7_docs(self, library_id: str, topic: Optional[str] = None) -> Optional[str]:
@@ -270,7 +280,7 @@ class Context7Manager:
             return f"# {library_id} Documentation\n\nReal-time documentation from Context7.\n\n**Topic**: {topic or 'General'}"
         
         try:
-            logger.debug(f"Calling Context7 MCP tool to get docs for: {library_id}")
+            logger.info(f"Calling Context7 MCP tool to get docs for: {library_id}")
             call_params = {"context7CompatibleLibraryID": library_id}
             if topic:
                 call_params["topic"] = topic
@@ -279,18 +289,22 @@ class Context7Manager:
             
             if isinstance(result, str) and result:
                 logger.info(f"Context7 retrieved docs for {library_id} (topic: {topic or 'general'})")
+                self._context7_docs_success += 1
                 return result
             elif isinstance(result, dict):
                 docs = result.get('documentation') or result.get('content') or str(result)
                 if docs:
                     logger.info(f"Context7 retrieved structured docs for {library_id}")
+                    self._context7_docs_success += 1
                     return docs
                     
             logger.warning(f"Context7 returned no documentation for {library_id}")
+            self._context7_docs_failure += 1
             return None
                 
         except Exception as e:
             logger.error(f"Context7 MCP docs call failed for {library_id}: {e}")
+            self._context7_docs_failure += 1
             return None
     
     def _is_cache_valid(self, cache_key: str) -> bool:
@@ -345,142 +359,33 @@ def register_context7_tools(mcp: FastMCP):
             if not context7_manager._validate_library_name(library_name):
                 return {
                     "status": "error",
-                    "library_name": library_name,
-                    "library_id": None,
-                    "message": f"Invalid library name: {library_name}"
+                    "message": f"Invalid library name: {library_name}",
+                    "details": "Library name must be alphanumeric, between 1 and 100 characters, and contain no spaces or special characters other than ._-"
                 }
             
-            library_name = library_name.strip().lower()
-            cache_key = f"resolve_{library_name}"
+            library_id = await context7_manager.resolve_library_id(library_name)
             
-            # Check cache first
-            if context7_manager._is_cache_valid(cache_key):
-                context7_manager._cache_hits += 1
-                cached_result = context7_manager._cache[cache_key]["data"]
-                logger.debug(f"Cache hit for library resolution: {library_name}")
-                
+            if library_id:
                 return {
                     "status": "success",
                     "library_name": library_name,
-                    "library_id": cached_result,
-                    "cached": True,
-                    "cache_stats": context7_manager.get_cache_stats(),
-                    "message": f"Resolved {library_name} to Context7 ID: {cached_result} (cached)"
+                    "library_id": library_id,
+                    "message": f"Resolved {library_name} to Context7 ID: {library_id}"
                 }
-            
-            context7_manager._cache_misses += 1
-            
-            # Try Context7 resolution with timeout
-            try:
-                logger.debug(f"Calling Context7 MCP tool to resolve: {library_name}")
-                
-                # Make direct Context7 MCP call using the global MCP tool
-                # Since we're inside a FastMCP tool, we need to call the external Context7 MCP server
-                # This is a placeholder - in practice, FastMCP handles this automatically
-                context7_result = "Placeholder: Direct MCP calls need FastMCP infrastructure"
-                
-                # For now, we'll simulate the Context7 response structure for testing
-                if library_name == "react":
-                    context7_result = """Available Libraries (top matches):
-
-- Title: React
-- Context7-compatible library ID: /websites/react_dev
-- Description: React is a JavaScript library for building user interfaces.
-- Code Snippets: 4077
-- Trust Score: 8.0
-----------
-- Title: React Bootstrap
-- Context7-compatible library ID: /react-bootstrap/react-bootstrap
-- Description: React-Bootstrap provides Bootstrap components built with React.
-- Code Snippets: 172
-- Trust Score: 8.9"""
-                elif library_name == "fastapi":
-                    context7_result = """Available Libraries (top matches):
-
-- Title: FastAPI
-- Context7-compatible library ID: /tiangolo/fastapi
-- Description: FastAPI is a modern Python web framework for building APIs.
-- Code Snippets: 500
-- Trust Score: 9.2"""
-                else:
-                    context7_result = None
-                
-                # Process Context7 response
-                if isinstance(context7_result, str) and context7_result:
-                    # Use Context7Manager's helper method to select the best match
-                    library_id = context7_manager._select_best_library_match(library_name, context7_result)
-                    if library_id:
-                        # Cache successful result
-                        context7_manager._set_cache(cache_key, library_id)
-                        context7_manager._enforce_cache_size_limit()
-                        logger.info(f"Context7 resolved {library_name} to {library_id}")
-                        
-                        return {
-                            "status": "success",
-                            "library_name": library_name,
-                            "library_id": library_id,
-                            "cached": False,
-                            "cache_stats": context7_manager.get_cache_stats(),
-                            "message": f"Resolved {library_name} to Context7 ID: {library_id}"
-                        }
-                        
-                # If Context7 didn't work, fall back to hardcoded mappings
-                logger.warning(f"Context7 found matches for {library_name} but none met selection criteria, using fallback")
-                fallback_mappings = {
-                    "react": "/facebook/react",
-                    "fastapi": "/tiangolo/fastapi", 
-                    "supabase": "/supabase/supabase",
-                    "nextjs": "/vercel/next.js",
-                    "express": "/expressjs/express"
+            else:
+                return {
+                    "status": "not_found",
+                    "library_name": library_name,
+                    "library_id": None,
+                    "message": f"Could not resolve library: {library_name}"
                 }
-                fallback_result = fallback_mappings.get(library_name)
-                if fallback_result:
-                    context7_manager._set_cache(cache_key, fallback_result)
-                    return {
-                        "status": "success",
-                        "library_name": library_name,
-                        "library_id": fallback_result,
-                        "cached": False,
-                        "cache_stats": context7_manager.get_cache_stats(),
-                        "message": f"Resolved {library_name} to fallback ID: {fallback_result}"
-                    }
-                
-            except Exception as context7_error:
-                logger.error(f"Context7 MCP call failed for {library_name}: {context7_error}")
-                # Fall back to hardcoded mappings
-                fallback_mappings = {
-                    "react": "/facebook/react",
-                    "fastapi": "/tiangolo/fastapi", 
-                    "supabase": "/supabase/supabase",
-                    "nextjs": "/vercel/next.js",
-                    "express": "/expressjs/express"
-                }
-                fallback_result = fallback_mappings.get(library_name)
-                if fallback_result:
-                    context7_manager._set_cache(cache_key, fallback_result)
-                    return {
-                        "status": "success",
-                        "library_name": library_name,
-                        "library_id": fallback_result,
-                        "cached": False,
-                        "cache_stats": context7_manager.get_cache_stats(),
-                        "message": f"Context7 failed, used fallback ID: {fallback_result}"
-                    }
-            
-            return {
-                "status": "not_found",
-                "library_name": library_name,
-                "library_id": None,
-                "message": f"Could not resolve library: {library_name}"
-            }
                 
         except Exception as e:
             logger.error(f"Error resolving library {library_name}: {e}")
             return {
                 "status": "error",
-                "library_name": library_name,
-                "library_id": None,
-                "message": f"Error resolving library: {str(e)}"
+                "message": f"An unexpected error occurred while resolving library: {library_name}",
+                "details": str(e)
             }
     
     @mcp.tool(
@@ -508,88 +413,35 @@ def register_context7_tools(mcp: FastMCP):
             if not library_id or not isinstance(library_id, str) or len(library_id.strip()) == 0:
                 return {
                     "status": "error",
-                    "library_id": library_id,
-                    "topic": topic,
-                    "documentation": None,
-                    "message": f"Invalid library_id: {library_id}"
+                    "message": f"Invalid library_id: {library_id}",
+                    "details": "library_id must be a valid Context7-compatible ID string."
                 }
             
-            cache_key = f"docs_{library_id}_{topic or 'general'}"
+            docs = await context7_manager.get_library_docs(library_id, topic)
             
-            # Check cache first
-            if context7_manager._is_cache_valid(cache_key):
-                context7_manager._cache_hits += 1
-                cached_docs = context7_manager._cache[cache_key]["data"]
-                logger.debug(f"Cache hit for library docs: {library_id}")
-                
+            if docs:
                 return {
                     "status": "success",
                     "library_id": library_id,
                     "topic": topic,
-                    "documentation": cached_docs,
-                    "cached": True,
-                    "cache_stats": context7_manager.get_cache_stats(),
-                    "message": f"Retrieved documentation for {library_id} (cached)"
+                    "documentation": docs,
+                    "message": f"Retrieved documentation for {library_id}"
                 }
-            
-            context7_manager._cache_misses += 1
-            
-            # Try Context7 documentation fetch with timeout
-            try:
-                logger.debug(f"Calling Context7 MCP tool to get docs for: {library_id}")
-                
-                # Make direct Context7 MCP call for documentation
-                # This is a placeholder - in practice, FastMCP handles this automatically
-                context7_docs = None
-                
-                # For now, we'll simulate the Context7 documentation response for testing
-                if "/react" in library_id.lower():
-                    context7_docs = f"# React Documentation\n\nReact is a JavaScript library for building user interfaces.\n\n## Topic: {topic or 'General'}\n\nReact lets you build user interfaces out of individual pieces called components. Create your own React components like Thumbnail, LikeButton, and Video. Then combine them into entire screens, pages, and apps.\n\n### Key Concepts:\n- Components\n- Props\n- State\n- Hooks\n\n### Example:\n```jsx\nfunction Welcome(props) {{  return <h1>Hello, {{props.name}}!</h1>;}}
-```"
-                elif "/fastapi" in library_id.lower():
-                    context7_docs = f"# FastAPI Documentation\n\nFastAPI is a modern Python web framework for building APIs with Python 3.7+ based on standard Python type hints.\n\n## Topic: {topic or 'General'}\n\nFastAPI gives you:\n- Automatic interactive API documentation\n- High performance\n- Easy to learn\n- Standards-based\n\n### Example:\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/")\nasync def read_root():\n    return {{"Hello": "World"}}
-```"
-                else:
-                    # Fallback documentation
-                    context7_docs = f"# {library_id} Documentation\n\nDocumentation for {library_id}.\n\n**Topic**: {topic or 'General'}\n\nThis is placeholder documentation retrieved from Context7 MCP server."
-                
-                if context7_docs:
-                    # Cache successful result
-                    context7_manager._set_cache(cache_key, context7_docs)
-                    context7_manager._enforce_cache_size_limit()
-                    logger.info(f"Context7 retrieved docs for {library_id} (topic: {topic or 'general'})")
-                    
-                    return {
-                        "status": "success",
-                        "library_id": library_id,
-                        "topic": topic,
-                        "documentation": context7_docs,
-                        "cached": False,
-                        "cache_stats": context7_manager.get_cache_stats(),
-                        "message": f"Retrieved documentation for {library_id}"
-                    }
-                    
-            except Exception as context7_error:
-                logger.error(f"Context7 MCP docs call failed for {library_id}: {context7_error}")
-            
-            # If we get here, Context7 didn't work
-            logger.warning(f"Context7 returned no documentation for {library_id}")
-            return {
-                "status": "not_found",
-                "library_id": library_id,
-                "topic": topic,
-                "documentation": None,
-                "message": f"No documentation found for {library_id}"
-            }
+            else:
+                return {
+                    "status": "not_found",
+                    "library_id": library_id,
+                    "topic": topic,
+                    "documentation": None,
+                    "message": f"No documentation found for {library_id}"
+                }
                 
         except Exception as e:
             logger.error(f"Error fetching docs for {library_id}: {e}")
             return {
                 "status": "error",
-                "library_id": library_id,
-                "topic": topic,
-                "documentation": None,
-                "message": f"Error fetching documentation: {str(e)}"
+                "message": f"An unexpected error occurred while fetching documentation for {library_id}",
+                "details": str(e)
             }
     
     @mcp.tool(
