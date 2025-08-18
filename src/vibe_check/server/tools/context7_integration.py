@@ -19,14 +19,21 @@ logger = logging.getLogger(__name__)
 class Context7Manager:
     """Manages Context7 MCP server interactions with caching and fallback."""
     
-    def __init__(self, max_cache_size: int = 1000):
+    def __init__(self, max_cache_size: int = 1000, mcp_client: Optional[Any] = None):
+        if mcp_client and not hasattr(mcp_client, 'call_tool'):
+            raise ValueError("Invalid MCP client provided to Context7Manager")
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._cache_ttl = 3600  # 1 hour TTL
         self._timeout = 30  # 30 second timeout for Context7 calls
         self._max_cache_size = max_cache_size
         self._cache_hits = 0
         self._cache_misses = 0
+        self._context7_resolve_success = 0
+        self._context7_resolve_failure = 0
+        self._context7_docs_success = 0
+        self._context7_docs_failure = 0
         self._knowledge_base: Optional[Dict[str, Any]] = None
+        self._mcp_client = mcp_client  # MCP client for Context7 API calls
         self._load_knowledge_base()
     
     def _load_knowledge_base(self) -> None:
@@ -161,24 +168,144 @@ class Context7Manager:
             logger.error(f"Context7 docs error for {library_id}: {e}")
             return None
     
+    def _select_best_library_match(self, library_name: str, context7_response: Union[str, Dict[str, Any]]) -> Optional[str]:
+        """
+        Select the best library match from Context7 response.
+        Handles both legacy string format and new structured JSON format.
+        
+        Args:
+            library_name: Original library name searched for
+            context7_response: Raw Context7 response (string or dict)
+            
+        Returns:
+            Best matching Context7-compatible library ID or None
+        """
+        entries = []
+        if isinstance(context7_response, str):
+            # Legacy string parsing
+            if "Context7-compatible library ID:" not in context7_response:
+                return None
+            lines = context7_response.split('\n')
+            current_entry = {}
+            for line in lines:
+                line = line.strip()
+                if line.startswith('- Title:'):
+                    if current_entry: entries.append(current_entry)
+                    current_entry = {'title': line.replace('- Title:', '').strip()}
+                elif line.startswith('- Context7-compatible library ID:'):
+                    current_entry['library_id'] = line.replace('- Context7-compatible library ID:', '').strip()
+                elif line.startswith('- Description:'):
+                    current_entry['description'] = line.replace('- Description:', '').strip()
+                elif line.startswith('- Code Snippets:'):
+                    try:
+                        current_entry['code_snippets'] = int(line.replace('- Code Snippets:', '').strip())
+                    except ValueError:
+                        current_entry['code_snippets'] = 0
+                elif line.startswith('- Trust Score:'):
+                    try:
+                        current_entry['trust_score'] = float(line.replace('- Trust Score:', '').strip())
+                    except ValueError:
+                        current_entry['trust_score'] = 0.0
+            if current_entry:
+                entries.append(current_entry)
+        
+        elif isinstance(context7_response, dict) and 'libraries' in context7_response:
+            # New structured JSON format
+            entries = context7_response['libraries']
+
+        if not entries:
+            return None
+            
+        # Selection logic
+        library_name_lower = library_name.lower()
+        
+        for entry in entries:
+            title = entry.get('title', '').lower()
+            if title == library_name_lower or library_name_lower in title:
+                trust_score = entry.get('trust_score', 0)
+                if trust_score >= 8.0:
+                    return entry.get('library_id')
+        
+        high_quality_matches = [
+            entry for entry in entries 
+            if entry.get('trust_score', 0) >= 8.0 and entry.get('code_snippets', 0) >= 100
+        ]
+        if high_quality_matches:
+            high_quality_matches.sort(key=lambda x: (x.get('trust_score', 0), x.get('code_snippets', 0)), reverse=True)
+            return high_quality_matches[0].get('library_id')
+            
+        if entries:
+            entries.sort(key=lambda x: x.get('trust_score', 0), reverse=True)
+            best_match = entries[0]
+            if best_match.get('trust_score', 0) >= 7.0:
+                return best_match.get('library_id')
+                
+        return None
+
     async def _call_context7_resolve(self, library_name: str) -> Optional[str]:
-        """Call Context7 resolve-library-id tool (placeholder for MCP integration)."""
-        # TODO: Replace with actual MCP tool call when Context7 is integrated
-        # For now, return simulated mapping for testing
-        library_mappings = {
-            "react": "/facebook/react",
-            "fastapi": "/tiangolo/fastapi", 
-            "supabase": "/supabase/supabase",
-            "nextjs": "/vercel/next.js",
-            "express": "/expressjs/express"
-        }
-        return library_mappings.get(library_name.lower())
-    
+        """Call Context7 resolve-library-id tool using MCP integration."""
+        if not self._mcp_client:
+            logger.warning("No MCP client available for Context7, falling back to hardcoded mappings")
+            library_mappings = {"react": "/facebook/react", "fastapi": "/tiangolo/fastapi", "supabase": "/supabase/supabase", "nextjs": "/vercel/next.js", "express": "/expressjs/express"}
+            return library_mappings.get(library_name.lower())
+        
+        try:
+            logger.info(f"Calling Context7 MCP tool to resolve: {library_name}")
+            result = await self._mcp_client.call_tool("mcp__Context7__resolve-library-id", libraryName=library_name)
+            
+            if result:
+                library_id = self._select_best_library_match(library_name, result)
+                if library_id:
+                    logger.info(f"Context7 resolved {library_name} to {library_id}")
+                    self._context7_resolve_success += 1
+                    return library_id
+                else:
+                    logger.warning(f"Context7 found matches for {library_name} but none met selection criteria")
+                    self._context7_resolve_failure += 1
+                    return None
+            else:
+                logger.warning(f"Context7 returned no results for {library_name}")
+                self._context7_resolve_failure += 1
+                return None
+                
+        except Exception as e:
+            logger.error(f"Context7 MCP call failed for {library_name}: {e}")
+            self._context7_resolve_failure += 1
+            return None
+
     async def _call_context7_docs(self, library_id: str, topic: Optional[str] = None) -> Optional[str]:
-        """Call Context7 get-library-docs tool (placeholder for MCP integration)."""
-        # TODO: Replace with actual MCP tool call when Context7 is integrated
-        # For now, return simulated documentation
-        return f"# {library_id} Documentation\n\nReal-time documentation from Context7.\n\n**Topic**: {topic or 'General'}"
+        """Call Context7 get-library-docs tool using MCP integration."""
+        if not self._mcp_client:
+            logger.warning("No MCP client available for Context7, falling back to simulated docs")
+            return f"# {library_id} Documentation\n\nReal-time documentation from Context7.\n\n**Topic**: {topic or 'General'}"
+        
+        try:
+            logger.info(f"Calling Context7 MCP tool to get docs for: {library_id}")
+            call_params = {"context7CompatibleLibraryID": library_id}
+            if topic:
+                call_params["topic"] = topic
+                
+            result = await self._mcp_client.call_tool("mcp__Context7__get-library-docs", **call_params)
+            
+            if isinstance(result, str) and result:
+                logger.info(f"Context7 retrieved docs for {library_id} (topic: {topic or 'general'})")
+                self._context7_docs_success += 1
+                return result
+            elif isinstance(result, dict):
+                docs = result.get('documentation') or result.get('content') or str(result)
+                if docs:
+                    logger.info(f"Context7 retrieved structured docs for {library_id}")
+                    self._context7_docs_success += 1
+                    return docs
+                    
+            logger.warning(f"Context7 returned no documentation for {library_id}")
+            self._context7_docs_failure += 1
+            return None
+                
+        except Exception as e:
+            logger.error(f"Context7 MCP docs call failed for {library_id}: {e}")
+            self._context7_docs_failure += 1
+            return None
     
     def _is_cache_valid(self, cache_key: str) -> bool:
         """Check if cache entry is valid (exists and not expired)."""
@@ -211,6 +338,7 @@ context7_manager = Context7Manager()
 
 def register_context7_tools(mcp: FastMCP):
     """Register Context7 integration tools with the MCP server."""
+    # The manager is already initialized globally and ready to use
     
     @mcp.tool(
         name="resolve_library_id",
@@ -227,18 +355,21 @@ def register_context7_tools(mcp: FastMCP):
             Result with resolved library ID or error
         """
         try:
+            # Input validation
+            if not context7_manager._validate_library_name(library_name):
+                return {
+                    "status": "error",
+                    "message": f"Invalid library name: {library_name}",
+                    "details": "Library name must be alphanumeric, between 1 and 100 characters, and contain no spaces or special characters other than ._-"
+                }
+            
             library_id = await context7_manager.resolve_library_id(library_name)
             
             if library_id:
-                cache_key = f"resolve_{library_name.lower()}"
-                was_cached = context7_manager._is_cache_valid(cache_key)
-                
                 return {
                     "status": "success",
                     "library_name": library_name,
                     "library_id": library_id,
-                    "cached": was_cached,
-                    "cache_stats": context7_manager.get_cache_stats(),
                     "message": f"Resolved {library_name} to Context7 ID: {library_id}"
                 }
             else:
@@ -253,9 +384,8 @@ def register_context7_tools(mcp: FastMCP):
             logger.error(f"Error resolving library {library_name}: {e}")
             return {
                 "status": "error",
-                "library_name": library_name,
-                "library_id": None,
-                "message": f"Error resolving library: {str(e)}"
+                "message": f"An unexpected error occurred while resolving library: {library_name}",
+                "details": str(e)
             }
     
     @mcp.tool(
@@ -279,19 +409,22 @@ def register_context7_tools(mcp: FastMCP):
             Result with documentation content or error
         """
         try:
+            # Input validation
+            if not library_id or not isinstance(library_id, str) or len(library_id.strip()) == 0:
+                return {
+                    "status": "error",
+                    "message": f"Invalid library_id: {library_id}",
+                    "details": "library_id must be a valid Context7-compatible ID string."
+                }
+            
             docs = await context7_manager.get_library_docs(library_id, topic)
             
             if docs:
-                cache_key = f"docs_{library_id}_{topic or 'general'}"
-                was_cached = context7_manager._is_cache_valid(cache_key)
-                
                 return {
                     "status": "success",
                     "library_id": library_id,
                     "topic": topic,
                     "documentation": docs,
-                    "cached": was_cached,
-                    "cache_stats": context7_manager.get_cache_stats(),
                     "message": f"Retrieved documentation for {library_id}"
                 }
             else:
@@ -307,10 +440,8 @@ def register_context7_tools(mcp: FastMCP):
             logger.error(f"Error fetching docs for {library_id}: {e}")
             return {
                 "status": "error",
-                "library_id": library_id,
-                "topic": topic,
-                "documentation": None,
-                "message": f"Error fetching documentation: {str(e)}"
+                "message": f"An unexpected error occurred while fetching documentation for {library_id}",
+                "details": str(e)
             }
     
     @mcp.tool(
