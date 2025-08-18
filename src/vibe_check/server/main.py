@@ -9,6 +9,7 @@ from .core import mcp
 from .transport import detect_transport_mode
 from .registry import register_all_tools
 from ..tools.config_validation import validate_configuration, format_validation_results, log_validation_results
+from .utils import get_version # Import the new function
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,17 +33,7 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
     Includes proper error handling and graceful startup/shutdown.
     """
     try:
-        version_file = Path(__file__).parent.parent.parent / "VERSION"
-        package_json = Path(__file__).parent.parent.parent / "package.json"
-        
-        version = "unknown"
-        if version_file.exists():
-            version = version_file.read_text().strip()
-        elif package_json.exists():
-            import json
-            with open(package_json) as f:
-                package_data = json.load(f)
-                version = package_data.get("version", "unknown")
+        version = get_version() # Get version dynamically
         
         logger.info("🚀 Starting Vibe Check MCP Server...")
         logger.info(f"📌 Version: {version}")
@@ -91,7 +82,7 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
                 mcp.run()
         else:
             server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")
-            server_port = port or int(os.environ.get("MCP_SERVER_PORT", "8001")),
+            server_port = port or int(os.environ.get("MCP_SERVER_PORT", "8001"))
             logger.info(f"🌐 Using streamable-http transport on http://{server_host}:{server_port}/mcp")
             mcp.run(transport="streamable-http", host=server_host, port=server_port)
         
@@ -102,6 +93,7 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
         sys.exit(1)
     finally:
         logger.info("✅ Vibe Check MCP server shutdown complete")
+
 
 def main():
     """Entry point for direct server execution with CLI argument support."""

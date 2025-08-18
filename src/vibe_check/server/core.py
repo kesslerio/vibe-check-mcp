@@ -1,5 +1,6 @@
 import logging
 import sys
+from .utils import get_version # Import the new function
 
 try:
     # Use official MCP server FastMCP for better Claude Code compatibility
@@ -18,10 +19,11 @@ logger = logging.getLogger(__name__)
 
 def get_mcp_instance() -> FastMCP:
     """Initializes and returns the FastMCP server instance."""
+    version = get_version() # Get version dynamically
     # Initialize FastMCP server
     mcp = FastMCP(
         name="Vibe Check MCP",
-        version="2.2.0"
+        version=version # Use dynamic version
     )
     return mcp
 
