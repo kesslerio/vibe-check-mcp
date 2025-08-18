@@ -806,7 +806,9 @@ async def analyze_content_async_with_circuit_breaker(
     
     async def _execute_analysis():
         """Inner function to execute the analysis."""
-        executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
+        # Use enhanced executor for automatic context injection
+        from .enhanced_claude_integration import EnhancedClaudeCliExecutor
+        executor = EnhancedClaudeCliExecutor(timeout_seconds=timeout_seconds)
         return await executor.execute_async(prompt=prompt, task_type=task_type, model=model)
     
     # Record the start time
@@ -976,5 +978,7 @@ def analyze_content_sync(
     
     prompt = "\n\n".join(prompt_parts)
     
-    executor = ClaudeCliExecutor(timeout_seconds=timeout_seconds)
+    # Use enhanced executor for automatic context injection
+    from .enhanced_claude_integration import EnhancedClaudeCliExecutor
+    executor = EnhancedClaudeCliExecutor(timeout_seconds=timeout_seconds)
     return executor.execute_sync(prompt=prompt, task_type=task_type, model=model)
