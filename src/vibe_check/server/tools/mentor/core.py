@@ -3,7 +3,7 @@ from typing import Dict, Any, Optional, List
 from ...core import mcp
 from .context import load_workspace_context
 from .analysis import analyze_query_and_context
-from .reasoning import get_reasoning_engine
+from .reasoning import get_reasoning_engine, generate_response
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,8 @@ async def vibe_check_mentor(
 
     # 3. Get reasoning engine and generate response
     engine = get_reasoning_engine()
-    response = await engine.generate_response(
+    response = await generate_response(
+        engine=engine,
         query=query,
         context=full_context,
         session_id=session_id,
