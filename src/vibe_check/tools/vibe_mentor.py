@@ -6,6 +6,47 @@ with collaborative reasoning to provide senior engineer feedback through
 multiple engineering perspectives.
 
 This is the main interface that orchestrates the modular components.
+
+## Usage Patterns
+
+### Production Usage (Singleton)
+```python
+# Standard production usage - uses singleton pattern
+engine = get_mentor_engine()
+result = engine.process_query(query)
+```
+
+### Testing Usage (Simple Dependency Injection)
+```python  
+# Testing with mocked dependencies
+mock_detector = MockPatternDetector()
+engine = create_mentor_engine(
+    test_mode=True,
+    pattern_detector=mock_detector
+)
+result = engine.process_query(query)
+```
+
+## Architecture Decision: Simple Test Factory vs Full DI
+
+This module uses a **simple test factory pattern** instead of full dependency injection
+based on collaborative reasoning that concluded full DI would be overengineering 
+for a 1-2 developer team with no current singleton pain.
+
+**Benefits of current approach:**
+- 80% of DI benefits with 20% of effort (1 day vs 3-5 days)
+- Zero production risk (singleton unchanged)  
+- Enables comprehensive testing with mocks
+- Clear upgrade path when/if problems emerge
+
+**Upgrade to full DI only when experiencing:**
+- Testing difficulties with global state
+- Memory leaks from mentor sessions
+- Concurrency race conditions  
+- Team growth (3+ developers)
+- Environment-specific configuration needs
+
+*"Sometimes the best architecture decision is knowing when NOT to architect."*
 """
 
 # Standard library
@@ -262,6 +303,33 @@ def _generate_summary(vibe_level: str, detected_patterns: List[Dict[str, Any]],
         return "No concerning patterns detected - looking good!"
 
 
+class TestMentorEngine(VibeMentorEngine):
+    """
+    Test version of VibeMentorEngine that supports dependency injection.
+    
+    Allows mocking dependencies for comprehensive testing while maintaining
+    the same interface as the production VibeMentorEngine.
+    """
+    
+    def __init__(
+        self,
+        session_manager=None,
+        response_coordinator=None, 
+        pattern_detector=None,
+        **kwargs
+    ):
+        # Don't call super().__init__() to avoid creating default dependencies
+        
+        # Inject provided dependencies or create defaults
+        self.session_manager = session_manager or SessionManager()
+        self.response_coordinator = response_coordinator or ResponseCoordinator()
+        self.pattern_detector = pattern_detector or PatternDetector()
+        self._enhanced_mode = kwargs.get('enhanced_mode', True)
+        
+        # Backward compatibility attributes
+        self.DEFAULT_PERSONAS = DEFAULT_PERSONAS
+
+
 # Engine singleton for session management
 _mentor_engine = None
 
@@ -278,3 +346,43 @@ def cleanup_mentor_engine() -> None:
     """Clear global engine state for testing/cleanup"""
     global _mentor_engine
     _mentor_engine = None
+
+
+def create_mentor_engine(test_mode: bool = False, **test_doubles) -> VibeMentorEngine:
+    """
+    Factory for creating mentor engines with optional test dependency injection.
+    
+    This provides 80% of dependency injection benefits with 20% of the effort,
+    following the YAGNI principle for small teams without current singleton pain.
+    
+    Args:
+        test_mode: If True, creates a test engine with injected dependencies
+        **test_doubles: Optional mock dependencies (pattern_detector, session_manager, etc.)
+        
+    Returns:
+        VibeMentorEngine instance - either singleton for production or test instance
+        
+    Usage:
+        # Production (unchanged)
+        engine = get_mentor_engine()
+        
+        # Testing (new capability)  
+        mock_detector = MockPatternDetector()
+        engine = create_mentor_engine(
+            test_mode=True,
+            pattern_detector=mock_detector
+        )
+        
+    Future: Upgrade to full dependency injection only when experiencing:
+    - Testing difficulties with global state
+    - Memory leaks from mentor sessions  
+    - Concurrency race conditions
+    - Team growth (3+ developers)
+    - Environment-specific configuration needs
+    """
+    if test_mode:
+        # Return test engine with injected dependencies
+        return TestMentorEngine(**test_doubles)
+    else:
+        # Production path: use existing singleton (zero risk)
+        return get_mentor_engine()
