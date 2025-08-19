@@ -9,31 +9,118 @@ import asyncio
 import json
 import logging
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 from mcp.server.fastmcp import FastMCP
+from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+class CircuitBreakerState(Enum):
+    """Circuit breaker states for external API calls."""
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Blocking calls due to failures  
+    HALF_OPEN = "half_open"  # Testing if service is back
+
+class CircuitBreaker:
+    """Circuit breaker pattern for external API calls."""
+    
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failure_count = 0
+        self.last_failure_time = 0
+        self.state = CircuitBreakerState.CLOSED
+        
+    def call_allowed(self) -> bool:
+        """Check if call is allowed based on circuit breaker state."""
+        if self.state == CircuitBreakerState.CLOSED:
+            return True
+        elif self.state == CircuitBreakerState.OPEN:
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = CircuitBreakerState.HALF_OPEN
+                return True
+            return False
+        else:  # HALF_OPEN
+            return True
+            
+    def record_success(self):
+        """Record successful call."""
+        self.failure_count = 0
+        self.state = CircuitBreakerState.CLOSED
+        
+    def record_failure(self):
+        """Record failed call."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitBreakerState.OPEN
+            logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
+
+class Context7Config:
+    """Configuration class for Context7Manager with environment variable support."""
+    
+    def __init__(self):
+        self.max_cache_size = int(os.getenv("CONTEXT7_MAX_CACHE_SIZE", "1000"))
+        self.max_memory_bytes = int(os.getenv("CONTEXT7_MAX_MEMORY_MB", "50")) * 1024 * 1024
+        self.cache_ttl = int(os.getenv("CONTEXT7_CACHE_TTL_SECONDS", "3600"))
+        self.timeout = int(os.getenv("CONTEXT7_TIMEOUT_SECONDS", "30"))
+        self.rate_limit_requests = int(os.getenv("CONTEXT7_RATE_LIMIT_REQUESTS", "100"))
+        self.rate_limit_window = int(os.getenv("CONTEXT7_RATE_LIMIT_WINDOW_SECONDS", "60"))
+        self.circuit_breaker_threshold = int(os.getenv("CONTEXT7_CIRCUIT_BREAKER_THRESHOLD", "5"))
+        self.circuit_breaker_timeout = int(os.getenv("CONTEXT7_CIRCUIT_BREAKER_TIMEOUT", "60"))
+        
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary for logging/debugging."""
+        return {
+            "max_cache_size": self.max_cache_size,
+            "max_memory_mb": self.max_memory_bytes // (1024 * 1024),
+            "cache_ttl_seconds": self.cache_ttl,
+            "timeout_seconds": self.timeout,
+            "rate_limit_requests": self.rate_limit_requests,
+            "rate_limit_window_seconds": self.rate_limit_window,
+            "circuit_breaker_threshold": self.circuit_breaker_threshold,
+            "circuit_breaker_timeout": self.circuit_breaker_timeout
+        }
 
 class Context7Manager:
     """Manages Context7 MCP server interactions with caching and fallback."""
     
-    def __init__(self, max_cache_size: int = 1000, mcp_client: Optional[Any] = None):
+    def __init__(
+        self, 
+        config: Optional[Context7Config] = None,
+        mcp_client: Optional[Any] = None
+    ):
         if mcp_client and not hasattr(mcp_client, 'call_tool'):
             raise ValueError("Invalid MCP client provided to Context7Manager")
+            
+        # Initialize configuration
+        self._config = config or Context7Config()
+        logger.info(f"Context7Manager initialized with config: {self._config.to_dict()}")
+        
+        # Cache and tracking
         self._cache: Dict[str, Dict[str, Any]] = {}
-        self._cache_ttl = 3600  # 1 hour TTL
-        self._timeout = 30  # 30 second timeout for Context7 calls
-        self._max_cache_size = max_cache_size
+        self._current_memory_usage = 0
         self._cache_hits = 0
         self._cache_misses = 0
         self._context7_resolve_success = 0
         self._context7_resolve_failure = 0
         self._context7_docs_success = 0
         self._context7_docs_failure = 0
+        self._rate_limit_tracker: Dict[str, List[float]] = {}
+        
+        # Circuit breaker for external API calls
+        self._circuit_breaker = CircuitBreaker(
+            failure_threshold=self._config.circuit_breaker_threshold,
+            recovery_timeout=self._config.circuit_breaker_timeout
+        )
+        
+        # External dependencies
         self._knowledge_base: Optional[Dict[str, Any]] = None
-        self._mcp_client = mcp_client  # MCP client for Context7 API calls
+        self._mcp_client = mcp_client
         self._load_knowledge_base()
     
     def _load_knowledge_base(self) -> None:
@@ -55,39 +142,116 @@ class Context7Manager:
             logger.error(f"Failed to load knowledge base: {e}")
             self._knowledge_base = {}
     
+    def _estimate_memory_usage(self, data: Any) -> int:
+        """Estimate memory usage of data in bytes."""
+        if isinstance(data, str):
+            return len(data.encode('utf-8'))
+        elif isinstance(data, dict):
+            return sum(self._estimate_memory_usage(k) + self._estimate_memory_usage(v) 
+                      for k, v in data.items())
+        elif isinstance(data, (list, tuple)):
+            return sum(self._estimate_memory_usage(item) for item in data)
+        elif isinstance(data, (int, float)):
+            return sys.getsizeof(data)
+        else:
+            return sys.getsizeof(data)
+
     def _validate_library_name(self, library_name: str) -> bool:
-        """Validate library name input."""
+        """Validate library name input with strict security rules."""
         if not library_name or not isinstance(library_name, str):
             return False
-        if len(library_name) > 100 or len(library_name.strip()) == 0:
+        
+        library_name = library_name.strip()
+        
+        # Length validation - more restrictive
+        if len(library_name) == 0 or len(library_name) > 50:
             return False
-        # Basic sanitization - alphanumeric, hyphens, underscores, dots
+        
+        # Strict regex - only allow lowercase alphanumeric, hyphens, dots
+        # No consecutive special characters, must start and end with alphanumeric
         import re
-        return bool(re.match(r'^[a-zA-Z0-9._-]+$', library_name.strip()))
+        if not re.match(r'^[a-z0-9]+([.-]?[a-z0-9]+)*$', library_name):
+            return False
+        
+        # Prevent common injection patterns
+        dangerous_patterns = ['..', '--', '..', 'script', 'eval', 'exec', 'import']
+        if any(pattern in library_name.lower() for pattern in dangerous_patterns):
+            return False
+        
+        return True
+
+    def _check_rate_limit(self, client_id: str = "default", max_requests: Optional[int] = None, window_seconds: Optional[int] = None) -> bool:
+        """Check if client is within rate limits."""
+        # Use config defaults if not specified
+        max_requests = max_requests or self._config.rate_limit_requests
+        window_seconds = window_seconds or self._config.rate_limit_window
+        
+        current_time = time.time()
+        
+        # Initialize tracker for new clients
+        if client_id not in self._rate_limit_tracker:
+            self._rate_limit_tracker[client_id] = []
+        
+        # Clean old requests outside the window
+        self._rate_limit_tracker[client_id] = [
+            req_time for req_time in self._rate_limit_tracker[client_id]
+            if current_time - req_time < window_seconds
+        ]
+        
+        # Check if within limits
+        if len(self._rate_limit_tracker[client_id]) >= max_requests:
+            logger.warning(f"Rate limit exceeded for client {client_id}")
+            return False
+        
+        # Record this request
+        self._rate_limit_tracker[client_id].append(current_time)
+        return True
     
-    def _enforce_cache_size_limit(self) -> None:
-        """Enforce maximum cache size by removing oldest entries."""
-        if len(self._cache) > self._max_cache_size:
-            # Remove oldest entries to get back to max size
-            entries_to_remove = len(self._cache) - self._max_cache_size
-            sorted_entries = sorted(
-                self._cache.items(), 
-                key=lambda x: x[1]["timestamp"]
-            )
-            for key, _ in sorted_entries[:entries_to_remove]:
-                del self._cache[key]
-            logger.debug(f"Cache size limit enforced, removed {entries_to_remove} entries")
+    def _enforce_cache_limits(self) -> None:
+        """Enforce both cache size and memory limits by removing oldest entries."""
+        entries_removed = 0
+        
+        # First check memory limit
+        while self._current_memory_usage > self._config.max_memory_bytes and self._cache:
+            # Find and remove oldest entry
+            oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k]["timestamp"])
+            old_entry = self._cache[oldest_key]
+            entry_size = self._estimate_memory_usage(old_entry["data"])
+            del self._cache[oldest_key]
+            self._current_memory_usage -= entry_size
+            entries_removed += 1
+            
+        # Then check entry count limit
+        while len(self._cache) > self._config.max_cache_size:
+            oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k]["timestamp"])
+            old_entry = self._cache[oldest_key]
+            entry_size = self._estimate_memory_usage(old_entry["data"])
+            del self._cache[oldest_key]
+            self._current_memory_usage -= entry_size
+            entries_removed += 1
+            
+        if entries_removed > 0:
+            logger.debug(f"Cache limits enforced, removed {entries_removed} entries. "
+                        f"Memory usage: {self._current_memory_usage / (1024*1024):.1f}MB / "
+                        f"{self._config.max_memory_bytes / (1024*1024):.1f}MB, "
+                        f"Entries: {len(self._cache)} / {self._config.max_cache_size}")
     
-    async def resolve_library_id(self, library_name: str) -> Optional[str]:
+    async def resolve_library_id(self, library_name: str, client_id: str = "default") -> Optional[str]:
         """
-        Resolve library name to Context7-compatible ID with caching.
+        Resolve library name to Context7-compatible ID with caching and rate limiting.
         
         Args:
             library_name: Library name (e.g., "react", "fastapi")
+            client_id: Client identifier for rate limiting
             
         Returns:
             Context7-compatible library ID or None if not found
         """
+        # Rate limiting check
+        if not self._check_rate_limit(client_id):
+            logger.warning(f"Rate limit exceeded for resolve request: {library_name}")
+            return None
+            
         # Input validation
         if not self._validate_library_name(library_name):
             logger.warning(f"Invalid library name: {library_name}")
@@ -104,36 +268,53 @@ class Context7Manager:
         
         self._cache_misses += 1
         
+        # Check circuit breaker before making external call
+        if not self._circuit_breaker.call_allowed():
+            logger.warning(f"Circuit breaker is open, skipping Context7 call for {library_name}")
+            return None
+            
         try:
             # Try Context7 resolution with timeout
             result = await asyncio.wait_for(
                 self._call_context7_resolve(library_name),
-                timeout=self._timeout
+                timeout=self._config.timeout
             )
+            
+            # Record success if we got a result
+            if result:
+                self._circuit_breaker.record_success()
             
             # Cache successful result and enforce limits
             self._set_cache(cache_key, result)
-            self._enforce_cache_size_limit()
+            self._enforce_cache_limits()
             return result
             
         except asyncio.TimeoutError:
             logger.warning(f"Context7 resolve timeout for {library_name}")
+            self._circuit_breaker.record_failure()
             return None
         except Exception as e:
             logger.error(f"Context7 resolve error for {library_name}: {e}")
+            self._circuit_breaker.record_failure()
             return None
     
-    async def get_library_docs(self, library_id: str, topic: Optional[str] = None) -> Optional[str]:
+    async def get_library_docs(self, library_id: str, topic: Optional[str] = None, client_id: str = "default") -> Optional[str]:
         """
-        Fetch library documentation from Context7 with caching.
+        Fetch library documentation from Context7 with caching and rate limiting.
         
         Args:
             library_id: Context7-compatible library ID
             topic: Optional topic filter for focused documentation
+            client_id: Client identifier for rate limiting
             
         Returns:
             Library documentation or None if not available
         """
+        # Rate limiting check
+        if not self._check_rate_limit(client_id, max_requests=50):  # Stricter limit for docs
+            logger.warning(f"Rate limit exceeded for docs request: {library_id}")
+            return None
+            
         # Input validation
         if not library_id or not isinstance(library_id, str) or len(library_id.strip()) == 0:
             logger.warning(f"Invalid library_id: {library_id}")
@@ -149,23 +330,34 @@ class Context7Manager:
         
         self._cache_misses += 1
         
+        # Check circuit breaker before making external call
+        if not self._circuit_breaker.call_allowed():
+            logger.warning(f"Circuit breaker is open, skipping Context7 docs call for {library_id}")
+            return None
+            
         try:
             # Try Context7 documentation fetch with timeout
             result = await asyncio.wait_for(
                 self._call_context7_docs(library_id, topic),
-                timeout=self._timeout
+                timeout=self._config.timeout
             )
+            
+            # Record success if we got a result
+            if result:
+                self._circuit_breaker.record_success()
             
             # Cache successful result and enforce limits
             self._set_cache(cache_key, result)
-            self._enforce_cache_size_limit()
+            self._enforce_cache_limits()
             return result
             
         except asyncio.TimeoutError:
             logger.warning(f"Context7 docs timeout for {library_id}")
+            self._circuit_breaker.record_failure()
             return None
         except Exception as e:
             logger.error(f"Context7 docs error for {library_id}: {e}")
+            self._circuit_breaker.record_failure()
             return None
     
     def _select_best_library_match(self, library_name: str, context7_response: Union[str, Dict[str, Any]]) -> Optional[str]:
@@ -311,14 +503,16 @@ class Context7Manager:
         """Check if cache entry is valid (exists and not expired)."""
         if cache_key not in self._cache:
             return False
-        return time.time() - self._cache[cache_key]["timestamp"] < self._cache_ttl
+        return time.time() - self._cache[cache_key]["timestamp"] < self._config.cache_ttl
     
     def _set_cache(self, cache_key: str, data: Any) -> None:
-        """Set cache entry with current timestamp."""
+        """Set cache entry with current timestamp and update memory tracking."""
+        entry_size = self._estimate_memory_usage(data)
         self._cache[cache_key] = {
             "data": data,
             "timestamp": time.time()
         }
+        self._current_memory_usage += entry_size
     
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache performance statistics."""
@@ -330,7 +524,35 @@ class Context7Manager:
             "cache_misses": self._cache_misses,
             "hit_rate_percent": round(hit_rate, 2),
             "cache_size": len(self._cache),
-            "max_cache_size": self._max_cache_size
+            "max_cache_size": self._config.max_cache_size,
+            "memory_usage_mb": round(self._current_memory_usage / (1024 * 1024), 2),
+            "max_memory_mb": round(self._config.max_memory_bytes / (1024 * 1024), 2),
+            "circuit_breaker_state": self._circuit_breaker.state.value,
+            "circuit_breaker_failures": self._circuit_breaker.failure_count
+        }
+        
+    def get_system_status(self) -> Dict[str, Any]:
+        """Get comprehensive system status including configuration and health."""
+        return {
+            "config": self._config.to_dict(),
+            "cache_stats": self.get_cache_stats(),
+            "api_stats": {
+                "context7_resolve_success": self._context7_resolve_success,
+                "context7_resolve_failure": self._context7_resolve_failure,
+                "context7_docs_success": self._context7_docs_success,
+                "context7_docs_failure": self._context7_docs_failure
+            },
+            "circuit_breaker": {
+                "state": self._circuit_breaker.state.value,
+                "failure_count": self._circuit_breaker.failure_count,
+                "last_failure_time": self._circuit_breaker.last_failure_time
+            },
+            "health": {
+                "mcp_client_available": self._mcp_client is not None,
+                "knowledge_base_loaded": self._knowledge_base is not None,
+                "cache_healthy": len(self._cache) < self._config.max_cache_size * 0.9,
+                "memory_healthy": self._current_memory_usage < self._config.max_memory_bytes * 0.9
+            }
         }
 
 # Global Context7 manager instance
@@ -442,6 +664,30 @@ def register_context7_tools(mcp: FastMCP):
                 "status": "error",
                 "message": f"An unexpected error occurred while fetching documentation for {library_id}",
                 "details": str(e)
+            }
+    
+    @mcp.tool(
+        name="get_context7_system_status", 
+        description="Get Context7 integration system status including configuration and health"
+    )
+    async def get_context7_system_status() -> Dict[str, Any]:
+        """
+        Get comprehensive Context7 system status.
+        
+        Returns:
+            System status including configuration, cache stats, circuit breaker state, and health metrics
+        """
+        try:
+            return {
+                "status": "success",
+                "system_status": context7_manager.get_system_status(),
+                "message": "Context7 system status retrieved successfully"
+            }
+        except Exception as e:
+            logger.error(f"Error getting Context7 system status: {e}")
+            return {
+                "status": "error", 
+                "message": f"Failed to get system status: {str(e)}"
             }
     
     @mcp.tool(
