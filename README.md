@@ -30,6 +30,7 @@ Get feedback from **multiple engineering perspectives simultaneously**:
 
 [![Version](https://img.shields.io/badge/Version-0.5.1-brightgreen)](https://github.com/kesslerio/vibe-check-mcp/releases/tag/v0.5.1)
 [![Smithery](https://smithery.ai/badge/vibe-check-mcp)](https://smithery.ai/package/vibe-check-mcp)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kesslerio/vibe-check-mcp)
 [![Claude Code Required](https://img.shields.io/badge/Claude%20Code-Required-red)](https://claude.ai)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.3.4-blue)](https://github.com/jlowin/fastmcp)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
