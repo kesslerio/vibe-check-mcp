@@ -91,14 +91,22 @@ class Context7Manager:
     
     def __init__(
         self, 
+        max_cache_size: int = 1000,  # Backward compatibility
         config: Optional[Context7Config] = None,
         mcp_client: Optional[Any] = None
     ):
         if mcp_client and not hasattr(mcp_client, 'call_tool'):
             raise ValueError("Invalid MCP client provided to Context7Manager")
             
-        # Initialize configuration
-        self._config = config or Context7Config()
+        # Initialize configuration (backward compatible)
+        if config is None:
+            # Create config but allow max_cache_size override for backward compatibility
+            self._config = Context7Config()
+            if max_cache_size != 1000:  # User specified a custom cache size
+                self._config.max_cache_size = max_cache_size
+        else:
+            self._config = config
+            
         logger.info(f"Context7Manager initialized with config: {self._config.to_dict()}")
         
         # Cache and tracking
@@ -120,7 +128,7 @@ class Context7Manager:
         
         # External dependencies
         self._knowledge_base: Optional[Dict[str, Any]] = None
-        self._mcp_client = mcp_client
+        self._mcp_client = mcp_client  # MCP client for Context7 API calls
         self._load_knowledge_base()
     
     def _load_knowledge_base(self) -> None:
@@ -666,29 +674,31 @@ def register_context7_tools(mcp: FastMCP):
                 "details": str(e)
             }
     
-    @mcp.tool(
-        name="get_context7_system_status", 
-        description="Get Context7 integration system status including configuration and health"
-    )
-    async def get_context7_system_status() -> Dict[str, Any]:
-        """
-        Get comprehensive Context7 system status.
-        
-        Returns:
-            System status including configuration, cache stats, circuit breaker state, and health metrics
-        """
-        try:
-            return {
-                "status": "success",
-                "system_status": context7_manager.get_system_status(),
-                "message": "Context7 system status retrieved successfully"
-            }
-        except Exception as e:
-            logger.error(f"Error getting Context7 system status: {e}")
-            return {
-                "status": "error", 
-                "message": f"Failed to get system status: {str(e)}"
-            }
+    # Developer/Debug tool - only expose in development mode
+    if os.getenv("VIBE_CHECK_DEBUG_MODE", "false").lower() == "true":
+        @mcp.tool(
+            name="get_context7_system_status", 
+            description="[DEBUG] Get Context7 integration system status including configuration and health"
+        )
+        async def get_context7_system_status() -> Dict[str, Any]:
+            """
+            Get comprehensive Context7 system status (DEBUG MODE ONLY).
+            
+            Returns:
+                System status including configuration, cache stats, circuit breaker state, and health metrics
+            """
+            try:
+                return {
+                    "status": "success",
+                    "system_status": context7_manager.get_system_status(),
+                    "message": "Context7 system status retrieved successfully (DEBUG MODE)"
+                }
+            except Exception as e:
+                logger.error(f"Error getting Context7 system status: {e}")
+                return {
+                    "status": "error", 
+                    "message": f"Failed to get system status: {str(e)}"
+                }
     
     @mcp.tool(
         name="get_hybrid_library_context",
