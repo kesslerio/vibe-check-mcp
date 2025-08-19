@@ -324,7 +324,9 @@ class TestMentorEngine(VibeMentorEngine):
         self.session_manager = session_manager or SessionManager()
         self.response_coordinator = response_coordinator or ResponseCoordinator()
         self.pattern_detector = pattern_detector or PatternDetector()
-        self._enhanced_mode = kwargs.get('enhanced_mode', True)
+        
+        # Enhanced mode disabled for test isolation (avoid async complexity in tests)
+        self._enhanced_mode = kwargs.get('enhanced_mode', False)
         
         # Backward compatibility attributes
         self.DEFAULT_PERSONAS = DEFAULT_PERSONAS
@@ -348,7 +350,10 @@ def cleanup_mentor_engine() -> None:
     _mentor_engine = None
 
 
-def create_mentor_engine(test_mode: bool = False, **test_doubles) -> VibeMentorEngine:
+def create_mentor_engine(
+    test_mode: bool = False, 
+    **test_doubles: Any
+) -> VibeMentorEngine:
     """
     Factory for creating mentor engines with optional test dependency injection.
     

@@ -180,6 +180,7 @@ CLAUDE.md.bak
 .claude/
 .qodo/
 .cursor/
+.gemini/
 
 # Cloned repositories
 claude-code-mcp/

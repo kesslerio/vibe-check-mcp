@@ -350,14 +350,19 @@ class TestGenerateSummary:
         assert "looking good" in summary.lower()
 
 
+@pytest.fixture(autouse=True)
+def cleanup_singleton():
+    """Ensure singleton is cleaned up before and after each test"""
+    cleanup_mentor_engine()  # Before test
+    yield
+    cleanup_mentor_engine()  # After test
+
+
 class TestGetMentorEngine:
     """Test the get_mentor_engine singleton function"""
 
     def test_get_mentor_engine_singleton(self):
         """Test that get_mentor_engine returns singleton instance"""
-        # Clear any existing instance
-        cleanup_mentor_engine()
-
         # First call
         engine1 = get_mentor_engine()
         # Second call
@@ -366,9 +371,6 @@ class TestGetMentorEngine:
         # Should return same instance
         assert engine1 is engine2
         assert isinstance(engine1, VibeMentorEngine)
-        
-        # Cleanup after test
-        cleanup_mentor_engine()
 
 
 class TestCreateMentorEngine:
@@ -376,9 +378,6 @@ class TestCreateMentorEngine:
 
     def test_create_mentor_engine_production_mode(self):
         """Test that create_mentor_engine returns singleton in production mode"""
-        # Clear any existing instance
-        cleanup_mentor_engine()
-        
         # Production mode (test_mode=False is default)
         engine1 = create_mentor_engine()
         engine2 = create_mentor_engine(test_mode=False)
@@ -388,9 +387,6 @@ class TestCreateMentorEngine:
         assert engine1 is singleton
         assert engine2 is singleton
         assert isinstance(engine1, VibeMentorEngine)
-        
-        # Cleanup after test
-        cleanup_mentor_engine()
 
     def test_create_mentor_engine_test_mode(self):
         """Test that create_mentor_engine returns TestMentorEngine with mocked dependencies"""
@@ -434,7 +430,9 @@ class TestCreateMentorEngine:
         
         # Should maintain backward compatibility
         assert hasattr(engine, 'DEFAULT_PERSONAS')
-        assert engine._enhanced_mode is True
+        
+        # Enhanced mode disabled by default for test isolation
+        assert engine._enhanced_mode is False
 
 
 class TestVibeCheckMentorIntegration:
