@@ -21,7 +21,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.vibe_mentor import (
     VibeMentorEngine,
+    TestMentorEngine,
     get_mentor_engine,
+    create_mentor_engine,
     cleanup_mentor_engine,
     _generate_summary,
 )
@@ -348,14 +350,19 @@ class TestGenerateSummary:
         assert "looking good" in summary.lower()
 
 
+@pytest.fixture(autouse=True)
+def cleanup_singleton():
+    """Ensure singleton is cleaned up before and after each test"""
+    cleanup_mentor_engine()  # Before test
+    yield
+    cleanup_mentor_engine()  # After test
+
+
 class TestGetMentorEngine:
     """Test the get_mentor_engine singleton function"""
 
     def test_get_mentor_engine_singleton(self):
         """Test that get_mentor_engine returns singleton instance"""
-        # Clear any existing instance
-        cleanup_mentor_engine()
-
         # First call
         engine1 = get_mentor_engine()
         # Second call
@@ -364,9 +371,68 @@ class TestGetMentorEngine:
         # Should return same instance
         assert engine1 is engine2
         assert isinstance(engine1, VibeMentorEngine)
+
+
+class TestCreateMentorEngine:
+    """Test the create_mentor_engine factory function (simple DI pattern)"""
+
+    def test_create_mentor_engine_production_mode(self):
+        """Test that create_mentor_engine returns singleton in production mode"""
+        # Production mode (test_mode=False is default)
+        engine1 = create_mentor_engine()
+        engine2 = create_mentor_engine(test_mode=False)
+        singleton = get_mentor_engine()
         
-        # Cleanup after test
-        cleanup_mentor_engine()
+        # All should return the same singleton instance
+        assert engine1 is singleton
+        assert engine2 is singleton
+        assert isinstance(engine1, VibeMentorEngine)
+
+    def test_create_mentor_engine_test_mode(self):
+        """Test that create_mentor_engine returns TestMentorEngine with mocked dependencies"""
+        # Create mock dependencies
+        mock_session_manager = MagicMock()
+        mock_pattern_detector = MagicMock()
+        mock_response_coordinator = MagicMock()
+        
+        # Create test engine with injected dependencies
+        engine = create_mentor_engine(
+            test_mode=True,
+            session_manager=mock_session_manager,
+            pattern_detector=mock_pattern_detector,
+            response_coordinator=mock_response_coordinator
+        )
+        
+        # Should return TestMentorEngine instance, not singleton
+        assert isinstance(engine, TestMentorEngine)
+        assert not isinstance(engine, VibeMentorEngine) or isinstance(engine, TestMentorEngine)
+        
+        # Should use injected dependencies
+        assert engine.session_manager is mock_session_manager
+        assert engine.pattern_detector is mock_pattern_detector
+        assert engine.response_coordinator is mock_response_coordinator
+        
+        # Should be different from singleton
+        singleton = get_mentor_engine()
+        assert engine is not singleton
+
+    def test_create_mentor_engine_test_mode_defaults(self):
+        """Test TestMentorEngine creates default dependencies when none provided"""
+        engine = create_mentor_engine(test_mode=True)
+        
+        # Should be TestMentorEngine instance
+        assert isinstance(engine, TestMentorEngine)
+        
+        # Should have created default dependencies (not None)
+        assert engine.session_manager is not None
+        assert engine.pattern_detector is not None
+        assert engine.response_coordinator is not None
+        
+        # Should maintain backward compatibility
+        assert hasattr(engine, 'DEFAULT_PERSONAS')
+        
+        # Enhanced mode disabled by default for test isolation
+        assert engine._enhanced_mode is False
 
 
 class TestVibeCheckMentorIntegration:
