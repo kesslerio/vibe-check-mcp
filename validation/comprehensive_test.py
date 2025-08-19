@@ -6,6 +6,10 @@ Tests detection algorithms against realistic examples
 
 import sys
 from pathlib import Path
+
+# Add validation directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
 from detect_patterns import PatternDetector
 from timing_utils import PerformanceTimer
 
