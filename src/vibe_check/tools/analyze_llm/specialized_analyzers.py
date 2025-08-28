@@ -16,6 +16,42 @@ from .text_analyzer import analyze_text_llm
 logger = logging.getLogger(__name__)
 
 
+def _check_common_file_patterns(pr_diff: str, repository: str) -> str:
+    """
+    Check for common file patterns that are often unnecessarily suggested.
+    
+    Returns context string about existing implementations to prevent redundant suggestions.
+    """
+    context_parts = []
+    
+    # Check for barrel exports (index.ts files)
+    if "index.ts" in pr_diff or "index.js" in pr_diff:
+        context_parts.append("✅ Barrel exports already implemented (index files found in PR)")
+    
+    # Check for README files
+    if "README.md" in pr_diff or "readme.md" in pr_diff.lower():
+        context_parts.append("✅ Documentation already present (README files found in PR)")
+    
+    # Check for common directory structures that are self-explanatory
+    common_patterns = ["validators/", "transformers/", "constants/", "utils/", "helpers/"]
+    found_patterns = [pattern for pattern in common_patterns if pattern in pr_diff]
+    if found_patterns:
+        context_parts.append(f"✅ Well-organized modular structure detected: {', '.join(found_patterns)}")
+    
+    # Check for TypeScript/configuration files
+    if ".eslintrc" in pr_diff or "tsconfig.json" in pr_diff or "prettier.config" in pr_diff:
+        context_parts.append("✅ Code quality tooling already configured")
+    
+    if context_parts:
+        return f"""
+**EXISTING IMPLEMENTATIONS DETECTED:**
+{chr(10).join(f'- {item}' for item in context_parts)}
+
+❗ IMPORTANT: Do not suggest adding these features - they are already implemented!
+"""
+    return ""
+
+
 def _extract_code_context(file_content: str, target_line: int, context_lines: int = 5) -> str:
     """
     Extract code context around a specific line number.
@@ -591,6 +627,9 @@ async def analyze_github_pr_llm(
             
             pr_diff = diff_result.data
             
+            # Check for existing implementations before suggesting improvements
+            file_pattern_context = _check_common_file_patterns(pr_diff, repository)
+            
             # Build comprehensive PR context
             pr_context = f"""# GitHub Pull Request Analysis
             
@@ -603,6 +642,8 @@ async def analyze_github_pr_llm(
 
 **PR Description:**
 {pr.body or 'No description provided'}
+
+{file_pattern_context}
 
 **Code Changes:**
 {pr_diff}
