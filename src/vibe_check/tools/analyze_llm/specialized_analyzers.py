@@ -21,26 +21,34 @@ def _check_common_file_patterns(pr_diff: str, repository: str) -> str:
     Check for common file patterns that are often unnecessarily suggested.
     
     Returns context string about existing implementations to prevent redundant suggestions.
+    Uses regex to match actual file additions in git diff format.
     """
+    import re
     context_parts = []
     
-    # Check for barrel exports (index.ts files)
-    if "index.ts" in pr_diff or "index.js" in pr_diff:
+    # Check for barrel exports (index.ts/js files) - match actual file additions
+    if re.search(r'^\+\+\+ b/.*index\.(ts|js)$', pr_diff, re.MULTILINE):
         context_parts.append("✅ Barrel exports already implemented (index files found in PR)")
     
-    # Check for README files
-    if "README.md" in pr_diff or "readme.md" in pr_diff.lower():
+    # Check for README files - match actual file additions
+    if re.search(r'^\+\+\+ b/.*README\.md$', pr_diff, re.MULTILINE | re.IGNORECASE):
         context_parts.append("✅ Documentation already present (README files found in PR)")
     
-    # Check for common directory structures that are self-explanatory
-    common_patterns = ["validators/", "transformers/", "constants/", "utils/", "helpers/"]
-    found_patterns = [pattern for pattern in common_patterns if pattern in pr_diff]
+    # Check for common directory structures - match actual directories being added
+    common_patterns = [r'validators/', r'transformers/', r'constants/', r'utils/', r'helpers/']
+    found_patterns = []
+    for pattern in common_patterns:
+        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
+            found_patterns.append(pattern.rstrip('/'))
     if found_patterns:
         context_parts.append(f"✅ Well-organized modular structure detected: {', '.join(found_patterns)}")
     
-    # Check for TypeScript/configuration files
-    if ".eslintrc" in pr_diff or "tsconfig.json" in pr_diff or "prettier.config" in pr_diff:
-        context_parts.append("✅ Code quality tooling already configured")
+    # Check for TypeScript/configuration files - match actual file additions
+    config_patterns = [r'\.eslintrc', r'tsconfig\.json', r'prettier\.config']
+    for pattern in config_patterns:
+        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
+            context_parts.append("✅ Code quality tooling already configured")
+            break
     
     if context_parts:
         return f"""
