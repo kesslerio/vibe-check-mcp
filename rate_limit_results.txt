@@ -1,9 +1,0 @@
-MCP RATE LIMIT TEST RESULTS
-========================================
-
-Rate Limit Detected: NO
-Sustainable Rate: 1.8 req/s
-Burst Rate: 29.3 req/s
-Circuit Breaker: WORKING
-
-Recommendation: No rate limiting concerns for normal usage

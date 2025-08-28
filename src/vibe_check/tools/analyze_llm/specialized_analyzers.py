@@ -16,6 +16,50 @@ from .text_analyzer import analyze_text_llm
 logger = logging.getLogger(__name__)
 
 
+def _check_common_file_patterns(pr_diff: str, repository: str) -> str:
+    """
+    Check for common file patterns that are often unnecessarily suggested.
+    
+    Returns context string about existing implementations to prevent redundant suggestions.
+    Uses regex to match actual file additions in git diff format.
+    """
+    import re
+    context_parts = []
+    
+    # Check for barrel exports (index.ts/js files) - match actual file additions
+    if re.search(r'^\+\+\+ b/.*index\.(ts|js)$', pr_diff, re.MULTILINE):
+        context_parts.append("✅ Barrel exports already implemented (index files found in PR)")
+    
+    # Check for README files - match actual file additions
+    if re.search(r'^\+\+\+ b/.*README\.md$', pr_diff, re.MULTILINE | re.IGNORECASE):
+        context_parts.append("✅ Documentation already present (README files found in PR)")
+    
+    # Check for common directory structures - match actual directories being added
+    common_patterns = [r'validators/', r'transformers/', r'constants/', r'utils/', r'helpers/']
+    found_patterns = []
+    for pattern in common_patterns:
+        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
+            found_patterns.append(pattern.rstrip('/'))
+    if found_patterns:
+        context_parts.append(f"✅ Well-organized modular structure detected: {', '.join(found_patterns)}")
+    
+    # Check for TypeScript/configuration files - match actual file additions
+    config_patterns = [r'\.eslintrc', r'tsconfig\.json', r'prettier\.config']
+    for pattern in config_patterns:
+        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
+            context_parts.append("✅ Code quality tooling already configured")
+            break
+    
+    if context_parts:
+        return f"""
+**EXISTING IMPLEMENTATIONS DETECTED:**
+{chr(10).join(f'- {item}' for item in context_parts)}
+
+❗ IMPORTANT: Do not suggest adding these features - they are already implemented!
+"""
+    return ""
+
+
 def _extract_code_context(file_content: str, target_line: int, context_lines: int = 5) -> str:
     """
     Extract code context around a specific line number.
@@ -591,6 +635,9 @@ async def analyze_github_pr_llm(
             
             pr_diff = diff_result.data
             
+            # Check for existing implementations before suggesting improvements
+            file_pattern_context = _check_common_file_patterns(pr_diff, repository)
+            
             # Build comprehensive PR context
             pr_context = f"""# GitHub Pull Request Analysis
             
@@ -603,6 +650,8 @@ async def analyze_github_pr_llm(
 
 **PR Description:**
 {pr.body or 'No description provided'}
+
+{file_pattern_context}
 
 **Code Changes:**
 {pr_diff}
