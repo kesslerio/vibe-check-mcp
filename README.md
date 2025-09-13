@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/kesslerio-vibe-check-mcp-badge.png)](https://mseep.ai/app/kesslerio-vibe-check-mcp)
+
 # 🧭 Vibe Check MCP
 
 **Your AI coding safety net with senior engineer collaborative reasoning - because getting 90% done and then stuck for weeks sucks.**
