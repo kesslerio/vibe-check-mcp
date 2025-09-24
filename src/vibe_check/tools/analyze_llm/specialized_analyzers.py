@@ -8,8 +8,8 @@ pull requests, code, issues, and GitHub issue vibe checks.
 import logging
 from typing import Dict, Any, Optional, List
 
-from ..shared.claude_integration import analyze_content_async
-from ..shared.github_abstraction import get_default_github_operations
+from vibe_check.tools.shared.claude_integration import analyze_content_async
+from vibe_check.tools.shared.github_abstraction import get_default_github_operations
 from .llm_models import ExternalClaudeResponse
 from .text_analyzer import analyze_text_llm
 
@@ -282,7 +282,7 @@ async def analyze_github_issue_llm(
         code_context = ""
         referenced_files = []
         try:
-            from ...core.code_reference_extractor import CodeReferenceExtractor, ExtractionConfig
+            from vibe_check.core.code_reference_extractor import CodeReferenceExtractor, ExtractionConfig
             
             # Use configurable extraction with review feedback improvements
             config = ExtractionConfig(
@@ -381,7 +381,7 @@ async def analyze_github_issue_llm(
         # Enhanced prompt with integration pattern detection
         integration_context = ""
         try:
-            from ..integration_pattern_analysis import quick_technology_scan
+            from vibe_check.tools.integration_pattern_analysis import quick_technology_scan
             tech_scan = quick_technology_scan(issue_context)
             if tech_scan.get("status") == "technologies_detected":
                 tech_list = [t["technology"] for t in tech_scan.get("technologies", [])]
@@ -395,7 +395,7 @@ async def analyze_github_issue_llm(
         # Check for doom loop patterns in issue content
         doom_loop_context = ""
         try:
-            from ..doom_loop_analysis import analyze_text_for_doom_loops
+            from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops
             doom_analysis = analyze_text_for_doom_loops(issue_context, tool_name="analyze_github_issue_llm")
             if doom_analysis.get("status") == "doom_loop_detected":
                 severity = doom_analysis.get("severity", "unknown")
@@ -512,7 +512,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
                 response["comment_error"] = f"Failed to post comment: {comment_result.error}"
         
         # Sanitize any GitHub API URLs to frontend URLs
-        from ..shared.github_helpers import sanitize_github_urls_in_response
+        from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
         return sanitize_github_urls_in_response(response)
         
     except Exception as e:
@@ -599,10 +599,10 @@ async def analyze_github_pr_llm(
         }
         
         # PHASE 1-4 IMPLEMENTATION: Complete analysis strategy with async processing
-        from ...core.pr_filtering import analyze_with_fallback, should_use_llm_analysis
-        from ..analyze_pr_nollm import analyze_pr_nollm
-        from ..async_analysis.integration import start_async_analysis
-        from ..async_analysis.config import DEFAULT_ASYNC_CONFIG
+        from vibe_check.core.pr_filtering import analyze_with_fallback, should_use_llm_analysis
+        from vibe_check.tools.analyze_pr_nollm import analyze_pr_nollm
+        from vibe_check.tools.async_analysis.integration import start_async_analysis
+        from vibe_check.tools.async_analysis.config import DEFAULT_ASYNC_CONFIG
         
         # PHASE 4 CHECK: Determine if PR should use async processing
         async_config = DEFAULT_ASYNC_CONFIG
@@ -623,7 +623,7 @@ async def analyze_github_pr_llm(
             )
             
             # Sanitize GitHub URLs and return
-            from ..shared.github_helpers import sanitize_github_urls_in_response
+            from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
             return sanitize_github_urls_in_response(async_result)
         
         async def llm_analysis():
@@ -669,7 +669,7 @@ async def analyze_github_pr_llm(
             # Enhanced PR prompt with integration pattern detection
             pr_integration_context = ""
             try:
-                from ..integration_pattern_analysis import analyze_integration_patterns_fast
+                from vibe_check.tools.integration_pattern_analysis import analyze_integration_patterns_fast
                 integration_analysis = analyze_integration_patterns_fast(pr_context, detail_level="brief")
                 if integration_analysis.get("technologies_detected"):
                     tech_list = [t["technology"] for t in integration_analysis.get("technologies_detected", [])]
@@ -686,7 +686,7 @@ async def analyze_github_pr_llm(
             # Check for doom loop patterns in PR content
             pr_doom_loop_context = ""
             try:
-                from ..doom_loop_analysis import analyze_text_for_doom_loops
+                from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops
                 doom_analysis = analyze_text_for_doom_loops(pr_context, tool_name="analyze_github_pr_llm")
                 if doom_analysis.get("status") == "doom_loop_detected":
                     severity = doom_analysis.get("severity", "unknown")
@@ -795,7 +795,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
             # For now, use create_and_submit_pull_request_review
             # TODO: Could enhance to use the abstraction layer when PR review methods are added
             try:
-                from ..shared.github_helpers import get_github_client
+                from vibe_check.tools.shared.github_helpers import get_github_client
                 client = get_github_client()
                 if client:
                     repo = client.get_repo(repository)
@@ -829,7 +829,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
 *🤖 Fast analysis by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) - Large PRs get pattern detection to ensure reliable response 🚀*"""
                 
                 try:
-                    from ..shared.github_helpers import get_github_client
+                    from vibe_check.tools.shared.github_helpers import get_github_client
                     client = get_github_client()
                     if client:
                         repo = client.get_repo(repository)
@@ -845,7 +845,7 @@ Use friendly, coaching language that helps developers learn rather than intimida
                     analysis_result["comment_error"] = f"Failed to post review: {str(e)}"
         
         # Sanitize any GitHub API URLs to frontend URLs
-        from ..shared.github_helpers import sanitize_github_urls_in_response
+        from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
         return sanitize_github_urls_in_response(analysis_result)
         
     except Exception as e:
