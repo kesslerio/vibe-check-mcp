@@ -17,8 +17,8 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from ..shared.claude_integration import analyze_content_async, ClaudeCliResult
-from ..shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
+from vibe_check.tools.shared.claude_integration import analyze_content_async, ClaudeCliResult
+from vibe_check.tools.shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
 
 logger = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@ from .claude_integration import ClaudeIntegration
 from .feedback_categorizer import FeedbackCategorizer
 from .chunked_analyzer import ChunkedAnalyzer, analyze_pr_with_chunking
 from .file_type_analyzer import FileTypeAnalyzer
-from ..shared.pr_classifier import classify_pr_size, PrSizeCategory, should_use_chunked_analysis
+from vibe_check.tools.shared.pr_classifier import classify_pr_size, PrSizeCategory, should_use_chunked_analysis
 
 logger = logging.getLogger(__name__)
 

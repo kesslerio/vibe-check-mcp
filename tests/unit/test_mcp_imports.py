@@ -1,5 +1,5 @@
 """
-Test MCP Import Context - Regression Test for Issue #229
+Test MCP Import Context - Regression Test for Issues #229 and #233
 
 Ensures that absolute imports work when modules are loaded by MCP server,
 preventing "attempted relative import beyond top-level package" errors.
@@ -124,3 +124,75 @@ class TestMCPImportContext:
 
         # Check return annotation
         assert sig.return_annotation != inspect.Signature.empty, "Return type annotation should be preserved"
+
+    def test_github_integration_tools_import_correctly(self):
+        """
+        Regression test for Issue #233: Ensure review_pr_comprehensive
+        and related GitHub integration tools can be imported without errors.
+        """
+        try:
+            # Test the main tool that was failing
+            from vibe_check.server.tools.github_integration import review_pr_comprehensive
+            assert callable(review_pr_comprehensive), "review_pr_comprehensive should be callable"
+
+            # Test the underlying function it depends on
+            from vibe_check.tools.pr_review import review_pull_request
+            assert callable(review_pull_request), "review_pull_request should be callable"
+
+            # Test that FileTypeAnalyzer is accessible (was causing NameError)
+            from vibe_check.tools.pr_review.file_type_analyzer import FileTypeAnalyzer
+            assert FileTypeAnalyzer is not None, "FileTypeAnalyzer should be importable"
+
+        except ImportError as e:
+            pytest.fail(f"GitHub integration tools import failed: {e}")
+
+    def test_pr_review_module_imports(self):
+        """
+        Test that all pr_review module imports work with absolute paths.
+        """
+        try:
+            # Test all components of pr_review module
+            from vibe_check.tools.pr_review.claude_integration import ClaudeIntegration
+            from vibe_check.tools.pr_review.data_collector import PRDataCollector
+            from vibe_check.tools.pr_review.size_classifier import PRSizeClassifier
+
+            assert ClaudeIntegration is not None
+            assert PRDataCollector is not None
+            assert PRSizeClassifier is not None
+
+        except ImportError as e:
+            pytest.fail(f"PR review module imports failed: {e}")
+
+    def test_critical_tools_have_no_relative_imports(self):
+        """
+        Ensure critical MCP tools don't use relative imports that go up directories.
+        Regression protection for Issues #229 and #233.
+        """
+        from pathlib import Path
+
+        critical_files = [
+            "src/vibe_check/server/tools/github_integration.py",
+            "src/vibe_check/tools/pr_review/main.py",
+            "src/vibe_check/tools/pr_review/claude_integration.py",
+            "src/vibe_check/tools/analyze_llm/specialized_analyzers.py",
+        ]
+
+        project_root = Path(__file__).parent.parent.parent
+
+        for file_path in critical_files:
+            full_path = project_root / file_path
+            if not full_path.exists():
+                continue
+
+            with open(full_path, 'r') as f:
+                content = f.read()
+
+            lines = content.split('\n')
+            relative_imports = []
+
+            for i, line in enumerate(lines, 1):
+                stripped = line.strip()
+                if stripped.startswith('from ..') or stripped.startswith('from ...'):
+                    relative_imports.append(f"Line {i}: {line}")
+
+            assert len(relative_imports) == 0, f"Found relative imports in {file_path}: {relative_imports}"

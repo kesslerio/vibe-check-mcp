@@ -1,9 +1,9 @@
 import logging
 from typing import Dict, Any
-from ..core import mcp
-from ...tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
-from ...tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
-from ...tools.pr_review import review_pull_request
+from vibe_check.server.core import mcp
+from vibe_check.tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
+from vibe_check.tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
+from vibe_check.tools.pr_review import review_pull_request
 
 logger = logging.getLogger(__name__)
 
