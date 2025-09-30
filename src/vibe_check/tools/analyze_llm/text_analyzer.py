@@ -25,21 +25,8 @@ async def analyze_text_llm(
     model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
-    🧠 Deep text analysis using Claude CLI reasoning.
-    
-    This tool executes Claude CLI in a separate process to provide comprehensive
-    LLM-powered analysis with full reasoning capabilities. For fast pattern 
-    detection without LLM calls, use analyze_text_nollm instead.
-    
-    Args:
-        content: Text content to analyze
-        task_type: Type of analysis (general, pr_review, code_analysis, issue_analysis)
-        additional_context: Optional additional context for the analysis
-        timeout_seconds: Maximum time to wait for response
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Comprehensive Claude CLI analysis results
+    Deep text analysis using Claude CLI reasoning.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external Claude analysis for task type: {task_type}")
     

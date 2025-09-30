@@ -584,3 +584,27 @@ Install **Vibe Check MCP v0.5.1** and get your context-aware senior engineer men
 ---
 
 **Stop building the wrong thing. Start building the right thing faster.**
+
+## Troubleshooting
+
+### MCP Server Connection Issues
+
+**Problem:** Server fails with `log_level validation error` or `Input should be 'DEBUG', 'INFO', 'WARNING', 'ERROR' or 'CRITICAL'`
+
+**Cause:** FastMCP uses case-sensitive environment variable validation. Lowercase values like `LOG_LEVEL=error` will fail.
+
+**Solution:** Ensure `LOG_LEVEL` is uppercase in your `.env` files:
+```bash
+# ❌ This will fail
+LOG_LEVEL=error
+
+# ✅ This works
+LOG_LEVEL=ERROR
+```
+
+### Server Not Starting
+
+1. **Check Python Path:** Ensure `PYTHONPATH` includes the vibe-check-mcp source directory
+2. **Verify Dependencies:** Run `pip install -r requirements.txt`
+3. **Check Logs:** Look for specific error messages in the startup output
+4. **Test Basic Connection:** Try `python -m vibe_check.server --stdio` directly

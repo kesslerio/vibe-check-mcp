@@ -26,46 +26,8 @@ async def vibe_check_mentor(
     working_directory: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    🧠 Senior engineer collaborative reasoning - Get multi-perspective feedback on technical decisions.
-
-    Interactive senior engineer mentor combining vibe-check pattern detection with collaborative reasoning.
-    Multiple engineering personas analyze your technical decisions and provide structured feedback.
-
-    Features:
-    - 🧠 Multi-persona collaborative reasoning (Senior, Product, AI/ML Engineer perspectives)
-    - 🎯 Automatic anti-pattern detection drives persona responses
-    - 💬 Session continuity for multi-turn conversations  
-    - 📊 Structured insights with consensus and disagreements
-    - 🎓 Educational coaching recommendations
-    - ⚡ NEW: Interrupt mode for quick focused interventions
-
-    Modes:
-    - interrupt: Quick focused intervention (<3 seconds) - single question/approval
-    - standard: Normal collaborative reasoning with selected personas
-    - comprehensive: Full analysis (legacy, same as reasoning_depth="comprehensive")
-
-    Reasoning Depths (when mode="standard"):
-    - quick: Senior engineer perspective only
-    - standard: Senior + Product engineer perspectives  
-    - comprehensive: All personas with full collaborative reasoning
-
-    Use this tool for: "Should I build a custom auth system?", "Planning microservices architecture", 
-    "What's the best approach for API integration?", "Continue previous discussion about caching"
-
-    Args:
-        query: Technical question or decision to discuss
-        context: Additional context (code, architecture, requirements)
-        session_id: Session ID to continue previous conversation
-        reasoning_depth: Analysis depth - quick/standard/comprehensive (default: standard)
-        continue_session: Whether to continue existing session (default: false)
-        mode: Interaction mode - interrupt/standard (default: standard)
-        phase: Development phase - planning/implementation/review (default: planning)
-        confidence_threshold: Minimum confidence to trigger interrupt (default: 0.7)
-        file_paths: Optional list of file paths to analyze (max 10 files, 1MB each)
-        working_directory: Optional working directory for resolving relative paths
-        
-    Returns:
-        Collaborative reasoning analysis with multi-perspective insights or quick interrupt
+    Multi-persona technical decision analysis with anti-pattern detection.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Vibe mentor activated: mode={mode}, depth={reasoning_depth}, phase={phase} for query: {query[:100]}...")
     

@@ -1,25 +1,39 @@
 # -*- coding: utf-8 -*-
 """
-Vibe Check MCP: Engineering Anti-Pattern Detection & Prevention
+Vibe Check MCP - Your AI coding safety net with senior engineer collaborative reasoning.
 
-A comprehensive system for detecting and preventing engineering anti-patterns
-through validated detection algorithms and educational content generation.
+Because getting 90% done and then stuck for weeks sucks.
 
-Phase 1: ✅ Core Detection Engine (87.5% accuracy, 0% false positives)
-Phase 2: ✅ FastMCP Server Integration
+This is an MCP (Model Context Protocol) server that provides anti-pattern detection
+and senior engineer mentoring for AI-assisted coding projects.
 
-Usage:
-    # MCP Server
-    from vibe_check.server import run_server
-    run_server()
-    
-    # Core Detection Engine
-    from vibe_check.core import PatternDetector, EducationalContentGenerator
-    
-    detector = PatternDetector()
-    educator = EducationalContentGenerator()
+Key Features:
+- Senior engineer collaborative reasoning with interrupt mode
+- Fast pattern detection without external API calls  
+- Deep analysis with Claude-powered reasoning
+- Educational explanations and real-world case studies
+- Native MCP protocol integration with sub-millisecond components
+
+For more information, visit: https://github.com/kesslerio/vibe-check-mcp
 """
 
+# CRITICAL: Fix environment variables before any fastmcp imports
+import os
+# Handle LOG_LEVEL that causes pydantic validation errors in FastMCP
+_original_log_level = os.environ.get('LOG_LEVEL', None)
+if _original_log_level and _original_log_level.lower() in ['debug', 'info', 'warning', 'error', 'critical']:
+    if _original_log_level.lower() == 'error':
+        # Convert lowercase 'error' to uppercase 'ERROR' for FastMCP validation
+        os.environ['LOG_LEVEL'] = 'ERROR'
+    elif _original_log_level != _original_log_level.upper():
+        os.environ['LOG_LEVEL'] = _original_log_level.upper()
+
+__version__ = "0.5.1"
+__author__ = "kesslerio"
+__email__ = "hello@kessler.io"
+
+# Import main server functions for easy access
+from .server import run_server
 from .core.pattern_detector import PatternDetector
 from .core.educational_content import EducationalContentGenerator
 from .server import run_server

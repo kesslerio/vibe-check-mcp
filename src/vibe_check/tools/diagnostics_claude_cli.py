@@ -14,13 +14,13 @@ import time
 import logging
 from typing import Dict, Any
 
-from fastmcp import FastMCP
+# FastMCP import moved inside functions to avoid early environment loading
 from ..core.vibe_config import get_vibe_config, vibe_message
 
 logger = logging.getLogger(__name__)
 
 
-def register_diagnostic_tools(mcp: FastMCP) -> None:
+def register_diagnostic_tools(mcp) -> None:
     """Register user diagnostic tools with the MCP server."""
     
     @mcp.tool()
