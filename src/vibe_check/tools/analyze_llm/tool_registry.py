@@ -10,8 +10,6 @@ import logging
 import time
 from typing import Dict, Any, List
 
-from fastmcp import FastMCP
-
 from .text_analyzer import analyze_text_llm
 from .specialized_analyzers import (
     analyze_pr_llm,
@@ -25,7 +23,7 @@ from .llm_models import ExternalClaudeResponse
 logger = logging.getLogger(__name__)
 
 
-def register_llm_analysis_tools(mcp: FastMCP) -> None:
+def register_llm_analysis_tools(mcp) -> None:
     """Register LLM-powered analysis tools with the MCP server."""
     
     # Register the text analyzer

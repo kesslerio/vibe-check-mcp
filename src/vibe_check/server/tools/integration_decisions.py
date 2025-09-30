@@ -28,28 +28,8 @@ def check_integration_alternatives(
     description: str = ""
 ) -> Dict[str, Any]:
     """
-    🔍 Official Alternative Check for Integration Decisions.
-    
-    Validates integration approaches against official alternatives to prevent
-    unnecessary custom development. Based on real-world case studies including
-    the Cognee integration failure where 2+ weeks were spent building custom
-    REST servers instead of using the official Docker container.
-    
-    Features:
-    - 🔍 Official alternative detection
-    - ⚠️ Red flag identification for anti-patterns  
-    - 📋 Decision framework generation
-    - 🎯 Custom development justification requirements
-    
-    Use this tool for: "check cognee integration", "validate docker approach", "integration decision"
-    
-    Args:
-        technology: Technology being integrated (e.g., "cognee", "supabase", "claude")
-        custom_features: Comma-separated list of features being custom developed
-        description: Optional description of the integration context
-        
-    Returns:
-        Integration recommendation with research requirements and next steps
+    Official alternative check for integration decisions.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Integration decision check for {technology}: {custom_features}")
     
@@ -100,26 +80,8 @@ def analyze_integration_decision_text(
     detail_level: str = "standard"
 ) -> Dict[str, Any]:
     """
-    🔍 Analyze text for integration decision anti-patterns.
-    
-    Scans text content for integration patterns and provides recommendations
-    to prevent custom development when official alternatives exist. Detects
-    technologies and custom development indicators automatically.
-    
-    Features:
-    - 🔍 Technology detection in text
-    - ⚠️ Custom development pattern identification
-    - 📋 Automatic recommendation generation
-    - 🎯 Integration decision guidance
-    
-    Use this tool for: "analyze this integration plan", "check for integration anti-patterns"
-    
-    Args:
-        text: Text content to analyze for integration patterns
-        detail_level: Educational detail level (brief/standard/comprehensive)
-        
-    Returns:
-        Analysis of detected technologies and integration recommendations
+    Analyze text for integration decision anti-patterns.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Integration decision text analysis for {len(text)} characters")
     
@@ -180,28 +142,8 @@ def integration_decision_framework(
     analysis_type: str = "weighted-criteria"
 ) -> Dict[str, Any]:
     """
-    🧠 Integration Decision Framework with Clear Thought Analysis.
-    
-    Combines integration alternative checking with Clear Thought decision framework
-    to provide structured decision analysis for integration approaches. Designed
-    to prevent unnecessary custom development through systematic evaluation.
-    
-    Features:
-    - 🧠 Clear Thought decision framework integration
-    - 🔍 Official alternative checking
-    - ⚖️ Weighted criteria analysis
-    - 📋 Structured decision documentation
-    
-    Use this tool for: "decide on cognee integration approach", "framework for docker vs custom"
-    
-    Args:
-        technology: Technology being integrated (e.g., "cognee", "supabase")
-        custom_features: Comma-separated list of features being custom developed
-        decision_statement: Decision being made (auto-generated if empty)
-        analysis_type: Type of analysis (weighted-criteria, pros-cons, risk-analysis)
-        
-    Returns:
-        Comprehensive decision framework with recommendations and next steps
+    Integration decision framework with systematic evaluation.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Integration decision framework for {technology}: {analysis_type}")
     
@@ -327,28 +269,8 @@ def integration_research_with_websearch(
     search_depth: str = "basic"
 ) -> Dict[str, Any]:
     """
-    🔍 Enhanced Integration Research with Real-time Web Search.
-    
-    Combines static knowledge base with real-time web search to research
-    official alternatives for technologies. Searches for official documentation,
-    Docker containers, SDKs, and deployment guides to provide up-to-date
-    integration recommendations.
-    
-    Features:
-    - 🌐 Real-time web search for official documentation
-    - 🔍 Official container and SDK discovery
-    - 📋 Up-to-date deployment options research
-    - 🎯 Enhanced red flag detection with current information
-    
-    Use this tool for: "research new technology integration", "find official deployment options"
-    
-    Args:
-        technology: Technology to research (e.g., "new-framework", "emerging-tool")
-        custom_features: Comma-separated list of features being considered for custom development
-        search_depth: Search depth ("basic" or "advanced")
-        
-    Returns:
-        Enhanced integration recommendation with web-researched information
+    Enhanced integration research with real-time web search.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Enhanced integration research for {technology} with web search")
     
@@ -456,27 +378,8 @@ def analyze_integration_patterns(
     detail_level: str = "standard"
 ) -> Dict[str, Any]:
     """
-    🚀 Fast Integration Pattern Detection for Vibe Coding Safety Net.
-    
-    Real-time detection of integration anti-patterns to prevent engineering disasters
-    like the Cognee case study. Provides instant feedback on technology usage and
-    custom development decisions with sub-second response for development workflow.
-    
-    Features:
-    - 🔍 Technology Recognition: Instant detection of Cognee, Supabase, OpenAI, Claude
-    - ⚠️ Red Flag Detection: Custom development when official alternatives exist
-    - 📊 Effort Analysis: High line counts for standard integrations
-    - 💡 Immediate Recommendations: Official alternatives and next steps
-    
-    Use this tool for: "vibe check this integration plan", "analyze for integration anti-patterns"
-    
-    Args:
-        content: Text content to analyze (PR description, issue content, code comments)
-        context: Additional context (title, file names, related information)
-        detail_level: Analysis detail level (brief/standard/comprehensive)
-        
-    Returns:
-        Real-time integration pattern analysis with actionable recommendations
+    Fast integration pattern detection for vibe coding safety net.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Integration pattern analysis for {len(content)} characters")
     
@@ -489,25 +392,8 @@ def analyze_integration_patterns(
 @mcp.tool()
 def quick_tech_scan(content: str) -> Dict[str, Any]:
     """
-    ⚡ Ultra-Fast Technology Scan for Immediate Feedback.
-    
-    Instant detection of known technologies (Cognee, Supabase, OpenAI, Claude)
-    with immediate alerts about official alternatives. Designed for real-time
-    development workflow integration where sub-second response is critical.
-    
-    Features:
-    - ⚡ Sub-second response time
-    - 🎯 Technology-specific official alternatives
-    - 🚨 Immediate red flag alerts
-    - ✅ Quick action recommendations
-    
-    Use this tool for: "scan for known technologies", "quick tech check", "instant integration scan"
-    
-    Args:
-        content: Text content to scan for technology mentions
-        
-    Returns:
-        Instant technology detection with official alternatives
+    Ultra-fast technology scan for immediate feedback.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Ultra-fast technology scan requested")
     
@@ -521,28 +407,8 @@ def analyze_integration_effort(
     files_changed: int = 0
 ) -> Dict[str, Any]:
     """
-    📊 Integration Effort-Complexity Analysis.
-    
-    Analyzes the relationship between development effort and integration complexity
-    to identify potential over-engineering. Helps prevent scenarios like the Cognee
-    case study where 2000+ lines were spent on standard integrations.
-    
-    Features:
-    - 📏 Line count analysis for integration work
-    - ⚖️ Effort-value ratio assessment
-    - 🎯 Technology-specific effort guidance
-    - 💡 Official alternative recommendations
-    
-    Use this tool for: "analyze integration effort", "check development complexity", "effort-value analysis"
-    
-    Args:
-        content: Content to analyze for effort indicators
-        lines_added: Lines added in PR/change (optional)
-        lines_deleted: Lines deleted in PR/change (optional)
-        files_changed: Number of files modified (optional)
-        
-    Returns:
-        Effort-complexity analysis with recommendations
+    Integration effort-complexity analysis.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Integration effort-complexity analysis requested")
     

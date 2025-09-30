@@ -5,6 +5,13 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
+# CRITICAL: Fix LOG_LEVEL environment variable before FastMCP imports
+_original_log_level = os.environ.get('LOG_LEVEL', None)
+if _original_log_level and _original_log_level.lower() == 'error':
+    os.environ['LOG_LEVEL'] = 'ERROR'
+elif _original_log_level and _original_log_level.lower() in ['debug', 'info', 'warning', 'critical']:
+    os.environ['LOG_LEVEL'] = _original_log_level.upper()
+
 from .core import mcp
 from .transport import detect_transport_mode
 from .registry import register_all_tools
@@ -74,11 +81,19 @@ def run_server(transport: Optional[str] = None, host: Optional[str] = None, port
             os.environ.setdefault("FASTMCP_SERVER_STRICT_INIT", "false")
             os.environ.setdefault("FASTMCP_SERVER_PROTOCOL_COMPLIANCE", "relaxed")
             
+            # Fix LOG_LEVEL before mcp.run() calls - FastMCP uses case_sensitive=True
+            _current_log_level = os.environ.get('LOG_LEVEL', None)
+            if _current_log_level and _current_log_level.lower() in ['debug', 'info', 'warning', 'error', 'critical']:
+                os.environ['LOG_LEVEL'] = _current_log_level.upper()
+            
             try:
                 mcp.run(transport="stdio")
             except Exception as e:
                 logger.error(f"Server failed to start with stdio transport: {e}")
                 logger.info("Attempting fallback startup with minimal configuration...")
+                # Clear problematic env vars for fallback
+                if 'LOG_LEVEL' in os.environ:
+                    del os.environ['LOG_LEVEL']
                 mcp.run()
         else:
             server_host = host or os.environ.get("MCP_SERVER_HOST", "0.0.0.0")

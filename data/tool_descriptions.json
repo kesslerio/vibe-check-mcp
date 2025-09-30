@@ -1,0 +1,206 @@
+{
+  "vibe_check_mentor": {
+    "title": "Senior Engineer Collaborative Reasoning",
+    "description": "Interactive senior engineer mentor combining vibe-check pattern detection with collaborative reasoning. Multiple engineering personas analyze your technical decisions and provide structured feedback.",
+    "features": [
+      "🧠 Multi-persona collaborative reasoning (Senior, Product, AI/ML Engineer perspectives)",
+      "🎯 Automatic anti-pattern detection drives persona responses",
+      "💬 Session continuity for multi-turn conversations",
+      "📊 Structured insights with consensus and disagreements",
+      "🎓 Educational coaching recommendations",
+      "⚡ Interrupt mode for quick focused interventions"
+    ],
+    "modes": {
+      "interrupt": "Quick focused intervention (<3 seconds) - single question/approval",
+      "standard": "Normal collaborative reasoning with selected personas",
+      "comprehensive": "Full analysis (legacy, same as reasoning_depth=comprehensive)"
+    },
+    "reasoning_depths": {
+      "quick": "Senior engineer perspective only",
+      "standard": "Senior + Product engineer perspectives",
+      "comprehensive": "All personas with full collaborative reasoning"
+    },
+    "use_cases": [
+      "Should I build a custom auth system?",
+      "Planning microservices architecture",
+      "What's the best approach for API integration?",
+      "Continue previous discussion about caching"
+    ],
+    "parameters": {
+      "query": "Technical question or decision to discuss",
+      "context": "Additional context (code, architecture, requirements)",
+      "session_id": "Session ID to continue previous conversation",
+      "reasoning_depth": "Analysis depth - quick/standard/comprehensive (default: standard)",
+      "continue_session": "Whether to continue existing session (default: false)",
+      "mode": "Interaction mode - interrupt/standard (default: standard)",
+      "phase": "Development phase - planning/implementation/review (default: planning)",
+      "confidence_threshold": "Minimum confidence to trigger interrupt (default: 0.7)",
+      "file_paths": "Optional list of file paths to analyze (max 10 files, 1MB each)",
+      "working_directory": "Optional working directory for resolving relative paths"
+    },
+    "returns": "Collaborative reasoning analysis with multi-perspective insights or quick interrupt"
+  },
+  "analyze_text_llm": {
+    "title": "Deep Text Analysis using Claude CLI",
+    "description": "Executes Claude CLI in a separate process to provide comprehensive LLM-powered analysis with full reasoning capabilities. For fast pattern detection without LLM calls, use analyze_text_nollm instead.",
+    "features": [
+      "Full Claude reasoning capabilities",
+      "Comprehensive anti-pattern detection",
+      "Security analysis",
+      "Code quality assessment"
+    ],
+    "parameters": {
+      "content": "Text content to analyze",
+      "task_type": "Type of analysis (general, pr_review, code_analysis, issue_analysis)",
+      "additional_context": "Optional additional context for the analysis",
+      "timeout_seconds": "Maximum time to wait for response",
+      "model": "Claude model to use (sonnet, opus, haiku, or full model name)"
+    },
+    "returns": "Comprehensive Claude CLI analysis results"
+  },
+  "analyze_pr_llm": {
+    "title": "Comprehensive PR Review using Claude CLI",
+    "description": "Deep PR analysis with LLM-powered reasoning including anti-pattern detection, security analysis, and code quality assessment. For fast direct PR analysis, use analyze_pr_nollm instead.",
+    "parameters": {
+      "pr_diff": "The full diff content of the pull request",
+      "pr_description": "Description/title of the pull request",
+      "file_changes": "List of changed files for context",
+      "timeout_seconds": "Maximum time to wait for analysis",
+      "model": "Claude model to use"
+    },
+    "returns": "Comprehensive Claude CLI PR review results"
+  },
+  "analyze_code_llm": {
+    "title": "Deep Code Analysis using Claude CLI",
+    "description": "Comprehensive code analysis with LLM-powered reasoning for anti-pattern detection, security vulnerabilities, and maintainability.",
+    "parameters": {
+      "code_content": "The code to analyze",
+      "file_path": "Optional file path for context",
+      "language": "Programming language for specialized analysis",
+      "timeout_seconds": "Maximum time to wait for analysis",
+      "model": "Claude model to use"
+    },
+    "returns": "Detailed Claude CLI code analysis results"
+  },
+  "analyze_issue_llm": {
+    "title": "Deep GitHub Issue Analysis using Claude CLI",
+    "description": "Comprehensive issue analysis with LLM-powered reasoning for anti-pattern prevention, requirements quality, and implementation guidance. For fast direct issue analysis, use analyze_issue_nollm instead.",
+    "parameters": {
+      "issue_content": "The issue body/content",
+      "issue_title": "Title of the issue",
+      "issue_labels": "List of issue labels for context",
+      "timeout_seconds": "Maximum time to wait for analysis",
+      "model": "Claude model to use"
+    },
+    "returns": "Comprehensive Claude CLI issue analysis with anti-pattern prevention guidance"
+  },
+  "analyze_github_issue_llm": {
+    "title": "Comprehensive GitHub Issue Vibe Check",
+    "description": "Fetches the GitHub issue, analyzes it for anti-patterns and engineering guidance using Claude CLI, and optionally posts a friendly coaching comment. For fast direct issue analysis, use analyze_issue_nollm instead.",
+    "important": "When this tool returns a comment_url or user_message field, ALWAYS include the full GitHub URL in your response",
+    "parameters": {
+      "issue_number": "GitHub issue number to analyze",
+      "repository": "Repository in format owner/repo (default: kesslerio/vibe-check-mcp)",
+      "post_comment": "Whether to post analysis as GitHub comment (default: True)",
+      "analysis_mode": "quick or comprehensive analysis (default: comprehensive)",
+      "detail_level": "Educational detail level - brief/standard/comprehensive (default: standard)",
+      "timeout_seconds": "Maximum time to wait for analysis (default: 90)",
+      "model": "Claude model to use"
+    },
+    "returns": "Comprehensive Claude CLI vibe check analysis with GitHub integration"
+  },
+  "analyze_github_pr_llm": {
+    "title": "Comprehensive GitHub PR Vibe Check",
+    "description": "Fetches the GitHub PR, analyzes it for anti-patterns and engineering guidance using Claude CLI, and optionally posts a friendly coaching review.",
+    "parameters": {
+      "pr_number": "GitHub PR number to analyze",
+      "repository": "Repository in format owner/repo",
+      "post_comment": "Whether to post analysis as GitHub review",
+      "analysis_mode": "quick or comprehensive analysis",
+      "detail_level": "Educational detail level",
+      "timeout_seconds": "Maximum time to wait for analysis",
+      "model": "Claude model to use"
+    },
+    "returns": "Comprehensive Claude CLI vibe check analysis with GitHub integration"
+  },
+  "analyze_text_nollm": {
+    "title": "Fast Text Analysis with Pattern Detection",
+    "description": "Direct pattern detection and anti-pattern analysis without LLM reasoning, enhanced with project-specific context and library awareness. Perfect for quick vibe checks and development workflow.",
+    "features": [
+      "🚀 Fast pattern detection on any content",
+      "🎯 Direct analysis without LLM dependencies",
+      "🤝 Basic coaching recommendations",
+      "📊 Pattern detection with confidence scoring",
+      "🔍 Project-aware analysis with library context",
+      "📚 Pattern exceptions and contextual recommendations"
+    ],
+    "use_cases": [
+      "Quick vibe check this text",
+      "Fast pattern analysis",
+      "Basic text check"
+    ],
+    "parameters": {
+      "text": "Text content to analyze for anti-patterns",
+      "detail_level": "Educational detail level (brief/standard/comprehensive)",
+      "use_project_context": "Whether to automatically load project context (default: true)",
+      "project_root": "Root directory for project context loading (default: current directory)"
+    },
+    "returns": "Fast pattern detection analysis results with contextual recommendations"
+  },
+  "demo_large_prompt_handling": {
+    "title": "Demo: Zen-style Large Prompt Handling",
+    "description": "Demonstrates the simple approach for handling prompts that exceed MCP's 25K token limit. No complex infrastructure needed!",
+    "how_it_works": [
+      "Check if content >50K characters",
+      "Ask Claude to save to file and resubmit",
+      "Claude handles the file operations automatically",
+      "Process the content normally"
+    ],
+    "parameters": {
+      "content": "The content to analyze (if >50K chars, will request file mode)",
+      "files": "Optional list of file paths (when Claude resubmits with files)",
+      "detail_level": "Analysis detail level"
+    },
+    "returns": "Either analysis results or instructions to use file mode"
+  },
+  "check_integration_alternatives": {
+    "title": "Official Alternative Check for Integration Decisions",
+    "description": "Validates integration approaches against official alternatives to prevent unnecessary custom development. Based on real-world case studies.",
+    "features": [
+      "🔍 Official alternative detection",
+      "⚠️ Red flag identification for anti-patterns",
+      "📋 Decision framework generation",
+      "🎯 Custom development justification requirements"
+    ],
+    "use_cases": [
+      "Check cognee integration",
+      "Validate docker approach",
+      "Integration decision"
+    ],
+    "parameters": {
+      "technology": "Technology being integrated (e.g., cognee, supabase, claude)",
+      "custom_features": "Comma-separated list of features being custom developed",
+      "description": "Optional description of the integration context"
+    },
+    "returns": "Integration recommendation with research requirements and next steps"
+  },
+  "analyze_integration_decision_text": {
+    "title": "Analyze Text for Integration Decision Anti-patterns",
+    "description": "Scans text content for integration patterns and provides recommendations to prevent custom development when official alternatives exist. Detects technologies and custom development indicators automatically.",
+    "features": [
+      "🔍 Technology detection in text",
+      "⚠️ Custom development pattern identification",
+      "📋 Automatic recommendation generation",
+      "🎯 Integration decision guidance"
+    ],
+    "use_cases": [
+      "Analyze this integration plan",
+      "Check for integration anti-patterns"
+    ],
+    "parameters": {
+      "text": "Text content to analyze for integration patterns",
+      "detail_level": "Educational detail level (brief/standard/comprehensive)"
+    },
+    "returns": "Analysis of detected technologies and integration recommendations"
+  }
+}

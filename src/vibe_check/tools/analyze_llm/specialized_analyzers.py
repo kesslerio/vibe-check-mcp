@@ -96,21 +96,8 @@ async def analyze_pr_llm(
     model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
-    🧠 Comprehensive PR review using Claude CLI reasoning.
-    
-    This tool provides deep PR analysis with LLM-powered reasoning including
-    anti-pattern detection, security analysis, and code quality assessment.
-    For fast direct PR analysis, use analyze_pr_nollm instead.
-    
-    Args:
-        pr_diff: The full diff content of the pull request
-        pr_description: Description/title of the pull request
-        file_changes: List of changed files for context
-        timeout_seconds: Maximum time to wait for analysis
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Comprehensive Claude CLI PR review results
+    Comprehensive PR review using Claude CLI reasoning.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Starting external PR review")
     
@@ -140,20 +127,8 @@ async def analyze_code_llm(
     model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
-    🧠 Deep code analysis using Claude CLI reasoning.
-    
-    This tool provides comprehensive code analysis with LLM-powered reasoning
-    for anti-pattern detection, security vulnerabilities, and maintainability.
-    
-    Args:
-        code_content: The code to analyze
-        file_path: Optional file path for context
-        language: Programming language for specialized analysis
-        timeout_seconds: Maximum time to wait for analysis
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Detailed Claude CLI code analysis results
+    Deep code analysis using Claude CLI reasoning.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external code analysis for {language or 'unknown'} code")
     
@@ -183,21 +158,8 @@ async def analyze_issue_llm(
     model: str = "sonnet"
 ) -> ExternalClaudeResponse:
     """
-    🧠 Deep GitHub issue analysis using Claude CLI reasoning.
-    
-    This tool provides comprehensive issue analysis with LLM-powered reasoning
-    for anti-pattern prevention, requirements quality, and implementation guidance.
-    For fast direct issue analysis, use analyze_issue_nollm instead.
-    
-    Args:
-        issue_content: The issue body/content
-        issue_title: Title of the issue
-        issue_labels: List of issue labels for context
-        timeout_seconds: Maximum time to wait for analysis
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Comprehensive Claude CLI issue analysis with anti-pattern prevention guidance
+    GitHub issue analysis using Claude CLI reasoning.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Starting external issue analysis")
     
@@ -229,27 +191,8 @@ async def analyze_github_issue_llm(
     model: str = "sonnet"
 ) -> Dict[str, Any]:
     """
-    🧠 Comprehensive GitHub issue vibe check using Claude CLI reasoning.
-    
-    This tool fetches the GitHub issue, analyzes it for anti-patterns and engineering
-    guidance using Claude CLI, and optionally posts a friendly coaching comment.
-    For fast direct issue analysis, use analyze_issue_nollm instead.
-    
-    IMPORTANT: When this tool returns a "comment_url" or "user_message" field, 
-    ALWAYS include the full GitHub URL in your response to help users access 
-    the posted comment directly.
-    
-    Args:
-        issue_number: GitHub issue number to analyze
-        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
-        post_comment: Whether to post analysis as GitHub comment (default: True)
-        analysis_mode: "quick" or "comprehensive" analysis (default: "comprehensive")
-        detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
-        timeout_seconds: Maximum time to wait for analysis (default: 90)
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Comprehensive Claude CLI vibe check analysis with GitHub integration
+    GitHub issue vibe check with Claude CLI reasoning and optional comment posting.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external GitHub issue vibe check for {repository}#{issue_number}")
     
@@ -535,32 +478,8 @@ async def analyze_github_pr_llm(
     model: str = "sonnet"
 ) -> Dict[str, Any]:
     """
-    🧠 Comprehensive GitHub PR vibe check using Claude CLI reasoning.
-    
-    This tool fetches the GitHub PR, analyzes it for anti-patterns and engineering
-    guidance using Claude CLI, and optionally posts a friendly coaching review.
-    For fast direct PR analysis, use analyze_pr_nollm instead.
-    
-    IMPLEMENTS ISSUE #101: Intelligent pre-filtering and graceful degradation
-    - Skips LLM analysis for PRs >1000 lines or >20 files
-    - Falls back to fast analysis when LLM fails
-    - Always returns useful response (never fails completely)
-    
-    IMPORTANT: When this tool returns a "comment_url" or "user_message" field, 
-    ALWAYS include the full GitHub URL in your response to help users access 
-    the posted review directly.
-    
-    Args:
-        pr_number: GitHub PR number to analyze
-        repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
-        post_comment: Whether to post analysis as GitHub review (default: True)
-        analysis_mode: "quick" or "comprehensive" analysis (default: "comprehensive")
-        detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
-        timeout_seconds: Maximum time to wait for analysis (default: 120)
-        model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
-    Returns:
-        Comprehensive Claude CLI vibe check analysis with GitHub integration
+    GitHub PR vibe check with Claude CLI reasoning and optional review posting.
+    Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external GitHub PR vibe check for {repository}#{pr_number}")
     
