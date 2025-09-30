@@ -7,6 +7,7 @@ helping ensure we stay within budget and prevent token bloat.
 """
 
 import sys
+import os
 import json
 from pathlib import Path
 
@@ -77,9 +78,9 @@ def count_tool_tokens():
 
     print("=" * 80)
 
-    # Check against targets
-    target = 10000
-    buffer_target = 12000
+    # Check against targets (configurable via environment variables)
+    target = int(os.environ.get("TOKEN_TARGET", "10000"))
+    buffer_target = int(os.environ.get("TOKEN_BUFFER_TARGET", "12000"))
 
     if total_tokens <= target:
         print(f"✅ SUCCESS: Within target of {target:,} tokens")

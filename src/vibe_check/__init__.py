@@ -28,19 +28,15 @@ if _original_log_level and _original_log_level.lower() in ['debug', 'info', 'war
     elif _original_log_level != _original_log_level.upper():
         os.environ['LOG_LEVEL'] = _original_log_level.upper()
 
-__version__ = "0.5.1"
-__author__ = "kesslerio"
-__email__ = "hello@kessler.io"
-
 # Import main server functions for easy access
 from .server import run_server
 from .core.pattern_detector import PatternDetector
 from .core.educational_content import EducationalContentGenerator
-from .server import run_server
 from .utils.version_utils import get_version
 
 __version__ = get_version()
 __author__ = "Vibe Check MCP Development Team"
+__email__ = "hello@kessler.io"
 
 __all__ = [
     "PatternDetector",
