@@ -51,8 +51,8 @@ than what standard email services typically provide.
 # These should all have HIGH confidence scores and BE detected
 examples_that_should_fail = [
     http_client_bad,
-    sdk_avoidance_bad, 
+    sdk_avoidance_bad,
     assumed_limitations_bad,
     over_engineering_bad,
-    no_research_bad
+    no_research_bad,
 ]

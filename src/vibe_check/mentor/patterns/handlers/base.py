@@ -15,7 +15,11 @@ class PatternHandler:
     def has_pattern(patterns: List[Dict[str, Any]], pattern_type: str) -> bool:
         """Check if a specific pattern type exists in the patterns list"""
         try:
-            return any(p.get("pattern_type") == pattern_type for p in patterns if isinstance(p, dict))
+            return any(
+                p.get("pattern_type") == pattern_type
+                for p in patterns
+                if isinstance(p, dict)
+            )
         except (TypeError, AttributeError):
             return False
 

@@ -43,18 +43,18 @@ class TestComplexScenarios:
         integrate well with our monitoring infrastructure. This will include custom formatters,
         multiple output targets, and performance optimization for high-throughput scenarios.
         """
-        
+
         result = analyze_text_demo(enterprise_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
-        assert 'analysis' in result
-        
+        assert "status" in result
+        assert "analysis" in result
+
         # Complex scenario should be detected and analyzed
-        if 'detection_result' in result.get('analysis', {}):
-            detection = result['analysis']['detection_result']
+        if "detection_result" in result.get("analysis", {}):
+            detection = result["analysis"]["detection_result"]
             # Should identify multiple potential issues
-            assert detection.get('total_issues', 0) >= 0
+            assert detection.get("total_issues", 0) >= 0
 
     def test_startup_mvp_scenario(self):
         """Test startup MVP development anti-pattern scenario"""
@@ -75,14 +75,14 @@ class TestComplexScenarios:
         message queue system. Time is critical, so we're skipping comprehensive
         testing and documentation to focus on core functionality.
         """
-        
+
         result = analyze_text_demo(startup_scenario, detail_level="standard")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
-        
+        assert "status" in result
+
         # Should identify multiple high-risk patterns
-        analysis = result.get('analysis', {})
+        analysis = result.get("analysis", {})
         assert isinstance(analysis, dict)
 
     def test_microservices_over_engineering_scenario(self):
@@ -108,11 +108,11 @@ class TestComplexScenarios:
         custom saga pattern orchestrator with compensation logic for complex
         business workflows.
         """
-        
+
         result = analyze_text_demo(microservices_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_ai_ml_infrastructure_scenario(self):
         """Test AI/ML infrastructure anti-pattern scenario"""
@@ -138,11 +138,11 @@ class TestComplexScenarios:
         metrics. This includes our own A/B testing framework for model comparison
         in production environments.
         """
-        
+
         result = analyze_text_demo(ai_scenario, detail_level="standard")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_security_compliance_scenario(self):
         """Test security and compliance-driven custom development"""
@@ -167,11 +167,11 @@ class TestComplexScenarios:
         loss prevention system that automatically identifies and protects
         sensitive information according to our compliance policies.
         """
-        
+
         result = analyze_text_demo(security_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_performance_optimization_scenario(self):
         """Test performance-driven custom implementation scenario"""
@@ -195,11 +195,11 @@ class TestComplexScenarios:
         prepared statement caching, and query optimization that's specifically
         tuned for our query patterns and database schema.
         """
-        
+
         result = analyze_text_demo(performance_scenario, detail_level="standard")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_ambiguous_justification_scenario(self):
         """Test scenario with ambiguous justification for custom development"""
@@ -221,11 +221,11 @@ class TestComplexScenarios:
         so creating a custom solution is definitely feasible, though we're
         not sure if it's the best use of our resources.
         """
-        
+
         result = analyze_text_demo(ambiguous_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_legacy_integration_scenario(self):
         """Test complex legacy system integration scenario"""
@@ -249,11 +249,11 @@ class TestComplexScenarios:
         who understand it are retiring soon, so we need to create our own
         abstraction layer that captures the business logic in a maintainable way.
         """
-        
+
         result = analyze_text_demo(legacy_scenario, detail_level="standard")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_multi_language_scenario(self):
         """Test scenario with mixed languages and frameworks"""
@@ -277,11 +277,13 @@ class TestComplexScenarios:
         and requirements of each language ecosystem while providing a unified
         deployment experience across our entire platform.
         """
-        
-        result = analyze_text_demo(multi_language_scenario, detail_level="comprehensive")
-        
+
+        result = analyze_text_demo(
+            multi_language_scenario, detail_level="comprehensive"
+        )
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     def test_rapid_scaling_scenario(self):
         """Test rapid scaling and resource constraint scenario"""
@@ -304,11 +306,11 @@ class TestComplexScenarios:
         and provide real-time alerting with custom correlation logic that
         understands our application's behavior patterns.
         """
-        
+
         result = analyze_text_demo(scaling_scenario, detail_level="standard")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result
 
     @pytest.mark.slow
     def test_stress_complex_analysis(self):
@@ -322,10 +324,10 @@ class TestComplexScenarios:
             "Multi-language infrastructure with unified RPC framework and monitoring",
             "Rapid scaling solution with custom load balancing and real-time sharding",
         ]
-        
+
         start_time = time.time()
         results = []
-        
+
         for i, scenario in enumerate(complex_scenarios):
             # Add complexity by combining scenarios
             combined_scenario = f"""
@@ -338,24 +340,32 @@ class TestComplexScenarios:
             The team has evaluated existing solutions but found they don't meet
             our specific requirements for performance, compliance, and integration
             with our existing systems.
-            """ * (i + 1)  # Increasing complexity
-            
+            """ * (
+                i + 1
+            )  # Increasing complexity
+
             result = analyze_text_demo(combined_scenario, detail_level="comprehensive")
             results.append(result)
-            
+
             assert isinstance(result, dict)
-            assert 'status' in result
-        
+            assert "status" in result
+
         end_time = time.time()
         total_duration = end_time - start_time
-        
+
         # Should handle complex scenarios efficiently
         avg_time_per_scenario = total_duration / len(complex_scenarios)
-        assert avg_time_per_scenario < 10.0, f"Average time too high: {avg_time_per_scenario}s"
-        
+        assert (
+            avg_time_per_scenario < 10.0
+        ), f"Average time too high: {avg_time_per_scenario}s"
+
         # All scenarios should be analyzed successfully
-        success_count = sum(1 for r in results if r.get('status') in ['success', 'completed'])
-        assert success_count == len(complex_scenarios), f"Some complex scenarios failed: {success_count}/{len(complex_scenarios)}"
+        success_count = sum(
+            1 for r in results if r.get("status") in ["success", "completed"]
+        )
+        assert success_count == len(
+            complex_scenarios
+        ), f"Some complex scenarios failed: {success_count}/{len(complex_scenarios)}"
 
     def test_contradictory_information_scenario(self):
         """Test scenario with contradictory or conflicting information"""
@@ -379,14 +389,14 @@ class TestComplexScenarios:
         to explore new approaches that might be better suited for our needs.
         Time is critical, but thorough planning and research are also essential.
         """
-        
+
         result = analyze_text_demo(contradictory_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
-        
+        assert "status" in result
+
         # Should handle contradictory information gracefully
-        analysis = result.get('analysis', {})
+        analysis = result.get("analysis", {})
         assert isinstance(analysis, dict)
 
     def test_cascading_complexity_scenario(self):
@@ -413,8 +423,8 @@ class TestComplexScenarios:
         Each component needs custom logging and tracing that provides the
         visibility we need into our integrated system behavior.
         """
-        
+
         result = analyze_text_demo(cascading_scenario, detail_level="comprehensive")
-        
+
         assert isinstance(result, dict)
-        assert 'status' in result
+        assert "status" in result

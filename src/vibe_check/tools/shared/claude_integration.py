@@ -6,7 +6,7 @@ Provides consistent Claude CLI execution, timeout handling, and environment isol
 
 Model Selection:
 - "sonnet" (default): Fast, efficient for routine analysis
-- "opus": Advanced reasoning for complex scenarios  
+- "opus": Advanced reasoning for complex scenarios
 - "haiku": Ultra-fast for simple checks
 - Full model names: e.g., "claude-sonnet-4-20250514" for version pinning
 
@@ -34,40 +34,40 @@ logger = logging.getLogger(__name__)
 VALID_MODELS = {"sonnet", "opus", "haiku"}
 VALID_MODEL_PATTERNS = [
     r"^claude-(sonnet|opus|haiku)-[\d]+-[\d]{8}$",  # claude-sonnet-4-20250514
-    r"^claude-[\d][\.\d]*-(sonnet|opus|haiku)$",     # claude-3.5-sonnet
+    r"^claude-[\d][\.\d]*-(sonnet|opus|haiku)$",  # claude-3.5-sonnet
 ]
 
 
 def _validate_model(model: str) -> str:
     """
     Validate Claude model parameter to prevent command injection and provide helpful errors.
-    
+
     Args:
         model: Model name to validate
-        
+
     Returns:
         The validated model name
-        
+
     Raises:
         ValueError: If model name is invalid or potentially dangerous
     """
     if not model or not isinstance(model, str):
         raise ValueError("Model must be a non-empty string")
-    
+
     # Check for command injection patterns
     dangerous_chars = [";", "&", "|", "`", "$", "(", ")", "{", "}", "<", ">"]
     if any(char in model for char in dangerous_chars):
         raise ValueError(f"Invalid model name contains dangerous characters: {model}")
-    
+
     # Allow simple model names
     if model in VALID_MODELS:
         return model
-    
+
     # Allow full model names that match expected patterns
     for pattern in VALID_MODEL_PATTERNS:
         if re.match(pattern, model):
             return model
-    
+
     # Log warning for unknown models but allow them (Claude CLI will validate)
     logger.warning(f"Unknown model '{model}', will be validated by Claude CLI")
     return model
@@ -75,7 +75,7 @@ def _validate_model(model: str) -> str:
 
 class ClaudeCliResult:
     """Container for Claude CLI execution results with SDK metadata."""
-    
+
     def __init__(
         self,
         success: bool,
@@ -89,7 +89,7 @@ class ClaudeCliResult:
         duration_ms: Optional[float] = None,
         session_id: Optional[str] = None,
         num_turns: Optional[int] = None,
-        sdk_metadata: Optional[Dict[str, Any]] = None
+        sdk_metadata: Optional[Dict[str, Any]] = None,
     ):
         self.success = success
         self.output = output
@@ -103,7 +103,7 @@ class ClaudeCliResult:
         self.session_id = session_id
         self.num_turns = num_turns
         self.sdk_metadata = sdk_metadata or {}
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary for JSON serialization."""
         return {
@@ -119,13 +119,13 @@ class ClaudeCliResult:
             "session_id": self.session_id,
             "num_turns": self.num_turns,
             "sdk_metadata": self.sdk_metadata,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
 
 class ClaudeCliExecutor:
     """Shared Claude CLI executor with isolation and specialized prompts."""
-    
+
     # System prompts for specialized task types
     SYSTEM_PROMPTS = {
         "pr_review": """You are a senior software engineer conducting thorough code reviews. Analyze pull requests with focus on:
@@ -154,7 +154,6 @@ class ClaudeCliExecutor:
 - Micro-optimizations that don't meaningfully improve the codebase
 
 Provide constructive, educational feedback that improves code quality and prevents anti-patterns. Recognize excellent code and don't suggest improvements just for the sake of having suggestions.""",
-
         "code_analysis": """You are an expert code analyst specializing in anti-pattern detection and code quality assessment. Focus on:
 
 1. **Anti-Pattern Detection**: Infrastructure without implementation, symptom-driven development, complexity escalation, documentation neglect
@@ -163,7 +162,6 @@ Provide constructive, educational feedback that improves code quality and preven
 4. **Educational Guidance**: Refactoring suggestions, best practices, prevention strategies
 
 Provide detailed analysis that helps developers learn and prevent future anti-patterns.""",
-
         "issue_analysis": """You are a technical product manager analyzing GitHub issues for quality and anti-pattern prevention. Evaluate issues for:
 
 1. **Anti-Pattern Risk**: Infrastructure-without-implementation indicators, symptom vs root cause, complexity escalation potential
@@ -172,20 +170,19 @@ Provide detailed analysis that helps developers learn and prevent future anti-pa
 4. **Educational Value**: Pattern prevention, alternative approaches, learning opportunities
 
 Promote good engineering practices through constructive analysis.""",
-
-        "general": """You are a helpful assistant providing clear, accurate, and actionable insights. Focus on clarity and practical recommendations."""
+        "general": """You are a helpful assistant providing clear, accurate, and actionable insights. Focus on clarity and practical recommendations.""",
     }
-    
+
     def __init__(self, timeout_seconds: int = 60):
         """
         Initialize Claude CLI executor.
-        
+
         Args:
             timeout_seconds: Maximum time to wait for Claude CLI response
         """
         self.timeout_seconds = timeout_seconds
         self.claude_cli_path = self._find_claude_cli()
-    
+
     def _find_claude_cli(self) -> str:
         """
         Find the Claude CLI executable path using claude-code-mcp approach.
@@ -193,53 +190,70 @@ Promote good engineering practices through constructive analysis.""",
         IMPORTANT: Always prefers full path ~/.claude/local/claude to avoid PATH issues in MCP stdio mode.
         See Issue #240 for context on MCP environment challenges.
         """
-        logger.debug('[Debug] Attempting to find Claude CLI...')
+        logger.debug("[Debug] Attempting to find Claude CLI...")
 
         # Log environment context for MCP stdio debugging (Issue #240)
         import shutil
+
         logger.debug(f'[Debug] Current PATH: {os.environ.get("PATH", "NOT SET")}')
-        logger.debug(f'[Debug] Current working directory: {os.getcwd()}')
-        logger.debug(f'[Debug] MCP environment indicators: stdio={sys.stdin.isatty()}, VIBE_CHECK_INTERNAL_CALL={os.environ.get("VIBE_CHECK_INTERNAL_CALL")}')
+        logger.debug(f"[Debug] Current working directory: {os.getcwd()}")
+        logger.debug(
+            f'[Debug] MCP environment indicators: stdio={sys.stdin.isatty()}, VIBE_CHECK_INTERNAL_CALL={os.environ.get("VIBE_CHECK_INTERNAL_CALL")}'
+        )
 
         # Check for custom CLI name from environment variable
-        custom_cli_name = os.environ.get('CLAUDE_CLI_NAME')
+        custom_cli_name = os.environ.get("CLAUDE_CLI_NAME")
         if custom_cli_name:
-            logger.debug(f'[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}')
+            logger.debug(
+                f"[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}"
+            )
 
             # If it's an absolute path, use it directly
             if os.path.isabs(custom_cli_name):
-                logger.debug(f'[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}')
-                if os.path.exists(custom_cli_name) and os.access(custom_cli_name, os.X_OK):
-                    logger.info(f'[Info] Using custom Claude CLI: {custom_cli_name}')
+                logger.debug(
+                    f"[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}"
+                )
+                if os.path.exists(custom_cli_name) and os.access(
+                    custom_cli_name, os.X_OK
+                ):
+                    logger.info(f"[Info] Using custom Claude CLI: {custom_cli_name}")
                     return custom_cli_name
                 else:
-                    logger.error(f'[Error] Custom Claude CLI path not found or not executable: {custom_cli_name}')
-                    raise FileNotFoundError(f"Claude CLI not found at custom path: {custom_cli_name}")
+                    logger.error(
+                        f"[Error] Custom Claude CLI path not found or not executable: {custom_cli_name}"
+                    )
+                    raise FileNotFoundError(
+                        f"Claude CLI not found at custom path: {custom_cli_name}"
+                    )
 
             # If it contains path separators (relative path), reject it
-            if '/' in custom_cli_name or '\\\\' in custom_cli_name:
+            if "/" in custom_cli_name or "\\\\" in custom_cli_name:
                 raise ValueError(
                     f"Invalid CLAUDE_CLI_NAME: Relative paths are not allowed. "
                     f"Use either a simple name (e.g., 'claude') or an absolute path"
                 )
 
-        cli_name = custom_cli_name or 'claude'
+        cli_name = custom_cli_name or "claude"
 
         # Try local install path: ~/.claude/local/claude (ALWAYS prefer this - Issue #240)
-        user_path = os.path.expanduser('~/.claude/local/claude')
-        logger.debug(f'[Debug] Checking for Claude CLI at local user path: {user_path}')
+        user_path = os.path.expanduser("~/.claude/local/claude")
+        logger.debug(f"[Debug] Checking for Claude CLI at local user path: {user_path}")
 
         if os.path.exists(user_path):
             # Check if file is executable
             if os.access(user_path, os.X_OK):
-                logger.info(f'[Info] Found Claude CLI at local user path: {user_path}')
+                logger.info(f"[Info] Found Claude CLI at local user path: {user_path}")
                 return user_path
             else:
-                logger.warning(f'[Warning] Claude CLI found at {user_path} but not executable. Permissions: {oct(os.stat(user_path).st_mode)}')
+                logger.warning(
+                    f"[Warning] Claude CLI found at {user_path} but not executable. Permissions: {oct(os.stat(user_path).st_mode)}"
+                )
                 # Try to use it anyway, subprocess will fail with clear error
                 return user_path
         else:
-            logger.warning(f'[Warning] Claude CLI not found at local user path: {user_path}')
+            logger.warning(
+                f"[Warning] Claude CLI not found at local user path: {user_path}"
+            )
 
         # Fallback to CLI name (PATH lookup) - log extensively for debugging
         which_result = shutil.which(cli_name)
@@ -249,19 +263,23 @@ Promote good engineering practices through constructive analysis.""",
             logger.info(f'[Info] Found "{cli_name}" in PATH at: {which_result}')
             return which_result
         else:
-            logger.error(f'[Error] Claude CLI not found in PATH. Tried: ~/.claude/local/claude and PATH lookup for "{cli_name}"')
+            logger.error(
+                f'[Error] Claude CLI not found in PATH. Tried: ~/.claude/local/claude and PATH lookup for "{cli_name}"'
+            )
             logger.error(f'[Error] Current PATH: {os.environ.get("PATH", "NOT SET")}')
-            logger.error('[Error] To fix: Install Claude CLI at ~/.claude/local/claude or add to PATH')
+            logger.error(
+                "[Error] To fix: Install Claude CLI at ~/.claude/local/claude or add to PATH"
+            )
             # Return cli_name anyway for clearer subprocess error
             return cli_name
-    
+
     def _get_claude_md_content(self) -> str:
         """
         Read CLAUDE.md content from the project directory.
-        
+
         Since Claude CLI runs from home directory to avoid recursion,
         we must explicitly read and include CLAUDE.md instructions.
-        
+
         Returns:
             CLAUDE.md content or empty string if not found
         """
@@ -269,11 +287,15 @@ Promote good engineering practices through constructive analysis.""",
             # Find project root by walking up from current file location
             current_file = os.path.abspath(__file__)
             # Navigate up: shared -> tools -> vibe_check -> src -> project_root
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file)))))
+            project_root = os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+                )
+            )
             claude_md_path = os.path.join(project_root, "CLAUDE.md")
-            
+
             if os.path.exists(claude_md_path):
-                with open(claude_md_path, 'r', encoding='utf-8') as f:
+                with open(claude_md_path, "r", encoding="utf-8") as f:
                     content = f.read()
                 logger.debug(f"Successfully read CLAUDE.md from {claude_md_path}")
                 return content
@@ -283,19 +305,19 @@ Promote good engineering practices through constructive analysis.""",
         except Exception as e:
             logger.error(f"Error reading CLAUDE.md: {e}")
             return ""
-    
+
     def _get_system_prompt(self, task_type: str) -> str:
         """
         Get specialized system prompt for task type, enhanced with CLAUDE.md instructions.
-        
+
         Args:
             task_type: Type of analysis task
-            
+
         Returns:
             System prompt for the specific task, including CLAUDE.md content
         """
         base_prompt = self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
-        
+
         # Add CLAUDE.md instructions for comprehensive guidance
         claude_md_content = self._get_claude_md_content()
         if claude_md_content:
@@ -311,11 +333,11 @@ Please apply these guidelines throughout your analysis and recommendations."""
             return enhanced_prompt
         else:
             return base_prompt
-    
+
     def _get_mcp_config_path(self) -> str:
         """
         Get path to MCP config file that excludes vibe-check server.
-        
+
         This prevents recursive MCP calls that cause infinite loops and hanging.
         Uses the project's standard MCP config with safe external servers only.
         Returns path to MCP config file.
@@ -324,25 +346,31 @@ Please apply these guidelines throughout your analysis and recommendations."""
         # __file__ is: /path/to/src/vibe_check/tools/shared/claude_integration.py
         # We need to go up 4 levels to reach project root
         current_file = os.path.abspath(__file__)
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file)))))
+        project_root = os.path.dirname(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+            )
+        )
         config_path = os.path.join(project_root, "mcp-config.json")
-        
+
         if os.path.exists(config_path):
             logger.debug(f"Using MCP config at: {config_path}")
             return config_path
         else:
             logger.warning(f"MCP config not found at: {config_path}")
             return ""
-    
-    def _get_claude_args(self, prompt: str, task_type: str, model: str = "sonnet") -> List[str]:
+
+    def _get_claude_args(
+        self, prompt: str, task_type: str, model: str = "sonnet"
+    ) -> List[str]:
         """
         Build Claude CLI arguments following SDK best practices.
-        
+
         Args:
             prompt: The prompt to send to Claude
             task_type: Type of task for specialized handling
             model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-            
+
         Returns:
             List of command line arguments
         """
@@ -351,137 +379,154 @@ Please apply these guidelines throughout your analysis and recommendations."""
         if task_type == "general":
             max_turns = None  # No limit
             allowed_tools = "Read,Write"
-            
+
         elif task_type == "issue_analysis":
             max_turns = None  # No limit
-            allowed_tools = ",".join([
-                # Basic file operations
-                "Read", "Write",
-                # Git operations
-                "Bash(git:*)",
-                # GitHub issue tools
-                "mcp__github__get_issue",
-                "mcp__github__get_issue_comments", 
-                "mcp__github__add_issue_comment",
-                "mcp__github__list_issues",
-                "mcp__github__search_issues",
-                "mcp__github__update_issue",
-                # Clear thought analysis tools
-                "mcp__clear-thought-server__sequentialthinking",
-                "mcp__clear-thought-server__mentalmodel",
-                "mcp__clear-thought-server__designpattern",
-                "mcp__clear-thought-server__debuggingapproach",
-                # Research tools
-                "mcp__brave-search__brave_web_search",
-                "mcp__tavily-mcp__tavily-search"
-            ])
-            
+            allowed_tools = ",".join(
+                [
+                    # Basic file operations
+                    "Read",
+                    "Write",
+                    # Git operations
+                    "Bash(git:*)",
+                    # GitHub issue tools
+                    "mcp__github__get_issue",
+                    "mcp__github__get_issue_comments",
+                    "mcp__github__add_issue_comment",
+                    "mcp__github__list_issues",
+                    "mcp__github__search_issues",
+                    "mcp__github__update_issue",
+                    # Clear thought analysis tools
+                    "mcp__clear-thought-server__sequentialthinking",
+                    "mcp__clear-thought-server__mentalmodel",
+                    "mcp__clear-thought-server__designpattern",
+                    "mcp__clear-thought-server__debuggingapproach",
+                    # Research tools
+                    "mcp__brave-search__brave_web_search",
+                    "mcp__tavily-mcp__tavily-search",
+                ]
+            )
+
         elif task_type == "pr_review":
             max_turns = None  # No limit
-            allowed_tools = ",".join([
-                # Basic file and code operations
-                "Read", "Write", "Grep", "Glob",
-                # Git operations  
-                "Bash(git:*)",
-                # GitHub PR tools
-                "mcp__github__get_pull_request",
-                "mcp__github__get_pull_request_diff",
-                "mcp__github__get_pull_request_files",
-                "mcp__github__get_pull_request_comments",
-                "mcp__github__add_pull_request_review_comment_to_pending_review",
-                "mcp__github__create_and_submit_pull_request_review",
-                "mcp__github__list_pull_requests",
-                # Clear thought analysis tools
-                "mcp__clear-thought-server__sequentialthinking",
-                "mcp__clear-thought-server__mentalmodel",
-                "mcp__clear-thought-server__designpattern",
-                "mcp__clear-thought-server__programmingparadigm",
-                "mcp__clear-thought-server__debuggingapproach",
-                # Research and documentation tools
-                "mcp__brave-search__brave_web_search",
-                "mcp__tavily-mcp__tavily-search"
-            ])
-            
+            allowed_tools = ",".join(
+                [
+                    # Basic file and code operations
+                    "Read",
+                    "Write",
+                    "Grep",
+                    "Glob",
+                    # Git operations
+                    "Bash(git:*)",
+                    # GitHub PR tools
+                    "mcp__github__get_pull_request",
+                    "mcp__github__get_pull_request_diff",
+                    "mcp__github__get_pull_request_files",
+                    "mcp__github__get_pull_request_comments",
+                    "mcp__github__add_pull_request_review_comment_to_pending_review",
+                    "mcp__github__create_and_submit_pull_request_review",
+                    "mcp__github__list_pull_requests",
+                    # Clear thought analysis tools
+                    "mcp__clear-thought-server__sequentialthinking",
+                    "mcp__clear-thought-server__mentalmodel",
+                    "mcp__clear-thought-server__designpattern",
+                    "mcp__clear-thought-server__programmingparadigm",
+                    "mcp__clear-thought-server__debuggingapproach",
+                    # Research and documentation tools
+                    "mcp__brave-search__brave_web_search",
+                    "mcp__tavily-mcp__tavily-search",
+                ]
+            )
+
         elif task_type == "code_analysis":
             max_turns = None  # No limit
-            allowed_tools = ",".join([
-                "Read", "Grep", "Glob",
-                # Clear thought tools for code analysis
-                "mcp__clear-thought-server__sequentialthinking",
-                "mcp__clear-thought-server__mentalmodel", 
-                "mcp__clear-thought-server__designpattern",
-                "mcp__clear-thought-server__programmingparadigm",
-                "mcp__clear-thought-server__debuggingapproach",
-                # Research for best practices
-                "mcp__brave-search__brave_web_search",
-                "mcp__tavily-mcp__tavily-search"
-            ])
-            
+            allowed_tools = ",".join(
+                [
+                    "Read",
+                    "Grep",
+                    "Glob",
+                    # Clear thought tools for code analysis
+                    "mcp__clear-thought-server__sequentialthinking",
+                    "mcp__clear-thought-server__mentalmodel",
+                    "mcp__clear-thought-server__designpattern",
+                    "mcp__clear-thought-server__programmingparadigm",
+                    "mcp__clear-thought-server__debuggingapproach",
+                    # Research for best practices
+                    "mcp__brave-search__brave_web_search",
+                    "mcp__tavily-mcp__tavily-search",
+                ]
+            )
+
         elif task_type == "comprehensive_review":  # New task type for thorough analysis
             max_turns = None  # No limit
-            allowed_tools = ",".join([
-                # All file operations
-                "Read", "Write", "Grep", "Glob",
-                # Git operations
-                "Bash(git:*)",
-                # Complete GitHub toolset
-                "mcp__github__get_issue",
-                "mcp__github__get_issue_comments",
-                "mcp__github__add_issue_comment",
-                "mcp__github__get_pull_request",
-                "mcp__github__get_pull_request_diff", 
-                "mcp__github__get_pull_request_files",
-                "mcp__github__create_and_submit_pull_request_review",
-                "mcp__github__search_code",
-                "mcp__github__search_issues",
-                # Full clear thought toolkit
-                "mcp__clear-thought-server__sequentialthinking",
-                "mcp__clear-thought-server__mentalmodel",
-                "mcp__clear-thought-server__designpattern",
-                "mcp__clear-thought-server__programmingparadigm",
-                "mcp__clear-thought-server__debuggingapproach",
-                "mcp__clear-thought-server__collaborativereasoning",
-                "mcp__clear-thought-server__decisionframework",
-                "mcp__clear-thought-server__scientificmethod",
-                "mcp__clear-thought-server__structuredargumentation",
-                # Research capabilities
-                "mcp__brave-search__brave_web_search",
-                "mcp__tavily-mcp__tavily-search",
-                "mcp__tavily-mcp__tavily-extract"
-            ])
+            allowed_tools = ",".join(
+                [
+                    # All file operations
+                    "Read",
+                    "Write",
+                    "Grep",
+                    "Glob",
+                    # Git operations
+                    "Bash(git:*)",
+                    # Complete GitHub toolset
+                    "mcp__github__get_issue",
+                    "mcp__github__get_issue_comments",
+                    "mcp__github__add_issue_comment",
+                    "mcp__github__get_pull_request",
+                    "mcp__github__get_pull_request_diff",
+                    "mcp__github__get_pull_request_files",
+                    "mcp__github__create_and_submit_pull_request_review",
+                    "mcp__github__search_code",
+                    "mcp__github__search_issues",
+                    # Full clear thought toolkit
+                    "mcp__clear-thought-server__sequentialthinking",
+                    "mcp__clear-thought-server__mentalmodel",
+                    "mcp__clear-thought-server__designpattern",
+                    "mcp__clear-thought-server__programmingparadigm",
+                    "mcp__clear-thought-server__debuggingapproach",
+                    "mcp__clear-thought-server__collaborativereasoning",
+                    "mcp__clear-thought-server__decisionframework",
+                    "mcp__clear-thought-server__scientificmethod",
+                    "mcp__clear-thought-server__structuredargumentation",
+                    # Research capabilities
+                    "mcp__brave-search__brave_web_search",
+                    "mcp__tavily-mcp__tavily-search",
+                    "mcp__tavily-mcp__tavily-extract",
+                ]
+            )
         else:
             max_turns = None  # No limit
             allowed_tools = "Read,Write"  # Basic operations
-        
+
         # Start with base args following SDK best practices
         # Use explicit tool allowlists for security instead of --dangerously-skip-permissions
         args = [
             # NOTE: Removed --output-format json and --verbose to get clean text output
             # The JSON format was returning session metadata instead of analysis content
         ]
-        
+
         # Add model parameter for Claude model selection (with validation)
         validated_model = _validate_model(model)
-        args.extend(['--model', validated_model])
-        
+        args.extend(["--model", validated_model])
+
         # Add max turns only if specified (None = no limit)
         if max_turns is not None:
-            args.extend(['--max-turns', str(max_turns)])
+            args.extend(["--max-turns", str(max_turns)])
         # If max_turns is None, don't add the flag at all - Claude CLI will run unlimited
-        
+
         # CRITICAL: Prevent recursive MCP calls by using empty MCP config
         # This prevents infinite loops and hanging (Issue #94)
         mcp_config_path = self._get_mcp_config_path()
         if mcp_config_path:  # Only add if config file exists
-            args.extend(['--mcp-config', mcp_config_path])
-        
+            args.extend(["--mcp-config", mcp_config_path])
+
         # Add explicit tool permissions for security (Issue #90 compliance)
         # This is much safer than --dangerously-skip-permissions
-        args.extend(['--allowedTools', allowed_tools])
-        
+        args.extend(["--allowedTools", allowed_tools])
+
         # Add print flag and prompt (prompt must be last)
-        args.append('-p')
-        
+        args.append("-p")
+
         # Add system prompt if we have specialized task types
         system_prompt = self._get_system_prompt(task_type)
         if task_type != "general" and system_prompt != self.SYSTEM_PROMPTS["general"]:
@@ -490,41 +535,44 @@ Please apply these guidelines throughout your analysis and recommendations."""
             args.append(enhanced_prompt)
         else:
             args.append(prompt)
-        
-        logger.debug(f'[Debug] Claude CLI args: {args}')
+
+        logger.debug(f"[Debug] Claude CLI args: {args}")
         return args
-    
+
     def _is_running_in_mcp_context(self) -> bool:
         """
         Detect if we're currently running within a Claude CLI MCP context that would cause recursion.
-        
+
         This specifically prevents recursive Claude CLI calls when Claude CLI has already loaded
         vibe-check as an MCP server and is calling it again.
-        
+
         Returns:
             True if running in recursive Claude CLI context, False for normal MCP usage
         """
         # Check for internal vibe-check call marker (most reliable indicator)
         if os.environ.get("VIBE_CHECK_INTERNAL_CALL") == "true":
             return True
-        
+
         recursion_indicators = []
-        
+
         # Check for Claude CLI specific environment variables that indicate we're inside Claude CLI
         claude_cli_vars = [
-            "CLAUDE_CLI_SESSION", "CLAUDE_CLI_MCP_MODE", "ANTHROPIC_CLI_SESSION"
+            "CLAUDE_CLI_SESSION",
+            "CLAUDE_CLI_MCP_MODE",
+            "ANTHROPIC_CLI_SESSION",
         ]
         for var in claude_cli_vars:
             if os.environ.get(var):
                 recursion_indicators.append(f"env:{var}={os.environ.get(var)}")
-        
+
         # REMOVED: stdio check - this is normal for MCP servers and was blocking legitimate usage
-        
+
         # Check for recursive Claude CLI calls specifically
         # Only check parent processes if we have other indicators of Claude CLI recursion
         if recursion_indicators:
             try:
                 import psutil
+
                 current_process = psutil.Process()
                 parent = current_process.parent()
                 if parent:
@@ -534,71 +582,79 @@ Please apply these guidelines throughout your analysis and recommendations."""
                         recursion_indicators.append(f"parent:claude_cli={parent_name}")
             except:
                 pass
-        
+
         is_recursive_context = len(recursion_indicators) > 0
-        
+
         if is_recursive_context:
-            logger.info(f"🔍 Recursive Claude CLI context detected: {recursion_indicators}")
+            logger.info(
+                f"🔍 Recursive Claude CLI context detected: {recursion_indicators}"
+            )
             logger.info("🚫 Preventing recursive Claude CLI calls")
         else:
             logger.debug("✅ No recursive context detected - Claude CLI calls allowed")
-        
+
         return is_recursive_context
-    
+
     def execute_sync(
-        self,
-        prompt: str,
-        task_type: str = "general",
-        model: str = "sonnet"
+        self, prompt: str, task_type: str = "general", model: str = "sonnet"
     ) -> ClaudeCliResult:
         """
         Execute Claude CLI synchronously with directory isolation for recursion prevention.
-        
+
         Args:
             prompt: The prompt to send to Claude CLI
             task_type: Type of task for specialized handling
             model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-            
+
         Returns:
             ClaudeCliResult with execution details
         """
         start_time = time.time()
-        
+
         # NOTE: Recursion prevention now handled by directory isolation
         # Claude CLI runs from home directory which doesn't have vibe-check MCP config
-        
+
         logger.info(f"Executing Claude CLI directly for task: {task_type}")
-        
+
         try:
             # Build command
             claude_args = self._get_claude_args(prompt, task_type, model)
-            
-            logger.debug(f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}')
-            
+
+            logger.debug(
+                f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}'
+            )
+
             # Create clean environment for internal Claude CLI calls
             clean_env = dict(os.environ)
-            
+
             # Set a marker to indicate this is an internal vibe-check call
             clean_env["VIBE_CHECK_INTERNAL_CALL"] = "true"
-            
+
             # Remove MCP-related variables that could cause recursion
             mcp_vars_to_remove = [
-                "MCP_SERVER", "CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "CLAUDECODE",
-                "MCP_CLAUDE_DEBUG", "ANTHROPIC_MCP_SERVERS", "MCP_CONFIG_PATH",
-                "CLAUDE_MCP_CONFIG"
+                "MCP_SERVER",
+                "CLAUDE_CODE_MODE",
+                "CLAUDE_CLI_SESSION",
+                "CLAUDECODE",
+                "MCP_CLAUDE_DEBUG",
+                "ANTHROPIC_MCP_SERVERS",
+                "MCP_CONFIG_PATH",
+                "CLAUDE_MCP_CONFIG",
             ]
             for var in mcp_vars_to_remove:
                 clean_env.pop(var, None)
-            
+
             # Use regular subprocess
             command = [self.claude_cli_path] + claude_args
             logger.debug(f'[Debug] Running command: {" ".join(command)}')
-            
+
             # Use home directory to avoid loading project's MCP config that includes vibe-check
             # This prevents recursion by ensuring Claude CLI doesn't load the vibe-check MCP server
             isolation_dir = os.path.expanduser("~")
-            logger.debug(f'[Debug] Running Claude CLI from isolation directory: {isolation_dir}')
-            
+            logger.debug(
+                f"[Debug] Running Claude CLI from isolation directory: {isolation_dir}"
+            )
+
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -606,19 +662,21 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 timeout=self.timeout_seconds,
                 cwd=isolation_dir,
                 env=clean_env,
-                stdin=subprocess.DEVNULL
+                stdin=subprocess.DEVNULL,
             )
-            
+
             execution_time = time.time() - start_time
-            
+
             if result.returncode == 0:
                 output = result.stdout
-                logger.info(f"Claude CLI completed successfully in {execution_time:.2f}s")
-                logger.debug(f'[Debug] Claude CLI stdout: {output.strip()}')
-                
+                logger.info(
+                    f"Claude CLI completed successfully in {execution_time:.2f}s"
+                )
+                logger.debug(f"[Debug] Claude CLI stdout: {output.strip()}")
+
                 if result.stderr:
-                    logger.debug(f'[Debug] Claude CLI stderr: {result.stderr.strip()}')
-                
+                    logger.debug(f"[Debug] Claude CLI stderr: {result.stderr.strip()}")
+
                 return ClaudeCliResult(
                     success=True,
                     output=output,
@@ -629,16 +687,20 @@ Please apply these guidelines throughout your analysis and recommendations."""
                     task_type=task_type,
                     sdk_metadata={
                         "isolation_method": "claude_cli_direct",
-                        "args_used": claude_args
-                    }
+                        "args_used": claude_args,
+                    },
                 )
             else:
                 # Handle error response with detailed diagnostics (Issue #240)
-                error_msg = result.stderr.strip() if result.stderr else "Claude CLI failed"
+                error_msg = (
+                    result.stderr.strip() if result.stderr else "Claude CLI failed"
+                )
                 output = result.stdout.strip() if result.stdout else ""
 
                 # Enhanced error analysis and logging
-                logger.error(f"[Error] Claude CLI failed with exit code {result.returncode}")
+                logger.error(
+                    f"[Error] Claude CLI failed with exit code {result.returncode}"
+                )
                 logger.error(f"[Error] Command: {self.claude_cli_path}")
                 logger.error(f"[Error] Working directory: {isolation_dir}")
                 logger.error(f"[Error] Full stderr: {error_msg}")
@@ -653,22 +715,31 @@ Please apply these guidelines throughout your analysis and recommendations."""
                         f"Claude CLI not found at {self.claude_cli_path}. "
                         "Install Claude CLI or set CLAUDE_CLI_NAME environment variable."
                     )
-                elif result.returncode == 126 or "permission denied" in error_msg.lower():
+                elif (
+                    result.returncode == 126 or "permission denied" in error_msg.lower()
+                ):
                     troubleshooting_hint = (
                         f"Permission denied executing {self.claude_cli_path}. "
                         f"Run: chmod +x {self.claude_cli_path}"
                     )
-                elif "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+                elif (
+                    "authentication" in error_msg.lower()
+                    or "api key" in error_msg.lower()
+                ):
                     troubleshooting_hint = "Authentication failed. Run 'claude login' or check ANTHROPIC_API_KEY."
                 elif "model" in error_msg.lower() or "invalid" in error_msg.lower():
                     troubleshooting_hint = f"Model '{model}' error. Check Claude CLI version and model availability."
                 else:
-                    troubleshooting_hint = "Check Claude CLI installation and configuration."
+                    troubleshooting_hint = (
+                        "Check Claude CLI installation and configuration."
+                    )
 
                 logger.error(f"[Error] Troubleshooting: {troubleshooting_hint}")
 
                 # Include troubleshooting hint in error message
-                enhanced_error_msg = f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+                enhanced_error_msg = (
+                    f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+                )
 
                 return ClaudeCliResult(
                     success=False,
@@ -682,14 +753,16 @@ Please apply these guidelines throughout your analysis and recommendations."""
                         "error_analysis": {
                             "cli_path": self.claude_cli_path,
                             "exit_code": result.returncode,
-                            "troubleshooting": troubleshooting_hint
+                            "troubleshooting": troubleshooting_hint,
                         }
-                    }
+                    },
                 )
-                
+
         except subprocess.TimeoutExpired:
             execution_time = time.time() - start_time
-            logger.warning(f"Claude CLI timed out after {self.timeout_seconds}s (subprocess timeout)")
+            logger.warning(
+                f"Claude CLI timed out after {self.timeout_seconds}s (subprocess timeout)"
+            )
 
             return ClaudeCliResult(
                 success=False,
@@ -697,12 +770,14 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 exit_code=124,
                 execution_time=execution_time,
                 command_used="claude_cli_direct",
-                task_type=task_type
+                task_type=task_type,
             )
         except FileNotFoundError as e:
             # Specific handling for file not found (Issue #240 - common in MCP stdio mode)
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Claude CLI executable not found: {self.claude_cli_path}")
+            logger.error(
+                f"[Error] Claude CLI executable not found: {self.claude_cli_path}"
+            )
             logger.error(f"[Error] Current PATH: {os.environ.get('PATH', 'NOT SET')}")
             logger.error(f"[Error] Working directory: {os.getcwd()}")
 
@@ -725,13 +800,15 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 sdk_metadata={
                     "error_type": "FileNotFoundError",
                     "cli_path": self.claude_cli_path,
-                    "path_env": os.environ.get('PATH', 'NOT SET')
-                }
+                    "path_env": os.environ.get("PATH", "NOT SET"),
+                },
             )
         except PermissionError as e:
             # Handle permission errors explicitly (Issue #240)
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}")
+            logger.error(
+                f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}"
+            )
 
             troubleshooting = (
                 f"Permission denied: {self.claude_cli_path}\n\n"
@@ -747,17 +824,20 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 task_type=task_type,
                 sdk_metadata={
                     "error_type": "PermissionError",
-                    "cli_path": self.claude_cli_path
-                }
+                    "cli_path": self.claude_cli_path,
+                },
             )
         except Exception as e:
             # General exception handler with enhanced logging
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Unexpected error executing Claude CLI: {type(e).__name__}: {e}")
+            logger.error(
+                f"[Error] Unexpected error executing Claude CLI: {type(e).__name__}: {e}"
+            )
             logger.error(f"[Error] CLI path: {self.claude_cli_path}")
             logger.error(f"[Error] Environment: MCP_stdio={not sys.stdin.isatty()}")
 
             import traceback
+
             logger.debug(f"[Debug] Full traceback: {traceback.format_exc()}")
 
             return ClaudeCliResult(
@@ -769,67 +849,69 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 task_type=task_type,
                 sdk_metadata={
                     "error_type": type(e).__name__,
-                    "cli_path": self.claude_cli_path
-                }
+                    "cli_path": self.claude_cli_path,
+                },
             )
-    
+
     async def execute_async(
-        self,
-        prompt: str,
-        task_type: str = "general",
-        model: str = "sonnet"
+        self, prompt: str, task_type: str = "general", model: str = "sonnet"
     ) -> ClaudeCliResult:
         """
         Execute Claude CLI asynchronously with directory isolation for recursion prevention.
-        
+
         Args:
             prompt: The prompt to send to Claude CLI
             task_type: Type of task for specialized handling
             model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-            
+
         Returns:
             ClaudeCliResult with execution details
         """
         start_time = time.time()
-        
+
         # NOTE: Recursion prevention now handled by directory isolation
         # Claude CLI runs from home directory which doesn't have vibe-check MCP config
-        
+
         logger.info(f"Executing Claude CLI async for task: {task_type}")
-        
+
         try:
             # Build command
             claude_args = self._get_claude_args(prompt, task_type, model)
             command = [self.claude_cli_path] + claude_args
-            
+
             logger.debug(f"Executing Claude CLI directly: {' '.join(command)}")
-            
+
             # Use home directory to avoid loading project's MCP config that includes vibe-check
             # This prevents recursion by ensuring Claude CLI doesn't load the vibe-check MCP server
             isolation_dir = os.path.expanduser("~")
-            logger.debug(f'[Debug] Running Claude CLI async from isolation directory: {isolation_dir}')
-            
+            logger.debug(
+                f"[Debug] Running Claude CLI async from isolation directory: {isolation_dir}"
+            )
+
             # Execute Claude CLI directly
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 stdin=asyncio.subprocess.DEVNULL,
-                cwd=isolation_dir
+                cwd=isolation_dir,
             )
-            
+
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(),
-                timeout=self.timeout_seconds + 10  # Allow extra time for process overhead
+                timeout=self.timeout_seconds
+                + 10,  # Allow extra time for process overhead
             )
-            
+
             execution_time = time.time() - start_time
-            
+
             if process.returncode == 0:
                 # Claude CLI succeeded
-                output_text = stdout.decode('utf-8').strip()
-                logger.info(f"Claude CLI completed successfully in {execution_time:.2f}s")
-                
+                output_text = stdout.decode("utf-8").strip()
+                logger.info(
+                    f"Claude CLI completed successfully in {execution_time:.2f}s"
+                )
+
                 return ClaudeCliResult(
                     success=True,
                     output=output_text,
@@ -837,15 +919,19 @@ Please apply these guidelines throughout your analysis and recommendations."""
                     exit_code=0,
                     execution_time=execution_time,
                     command_used="claude_cli_async",
-                    task_type=task_type
+                    task_type=task_type,
                 )
             else:
                 # Handle error with enhanced diagnostics (Issue #240)
-                error_msg = stderr.decode('utf-8').strip() if stderr else "Unknown error"
-                output_text = stdout.decode('utf-8').strip() if stdout else ""
+                error_msg = (
+                    stderr.decode("utf-8").strip() if stderr else "Unknown error"
+                )
+                output_text = stdout.decode("utf-8").strip() if stdout else ""
 
                 # Enhanced error analysis and logging
-                logger.error(f"[Error] Claude CLI async failed with exit code {process.returncode}")
+                logger.error(
+                    f"[Error] Claude CLI async failed with exit code {process.returncode}"
+                )
                 logger.error(f"[Error] Command: {self.claude_cli_path}")
                 logger.error(f"[Error] Working directory: {isolation_dir}")
                 logger.error(f"[Error] Full stderr: {error_msg}")
@@ -860,22 +946,32 @@ Please apply these guidelines throughout your analysis and recommendations."""
                         f"Claude CLI not found at {self.claude_cli_path}. "
                         "Install Claude CLI or set CLAUDE_CLI_NAME environment variable."
                     )
-                elif process.returncode == 126 or "permission denied" in error_msg.lower():
+                elif (
+                    process.returncode == 126
+                    or "permission denied" in error_msg.lower()
+                ):
                     troubleshooting_hint = (
                         f"Permission denied executing {self.claude_cli_path}. "
                         f"Run: chmod +x {self.claude_cli_path}"
                     )
-                elif "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+                elif (
+                    "authentication" in error_msg.lower()
+                    or "api key" in error_msg.lower()
+                ):
                     troubleshooting_hint = "Authentication failed. Run 'claude login' or check ANTHROPIC_API_KEY."
                 elif "model" in error_msg.lower() or "invalid" in error_msg.lower():
                     troubleshooting_hint = f"Model '{model}' error. Check Claude CLI version and model availability."
                 else:
-                    troubleshooting_hint = "Check Claude CLI installation and configuration."
+                    troubleshooting_hint = (
+                        "Check Claude CLI installation and configuration."
+                    )
 
                 logger.error(f"[Error] Troubleshooting: {troubleshooting_hint}")
 
                 # Include troubleshooting hint in error message
-                enhanced_error_msg = f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+                enhanced_error_msg = (
+                    f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+                )
 
                 return ClaudeCliResult(
                     success=False,
@@ -888,27 +984,31 @@ Please apply these guidelines throughout your analysis and recommendations."""
                         "error_analysis": {
                             "cli_path": self.claude_cli_path,
                             "exit_code": process.returncode,
-                            "troubleshooting": troubleshooting_hint
+                            "troubleshooting": troubleshooting_hint,
                         }
-                    }
+                    },
                 )
 
         except asyncio.TimeoutError:
             execution_time = time.time() - start_time
-            logger.warning(f"Claude CLI async timed out after {self.timeout_seconds + 10}s")
+            logger.warning(
+                f"Claude CLI async timed out after {self.timeout_seconds + 10}s"
+            )
             return ClaudeCliResult(
                 success=False,
                 error=f"Analysis timed out after {self.timeout_seconds + 10} seconds",
                 exit_code=-1,
                 execution_time=execution_time,
                 command_used="claude_cli_async",
-                task_type=task_type
+                task_type=task_type,
             )
 
         except FileNotFoundError as e:
             # Specific handling for file not found (Issue #240 - common in MCP stdio mode)
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Claude CLI executable not found: {self.claude_cli_path}")
+            logger.error(
+                f"[Error] Claude CLI executable not found: {self.claude_cli_path}"
+            )
             logger.error(f"[Error] Current PATH: {os.environ.get('PATH', 'NOT SET')}")
 
             troubleshooting = (
@@ -930,14 +1030,16 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 sdk_metadata={
                     "error_type": "FileNotFoundError",
                     "cli_path": self.claude_cli_path,
-                    "path_env": os.environ.get('PATH', 'NOT SET')
-                }
+                    "path_env": os.environ.get("PATH", "NOT SET"),
+                },
             )
 
         except PermissionError as e:
             # Handle permission errors explicitly (Issue #240)
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}")
+            logger.error(
+                f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}"
+            )
 
             troubleshooting = (
                 f"Permission denied: {self.claude_cli_path}\n\n"
@@ -953,18 +1055,21 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 task_type=task_type,
                 sdk_metadata={
                     "error_type": "PermissionError",
-                    "cli_path": self.claude_cli_path
-                }
+                    "cli_path": self.claude_cli_path,
+                },
             )
 
         except Exception as e:
             # General exception handler with enhanced logging
             execution_time = time.time() - start_time
-            logger.error(f"[Error] Unexpected error in Claude CLI async execution: {type(e).__name__}: {e}")
+            logger.error(
+                f"[Error] Unexpected error in Claude CLI async execution: {type(e).__name__}: {e}"
+            )
             logger.error(f"[Error] CLI path: {self.claude_cli_path}")
             logger.error(f"[Error] Environment: MCP_stdio={not sys.stdin.isatty()}")
 
             import traceback
+
             logger.debug(f"[Debug] Full traceback: {traceback.format_exc()}")
 
             return ClaudeCliResult(
@@ -976,13 +1081,17 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 task_type=task_type,
                 sdk_metadata={
                     "error_type": type(e).__name__,
-                    "cli_path": self.claude_cli_path
-                }
+                    "cli_path": self.claude_cli_path,
+                },
             )
 
 
 # Circuit breaker integration (Phase 2 - Issue #102)
-from .circuit_breaker import ClaudeCliCircuitBreaker, CircuitBreakerOpenError, ClaudeCliError
+from .circuit_breaker import (
+    ClaudeCliCircuitBreaker,
+    CircuitBreakerOpenError,
+    ClaudeCliError,
+)
 from .retry_logic import get_global_circuit_breaker, claude_cli_with_retry
 from .health_monitor import ClaudeCliHealthMonitor
 
@@ -993,12 +1102,12 @@ _global_health_monitor: Optional[ClaudeCliHealthMonitor] = None
 def get_global_health_monitor() -> ClaudeCliHealthMonitor:
     """Get or create the global health monitor instance."""
     global _global_health_monitor
-    
+
     if _global_health_monitor is None:
         circuit_breaker = get_global_circuit_breaker()
         _global_health_monitor = ClaudeCliHealthMonitor(circuit_breaker)
         logger.info("Global health monitor created")
-    
+
     return _global_health_monitor
 
 
@@ -1008,17 +1117,17 @@ async def analyze_content_async_with_circuit_breaker(
     additional_context: Optional[str] = None,
     timeout_seconds: int = 60,
     max_retries: int = 2,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI with circuit breaker and retry logic.
-    
+
     This is the enhanced version that implements Phase 2 (Issue #102) with:
     - Circuit breaker pattern for reliability
     - Retry logic with exponential backoff
     - Health monitoring and diagnostics
     - Graceful degradation on failures
-    
+
     Args:
         content: Content to analyze
         task_type: Type of analysis (pr_review, code_analysis, etc.)
@@ -1026,56 +1135,57 @@ async def analyze_content_async_with_circuit_breaker(
         timeout_seconds: Maximum time to wait for response
         max_retries: Maximum number of retry attempts
         model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
+
     Returns:
         ClaudeCliResult with analysis
-        
+
     Raises:
         ClaudeCliError: When analysis fails after all retries
         CircuitBreakerOpenError: When circuit breaker is open
     """
     circuit_breaker = get_global_circuit_breaker()
     health_monitor = get_global_health_monitor()
-    
+
     # Build prompt with context and content
     prompt_parts = []
-    
+
     if additional_context:
         prompt_parts.append(f"Context: {additional_context}")
-    
+
     prompt_parts.append(f"Content to analyze:\n{content}")
-    
+
     prompt = "\n\n".join(prompt_parts)
-    
+
     async def _execute_analysis():
         """Inner function to execute the analysis."""
         # Use enhanced executor for automatic context injection
         from .enhanced_claude_integration import EnhancedClaudeCliExecutor
+
         executor = EnhancedClaudeCliExecutor(timeout_seconds=timeout_seconds)
-        return await executor.execute_async(prompt=prompt, task_type=task_type, model=model)
-    
+        return await executor.execute_async(
+            prompt=prompt, task_type=task_type, model=model
+        )
+
     # Record the start time
     start_time = time.time()
-    
+
     try:
         # Execute through circuit breaker with retry logic
         result = await claude_cli_with_retry(
             _execute_analysis,
             circuit_breaker,
             max_retries=max_retries,
-            timeout=timeout_seconds
+            timeout=timeout_seconds,
         )
-        
+
         # Record successful call
         duration = time.time() - start_time
         health_monitor.record_call(
-            success=result.success,
-            duration=duration,
-            timeout=False
+            success=result.success, duration=duration, timeout=False
         )
-        
+
         return result
-        
+
     except CircuitBreakerOpenError as e:
         # Circuit breaker is open - record as rejected call
         duration = time.time() - start_time
@@ -1083,9 +1193,9 @@ async def analyze_content_async_with_circuit_breaker(
             success=False,
             duration=duration,
             error_type="CircuitBreakerOpen",
-            error_message=str(e)
+            error_message=str(e),
         )
-        
+
         # Return a graceful degradation result instead of raising
         return ClaudeCliResult(
             success=False,
@@ -1097,10 +1207,10 @@ async def analyze_content_async_with_circuit_breaker(
             sdk_metadata={
                 "circuit_breaker_status": "OPEN",
                 "graceful_degradation": True,
-                "health_status": health_monitor.get_health_status().level
-            }
+                "health_status": health_monitor.get_health_status().level,
+            },
         )
-        
+
     except ClaudeCliError as e:
         # Analysis failed after retries
         duration = time.time() - start_time
@@ -1109,9 +1219,9 @@ async def analyze_content_async_with_circuit_breaker(
             duration=duration,
             error_type="ClaudeCliError",
             error_message=str(e),
-            timeout="timeout" in str(e).lower()
+            timeout="timeout" in str(e).lower(),
         )
-        
+
         # Return error result instead of raising
         return ClaudeCliResult(
             success=False,
@@ -1123,10 +1233,10 @@ async def analyze_content_async_with_circuit_breaker(
             sdk_metadata={
                 "circuit_breaker_status": circuit_breaker.state.value,
                 "health_status": health_monitor.get_health_status().level,
-                "retries_exhausted": True
-            }
+                "retries_exhausted": True,
+            },
         )
-        
+
     except Exception as e:
         # Unexpected error
         duration = time.time() - start_time
@@ -1134,11 +1244,11 @@ async def analyze_content_async_with_circuit_breaker(
             success=False,
             duration=duration,
             error_type=type(e).__name__,
-            error_message=str(e)
+            error_message=str(e),
         )
-        
+
         logger.error(f"Unexpected error in circuit breaker analysis: {e}")
-        
+
         return ClaudeCliResult(
             success=False,
             error=f"Unexpected error: {str(e)}",
@@ -1149,8 +1259,8 @@ async def analyze_content_async_with_circuit_breaker(
             sdk_metadata={
                 "circuit_breaker_status": circuit_breaker.state.value,
                 "health_status": health_monitor.get_health_status().level,
-                "unexpected_error": True
-            }
+                "unexpected_error": True,
+            },
         )
 
 
@@ -1160,22 +1270,22 @@ async def analyze_content_async(
     task_type: str = "general",
     additional_context: Optional[str] = None,
     timeout_seconds: int = 60,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI asynchronously.
-    
+
     This is the legacy function maintained for backward compatibility.
     For new code, consider using analyze_content_async_with_circuit_breaker()
     which provides better reliability through circuit breaker patterns.
-    
+
     Args:
         content: Content to analyze
         task_type: Type of analysis (pr_review, code_analysis, etc.)
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
         model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
+
     Returns:
         ClaudeCliResult with analysis
     """
@@ -1187,7 +1297,7 @@ async def analyze_content_async(
         additional_context=additional_context,
         timeout_seconds=timeout_seconds,
         max_retries=2,  # Default retry behavior
-        model=model
+        model=model,
     )
 
 
@@ -1196,32 +1306,33 @@ def analyze_content_sync(
     task_type: str = "general",
     additional_context: Optional[str] = None,
     timeout_seconds: int = 60,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ClaudeCliResult:
     """
     Analyze content using Claude CLI synchronously.
-    
+
     Args:
         content: Content to analyze
         task_type: Type of analysis (pr_review, code_analysis, etc.)
         additional_context: Optional additional context
         timeout_seconds: Maximum time to wait for response
         model: Claude model to use ("sonnet", "opus", "haiku", or full model name)
-        
+
     Returns:
         ClaudeCliResult with analysis
     """
     # Build prompt with context and content
     prompt_parts = []
-    
+
     if additional_context:
         prompt_parts.append(f"Context: {additional_context}")
-    
+
     prompt_parts.append(f"Content to analyze:\n{content}")
-    
+
     prompt = "\n\n".join(prompt_parts)
-    
+
     # Use enhanced executor for automatic context injection
     from .enhanced_claude_integration import EnhancedClaudeCliExecutor
+
     executor = EnhancedClaudeCliExecutor(timeout_seconds=timeout_seconds)
     return executor.execute_sync(prompt=prompt, task_type=task_type, model=model)

@@ -17,9 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from vibe_check.core.educational_content import (
-    EducationalContentGenerator, 
+    EducationalContentGenerator,
     DetailLevel,
-    EducationalResponse
+    EducationalResponse,
 )
 
 
@@ -40,29 +40,29 @@ class TestEducationalContentGenerator:
             "evidence": [
                 "Custom HTTP client implementation detected",
                 "Building REST client from scratch",
-                "No SDK usage found"
-            ]
+                "No SDK usage found",
+            ],
         }
 
     def test_generator_initialization(self, generator):
         """Test that generator initializes properly"""
         assert generator is not None
-        assert hasattr(generator, 'generate_educational_response')
+        assert hasattr(generator, "generate_educational_response")
 
     def test_brief_detail_level(self, generator, sample_pattern_data):
         """Test brief detail level content generation"""
         response = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.BRIEF
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.BRIEF,
         )
-        
+
         assert isinstance(response, EducationalResponse)
-        assert response.pattern_type == sample_pattern_data['pattern_type']
-        assert response.confidence == sample_pattern_data['confidence']
+        assert response.pattern_type == sample_pattern_data["pattern_type"]
+        assert response.confidence == sample_pattern_data["confidence"]
         assert response.detail_level == DetailLevel.BRIEF
-        
+
         # Brief content should be concise
         assert len(response.why_problematic) > 0
         assert len(response.why_problematic) < 1000  # Brief should be under 1000 chars
@@ -70,34 +70,34 @@ class TestEducationalContentGenerator:
     def test_standard_detail_level(self, generator, sample_pattern_data):
         """Test standard detail level content generation"""
         response = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.STANDARD
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.detail_level == DetailLevel.STANDARD
         assert len(response.immediate_actions) > 0
         assert len(response.remediation_steps) > 0
-        
+
         # Standard content should be more detailed than brief
         assert len(response.why_problematic) > 100  # Should have substantial content
 
     def test_comprehensive_detail_level(self, generator, sample_pattern_data):
         """Test comprehensive detail level content generation"""
         response = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.COMPREHENSIVE
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.COMPREHENSIVE,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.detail_level == DetailLevel.COMPREHENSIVE
         assert len(response.learning_resources) > 0
         assert len(response.best_practices) > 0
-        
+
         # Comprehensive should have the most detail
         assert len(response.remediation_steps) >= 3  # Multiple steps
         assert len(response.why_problematic) > 200  # Detailed explanation
@@ -107,24 +107,33 @@ class TestEducationalContentGenerator:
         response = generator.generate_educational_response(
             pattern_type="documentation_neglect",
             confidence=0.7,
-            evidence=["No research phase found", "Custom solution without checking docs"],
-            detail_level=DetailLevel.STANDARD
+            evidence=[
+                "No research phase found",
+                "Custom solution without checking docs",
+            ],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.pattern_type == "documentation_neglect"
         # Should emphasize documentation importance
-        assert 'documentation' in response.why_problematic.lower() or 'research' in response.why_problematic.lower()
+        assert (
+            "documentation" in response.why_problematic.lower()
+            or "research" in response.why_problematic.lower()
+        )
 
     def test_complexity_escalation_pattern(self, generator):
         """Test content generation for complexity_escalation pattern"""
         response = generator.generate_educational_response(
             pattern_type="complexity_escalation",
             confidence=0.9,
-            evidence=["Unnecessary abstract factory pattern", "Over-engineering detected"],
-            detail_level=DetailLevel.STANDARD
+            evidence=[
+                "Unnecessary abstract factory pattern",
+                "Over-engineering detected",
+            ],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.pattern_type == "complexity_escalation"
         assert len(response.immediate_actions) >= 1
@@ -138,33 +147,36 @@ class TestEducationalContentGenerator:
             evidence=[
                 "Custom HTTP implementation",
                 "Building from scratch instead of using SDK",
-                "Reinventing standard functionality"
+                "Reinventing standard functionality",
             ],
-            detail_level=DetailLevel.STANDARD
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.confidence == 0.95
         assert len(response.immediate_actions) >= 1
         # Should address the high confidence pattern
-        assert 'custom' in response.why_problematic.lower() or 'sdk' in response.why_problematic.lower()
+        assert (
+            "custom" in response.why_problematic.lower()
+            or "sdk" in response.why_problematic.lower()
+        )
 
     def test_content_consistency(self, generator, sample_pattern_data):
         """Test that content generation is consistent across multiple calls"""
         response1 = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.STANDARD
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         response2 = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.STANDARD
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         # Should generate consistent structure
         assert response1.pattern_type == response2.pattern_type
         assert response1.confidence == response2.confidence
@@ -175,26 +187,35 @@ class TestEducationalContentGenerator:
     def test_coaching_tone(self, generator, sample_pattern_data):
         """Test that content maintains appropriate coaching tone"""
         response = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.STANDARD
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         # Check for coaching language patterns
-        text_content = (response.why_problematic + ' '.join(response.immediate_actions)).lower()
-        
+        text_content = (
+            response.why_problematic + " ".join(response.immediate_actions)
+        ).lower()
+
         # Should avoid harsh language
-        harsh_words = ['bad', 'wrong', 'terrible', 'stupid', 'awful']
+        harsh_words = ["bad", "wrong", "terrible", "stupid", "awful"]
         for word in harsh_words:
             assert text_content.count(word) <= 1  # Allow minimal usage
-        
+
         # Should include constructive language
         constructive_indicators = [
-            'consider', 'recommend', 'suggest', 'try', 'explore',
-            'alternative', 'option', 'approach', 'improve'
+            "consider",
+            "recommend",
+            "suggest",
+            "try",
+            "explore",
+            "alternative",
+            "option",
+            "approach",
+            "improve",
         ]
-        
+
         has_constructive = any(word in text_content for word in constructive_indicators)
         assert has_constructive, "Content should use constructive coaching language"
 
@@ -204,20 +225,20 @@ class TestEducationalContentGenerator:
             pattern_type="infrastructure_without_implementation",
             confidence=0.95,
             evidence=["Critical architecture anti-pattern"],
-            detail_level=DetailLevel.STANDARD
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         low_confidence_response = generator.generate_educational_response(
             pattern_type="documentation_neglect",
             confidence=0.6,
             evidence=["Minor documentation issue"],
-            detail_level=DetailLevel.STANDARD
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         # High confidence should have more certain language
         high_text = high_confidence_response.why_problematic.lower()
         low_text = low_confidence_response.why_problematic.lower()
-        
+
         # Both should have appropriate responses
         assert len(high_text) > 0
         assert len(low_text) > 0
@@ -227,13 +248,13 @@ class TestEducationalContentGenerator:
     def test_learning_resources_inclusion(self, generator, sample_pattern_data):
         """Test inclusion of learning resources in comprehensive mode"""
         response = generator.generate_educational_response(
-            pattern_type=sample_pattern_data['pattern_type'],
-            confidence=sample_pattern_data['confidence'],
-            evidence=sample_pattern_data['evidence'],
-            detail_level=DetailLevel.COMPREHENSIVE
+            pattern_type=sample_pattern_data["pattern_type"],
+            confidence=sample_pattern_data["confidence"],
+            evidence=sample_pattern_data["evidence"],
+            detail_level=DetailLevel.COMPREHENSIVE,
         )
-        
-        assert hasattr(response, 'learning_resources')
+
+        assert hasattr(response, "learning_resources")
         assert isinstance(response.learning_resources, list)
         assert len(response.learning_resources) > 0
 
@@ -245,7 +266,7 @@ class TestEducationalContentGenerator:
                 pattern_type="unknown_pattern_type",
                 confidence=0.5,
                 evidence=["Some evidence"],
-                detail_level=DetailLevel.STANDARD
+                detail_level=DetailLevel.STANDARD,
             )
 
     def test_empty_evidence_handling(self, generator):
@@ -254,9 +275,9 @@ class TestEducationalContentGenerator:
             pattern_type="documentation_neglect",
             confidence=0.5,
             evidence=[],  # Empty evidence list
-            detail_level=DetailLevel.STANDARD
+            detail_level=DetailLevel.STANDARD,
         )
-        
+
         assert isinstance(response, EducationalResponse)
         assert response.pattern_type == "documentation_neglect"
         # Should provide constructive feedback even with empty evidence

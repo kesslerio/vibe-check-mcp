@@ -13,6 +13,7 @@ from mcp.server.fastmcp import FastMCP
 
 class MockToolManager:
     """Mock tool manager for testing."""
+
     def __init__(self):
         self.tools = []
 
@@ -39,7 +40,7 @@ def clean_env():
     env_vars = [
         "VIBE_CHECK_DIAGNOSTICS",
         "VIBE_CHECK_DEV_MODE",
-        "VIBE_CHECK_DEV_MODE_OVERRIDE"
+        "VIBE_CHECK_DEV_MODE_OVERRIDE",
     ]
 
     # Save original values
@@ -112,7 +113,9 @@ def test_diagnostics_mode_tool_count(mcp_instance, clean_env):
     # Total: 2 + 2 + 7 = 11 diagnostic tools
 
     assert tool_count >= 30, f"Should have at least 30 tools, got {tool_count}"
-    assert tool_count >= 41, f"Diagnostics mode should add 11 tools (30+11=41), got {tool_count}"
+    assert (
+        tool_count >= 41
+    ), f"Diagnostics mode should add 11 tools (30+11=41), got {tool_count}"
 
 
 def test_dev_mode_tool_count(mcp_instance, clean_env):
@@ -155,7 +158,9 @@ def test_all_modes_combined(mcp_instance, clean_env):
     # Production: 30
     # Diagnostic: 11 (2 + 2 + 7)
     # Dev: 2
-    assert tool_count >= 43, f"Combined modes should have 43+ tools (30+11+2), got {tool_count}"
+    assert (
+        tool_count >= 43
+    ), f"Combined modes should have 43+ tools (30+11+2), got {tool_count}"
 
 
 def test_llm_production_tools_only():
@@ -169,7 +174,9 @@ def test_llm_production_tools_only():
     register_llm_production_tools(mcp)
 
     # Should register 6 production tools
-    assert len(tools_registered) == 6, f"Expected 6 LLM production tools, got {len(tools_registered)}"
+    assert (
+        len(tools_registered) == 6
+    ), f"Expected 6 LLM production tools, got {len(tools_registered)}"
 
 
 def test_llm_diagnostic_tools_only():
@@ -184,7 +191,9 @@ def test_llm_diagnostic_tools_only():
 
     # Should register 7 diagnostic tools
     # Note: This includes inline tool definitions, so count may differ
-    assert len(tools_registered) >= 7, f"Expected 7+ LLM diagnostic tools, got {len(tools_registered)}"
+    assert (
+        len(tools_registered) >= 7
+    ), f"Expected 7+ LLM diagnostic tools, got {len(tools_registered)}"
 
 
 def test_text_analysis_dev_mode():
@@ -213,7 +222,9 @@ def test_text_analysis_dev_mode():
     mcp_dev_skip.add_tool = lambda func: tools_dev_skip.append(func)
 
     register_text_analysis_tools(mcp_dev_skip, dev_mode=True, skip_production=True)
-    assert len(tools_dev_skip) == 1, "Dev mode with skip_production should register only 1 dev tool"
+    assert (
+        len(tools_dev_skip) == 1
+    ), "Dev mode with skip_production should register only 1 dev tool"
 
 
 def test_productivity_dev_mode():
@@ -234,7 +245,9 @@ def test_productivity_dev_mode():
     mcp_dev.add_tool = lambda func: tools_dev.append(func)
 
     register_productivity_tools(mcp_dev, dev_mode=True)
-    assert len(tools_dev) == 4, "Dev mode should register 4 tools (3 production + 1 dev)"
+    assert (
+        len(tools_dev) == 4
+    ), "Dev mode should register 4 tools (3 production + 1 dev)"
 
     # Test dev mode with skip_production
     mcp_dev_skip = Mock()
@@ -242,7 +255,9 @@ def test_productivity_dev_mode():
     mcp_dev_skip.add_tool = lambda func: tools_dev_skip.append(func)
 
     register_productivity_tools(mcp_dev_skip, dev_mode=True, skip_production=True)
-    assert len(tools_dev_skip) == 1, "Dev mode with skip_production should register only 1 dev tool"
+    assert (
+        len(tools_dev_skip) == 1
+    ), "Dev mode with skip_production should register only 1 dev tool"
 
 
 def test_diagnostic_prefix_in_descriptions():
@@ -256,6 +271,7 @@ def test_diagnostic_prefix_in_descriptions():
         def decorator(func):
             registered_tools[func.__name__] = func.__doc__
             return func
+
         return decorator
 
     mcp.tool = mock_tool
@@ -264,18 +280,26 @@ def test_diagnostic_prefix_in_descriptions():
 
     # Check that registered tools have [DIAGNOSTIC] prefix
     for tool_name, docstring in registered_tools.items():
-        assert "[DIAGNOSTIC]" in docstring, f"{tool_name} should have [DIAGNOSTIC] prefix"
+        assert (
+            "[DIAGNOSTIC]" in docstring
+        ), f"{tool_name} should have [DIAGNOSTIC] prefix"
 
 
 def test_dev_prefix_in_descriptions():
     """Verify [DEV] prefix is added to dev tool descriptions."""
     # Check demo_large_prompt_handling
     from vibe_check.server.tools.text_analysis import demo_large_prompt_handling
-    assert "[DEV]" in demo_large_prompt_handling.__doc__, "demo_large_prompt_handling should have [DEV] prefix"
+
+    assert (
+        "[DEV]" in demo_large_prompt_handling.__doc__
+    ), "demo_large_prompt_handling should have [DEV] prefix"
 
     # Check reset_session_tracking
     from vibe_check.server.tools.productivity import reset_session_tracking
-    assert "[DEV]" in reset_session_tracking.__doc__, "reset_session_tracking should have [DEV] prefix"
+
+    assert (
+        "[DEV]" in reset_session_tracking.__doc__
+    ), "reset_session_tracking should have [DEV] prefix"
 
 
 def test_backward_compatibility():
@@ -290,7 +314,9 @@ def test_backward_compatibility():
     register_llm_analysis_tools(mcp)
 
     # Should register both production and diagnostic tools
-    assert len(tools_registered) >= 6, "Backward compatible function should register at least 6 tools"
+    assert (
+        len(tools_registered) >= 6
+    ), "Backward compatible function should register at least 6 tools"
 
 
 if __name__ == "__main__":

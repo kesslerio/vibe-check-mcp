@@ -5,12 +5,16 @@ Core detection and educational content generation modules.
 """
 
 from .pattern_detector import PatternDetector, DetectionResult
-from .educational_content import EducationalContentGenerator, EducationalResponse, DetailLevel
+from .educational_content import (
+    EducationalContentGenerator,
+    EducationalResponse,
+    DetailLevel,
+)
 
 __all__ = [
-    "PatternDetector", 
+    "PatternDetector",
     "DetectionResult",
-    "EducationalContentGenerator", 
+    "EducationalContentGenerator",
     "EducationalResponse",
-    "DetailLevel"
+    "DetailLevel",
 ]

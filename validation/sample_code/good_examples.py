@@ -52,5 +52,5 @@ using their library for everything else.
 examples_that_should_pass = [
     stripe_good_example,
     api_good_example,
-    informed_custom_example
+    informed_custom_example,
 ]

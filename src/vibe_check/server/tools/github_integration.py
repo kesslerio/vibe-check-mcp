@@ -1,11 +1,16 @@
 import logging
 from typing import Dict, Any
 from vibe_check.server.core import mcp
-from vibe_check.tools.analyze_issue_nollm import analyze_issue as analyze_github_issue_tool
-from vibe_check.tools.analyze_pr_nollm import analyze_pr_nollm as analyze_pr_nollm_function
+from vibe_check.tools.analyze_issue_nollm import (
+    analyze_issue as analyze_github_issue_tool,
+)
+from vibe_check.tools.analyze_pr_nollm import (
+    analyze_pr_nollm as analyze_pr_nollm_function,
+)
 from vibe_check.tools.pr_review import review_pull_request
 
 logger = logging.getLogger(__name__)
+
 
 def register_github_tools(mcp_instance):
     """Registers GitHub tools with the MCP server."""
@@ -13,13 +18,14 @@ def register_github_tools(mcp_instance):
     mcp_instance.add_tool(analyze_pr_nollm)
     mcp_instance.add_tool(review_pr_comprehensive)
 
+
 @mcp.tool()
 def analyze_issue_nollm(
-    issue_number: int, 
-    repository: str = "kesslerio/vibe-check-mcp", 
+    issue_number: int,
+    repository: str = "kesslerio/vibe-check-mcp",
     analysis_mode: str = "quick",
     detail_level: str = "standard",
-    post_comment: bool = None
+    post_comment: bool = None,
 ) -> Dict[str, Any]:
     """
     🚀 Fast GitHub issue analysis using direct pattern detection (no LLM calls).
@@ -42,29 +48,32 @@ def analyze_issue_nollm(
         analysis_mode: "quick" for fast pattern detection
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
         post_comment: Post analysis as GitHub comment (disabled by default for fast mode)
-        
+
     Returns:
         Fast GitHub issue analysis with basic recommendations
     """
     # Auto-enable comment posting for comprehensive mode unless explicitly disabled
     if post_comment is None:
-        post_comment = (analysis_mode == "comprehensive")
-    
-    logger.info(f"GitHub issue analysis ({analysis_mode}): #{issue_number} in {repository}")
+        post_comment = analysis_mode == "comprehensive"
+
+    logger.info(
+        f"GitHub issue analysis ({analysis_mode}): #{issue_number} in {repository}"
+    )
     return analyze_github_issue_tool(
         issue_number=issue_number,
-        repository=repository, 
+        repository=repository,
         analysis_mode=analysis_mode,
         detail_level=detail_level,
-        post_comment=post_comment
+        post_comment=post_comment,
     )
+
 
 @mcp.tool()
 def analyze_pr_nollm(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
     analysis_mode: str = "quick",
-    detail_level: str = "standard"
+    detail_level: str = "standard",
 ) -> Dict[str, Any]:
     """
     🚀 Fast PR analysis using direct pattern detection (no LLM calls).
@@ -87,17 +96,20 @@ def analyze_pr_nollm(
         repository: Repository in format "owner/repo" (default: "kesslerio/vibe-check-mcp")
         analysis_mode: "quick" for fast analysis
         detail_level: Educational detail level - brief/standard/comprehensive (default: "standard")
-        
+
     Returns:
         Fast PR analysis with basic recommendations
     """
-    logger.info(f"Fast PR analysis requested: #{pr_number} in {repository} (mode: {analysis_mode})")
+    logger.info(
+        f"Fast PR analysis requested: #{pr_number} in {repository} (mode: {analysis_mode})"
+    )
     return analyze_pr_nollm_function(
         pr_number=pr_number,
         repository=repository,
         analysis_mode=analysis_mode,
-        detail_level=detail_level
+        detail_level=detail_level,
     )
+
 
 @mcp.tool()
 async def review_pr_comprehensive(
@@ -106,20 +118,20 @@ async def review_pr_comprehensive(
     force_re_review: bool = False,
     analysis_mode: str = "comprehensive",
     detail_level: str = "standard",
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> Dict[str, Any]:
     """
     🧠 Advanced PR review with file type analysis and model selection.
-    
+
     Enhanced PR review tool with:
     - 📁 File type-specific analysis (TypeScript, Python, API endpoints, tests)
     - ⭐ First-time contributor awareness for encouraging feedback
     - 🔍 Security-focused review sections
     - 🧪 Test coverage analysis
     - 🎯 Model selection (sonnet/opus/haiku) for performance vs capability
-    
+
     This is the enhanced modular PR review replacing the monolithic tool.
-    
+
     Args:
         pr_number: PR number to review
         repository: Repository in format "owner/repo"
@@ -127,17 +139,19 @@ async def review_pr_comprehensive(
         analysis_mode: "comprehensive" or "quick" analysis
         detail_level: "brief", "standard", or "comprehensive"
         model: Claude model - "sonnet" (default), "opus" (best), or "haiku" (fast)
-        
+
     Returns:
         Comprehensive PR analysis with file type breakdown and recommendations
     """
-    logger.info(f"🔍 Starting enhanced PR review for PR #{pr_number} with model: {model}")
-    
+    logger.info(
+        f"🔍 Starting enhanced PR review for PR #{pr_number} with model: {model}"
+    )
+
     return await review_pull_request(
         pr_number=pr_number,
         repository=repository,
         force_re_review=force_re_review,
         analysis_mode=analysis_mode,
         detail_level=detail_level,
-        model=model
+        model=model,
     )

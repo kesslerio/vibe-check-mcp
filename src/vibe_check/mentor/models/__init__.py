@@ -6,15 +6,15 @@ the collaborative reasoning system.
 """
 
 from .persona import PersonaData
-from .session import CollaborativeReasoningSession, ContributionData  
+from .session import CollaborativeReasoningSession, ContributionData
 from .responses import DisagreementData
 from .config import ConfidenceScores, ExperienceStrings
 
 __all__ = [
     "PersonaData",
     "CollaborativeReasoningSession",
-    "ContributionData", 
+    "ContributionData",
     "DisagreementData",
     "ConfidenceScores",
-    "ExperienceStrings"
+    "ExperienceStrings",
 ]

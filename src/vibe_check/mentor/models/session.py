@@ -21,7 +21,7 @@ class ContributionData:
     content: str
     type: Literal[
         "observation",
-        "question", 
+        "question",
         "insight",
         "concern",
         "suggestion",
@@ -42,7 +42,7 @@ class CollaborativeReasoningSession:
     contributions: List[ContributionData]
     stage: Literal[
         "problem-definition",
-        "ideation", 
+        "ideation",
         "critique",
         "integration",
         "decision",

@@ -32,7 +32,7 @@ class TestPRReviewExternalClaude:
     def setup_method(self):
         """Set up test fixtures."""
         self.pr_tool = PRReviewTool()
-        
+
         # Mock PR data for testing
         self.mock_pr_data = {
             "metadata": {
@@ -42,17 +42,17 @@ class TestPRReviewExternalClaude:
                 "author": "testuser",
                 "created_at": "2023-01-01T00:00:00Z",
                 "base_branch": "main",
-                "head_branch": "feature/test"
+                "head_branch": "feature/test",
             },
             "statistics": {
                 "files_count": 3,
                 "additions": 150,
                 "deletions": 50,
-                "total_changes": 200
+                "total_changes": 200,
             },
             "files": [
                 {"path": "src/test.py", "additions": 100, "deletions": 25},
-                {"path": "tests/test_test.py", "additions": 50, "deletions": 25}
+                {"path": "tests/test_test.py", "additions": 50, "deletions": 25},
             ],
             "diff": "diff --git a/src/test.py b/src/test.py\n+new code here",
             "comments": [],
@@ -63,14 +63,14 @@ class TestPRReviewExternalClaude:
                     "title": "Test issue",
                     "body": "Issue description",
                     "labels": ["bug", "P1"],
-                    "state": "open"
+                    "state": "open",
                 }
-            ]
+            ],
         }
 
     def test_pr_tool_initialization(self):
         """Test that PRReviewTool initializes with external Claude CLI."""
-        assert hasattr(self.pr_tool, 'external_claude')
+        assert hasattr(self.pr_tool, "external_claude")
         assert isinstance(self.pr_tool.external_claude, ExternalClaudeCli)
         assert self.pr_tool.external_claude.timeout_seconds == 300  # 5 min timeout
 
@@ -85,9 +85,9 @@ class TestPRReviewExternalClaude:
         small_pr_data = self.mock_pr_data.copy()
         small_pr_data["statistics"]["total_changes"] = 100
         small_pr_data["statistics"]["files_count"] = 2
-        
+
         size_analysis = self.pr_tool._classify_pr_size(small_pr_data)
-        
+
         assert size_analysis["size_by_lines"] == "SMALL"
         assert size_analysis["size_by_files"] == "SMALL"
         assert size_analysis["overall_size"] == "SMALL"
@@ -99,9 +99,9 @@ class TestPRReviewExternalClaude:
         large_pr_data = self.mock_pr_data.copy()
         large_pr_data["statistics"]["total_changes"] = 3000
         large_pr_data["statistics"]["files_count"] = 15
-        
+
         size_analysis = self.pr_tool._classify_pr_size(large_pr_data)
-        
+
         assert size_analysis["overall_size"] == "LARGE"
         assert size_analysis["review_strategy"] == "SUMMARY_ANALYSIS"
 
@@ -111,19 +111,21 @@ class TestPRReviewExternalClaude:
         test_pr_data = self.mock_pr_data.copy()
         test_pr_data["files"] = [
             {"path": "tests/test_large.py", "additions": 1000, "deletions": 0},
-            {"path": "tests/test_another.py", "additions": 500, "deletions": 0}
+            {"path": "tests/test_another.py", "additions": 500, "deletions": 0},
         ]
-        test_pr_data["diff"] = "x" * 150000  # 150k chars (would be LARGE for normal PRs)
-        
+        test_pr_data["diff"] = (
+            "x" * 150000
+        )  # 150k chars (would be LARGE for normal PRs)
+
         size_analysis = self.pr_tool._classify_pr_size(test_pr_data)
-        
+
         # Should get more lenient treatment for test files
         assert size_analysis["size_by_chars"] in ["SMALL", "LARGE"]  # Not VERY_LARGE
 
     def test_detect_re_review_no_previous(self):
         """Test re-review detection with no previous reviews."""
         review_context = self.pr_tool._detect_re_review(self.mock_pr_data, False)
-        
+
         assert review_context["is_re_review"] is False
         assert review_context["review_count"] == 0
         assert review_context["previous_reviews"] == []
@@ -134,52 +136,60 @@ class TestPRReviewExternalClaude:
         pr_data_with_comments["comments"] = [
             {
                 "body": "## 🎯 Overview\nAutomated PR Review results...",
-                "author": {"login": "bot"}
+                "author": {"login": "bot"},
             }
         ]
-        
+
         review_context = self.pr_tool._detect_re_review(pr_data_with_comments, False)
-        
+
         assert review_context["is_re_review"] is True
         assert review_context["review_count"] == 1
 
     def test_detect_re_review_forced(self):
         """Test forced re-review mode."""
         review_context = self.pr_tool._detect_re_review(self.mock_pr_data, True)
-        
+
         assert review_context["is_re_review"] is True
 
     def test_check_claude_availability_docker_environment(self):
         """Test Claude availability check in Docker environment."""
-        with patch('os.path.exists', return_value=True):  # Simulate /.dockerenv exists
+        with patch("os.path.exists", return_value=True):  # Simulate /.dockerenv exists
             result = self.pr_tool._check_claude_availability()
             assert result is False
 
     def test_check_claude_availability_docker_env_var(self):
         """Test Claude availability check with Docker environment variable."""
-        with patch('os.environ.get', return_value="true"):  # RUNNING_IN_DOCKER=true
+        with patch("os.environ.get", return_value="true"):  # RUNNING_IN_DOCKER=true
             result = self.pr_tool._check_claude_availability()
             assert result is False
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_check_claude_availability_success(self, mock_run):
         """Test successful Claude availability check."""
         # Mock environment checks
-        with patch('os.path.exists', return_value=False):
-            with patch('os.environ.get', return_value=None):
+        with patch("os.path.exists", return_value=False):
+            with patch("os.environ.get", return_value=None):
                 # Mock external Claude CLI finding claude
-                with patch.object(self.pr_tool.external_claude, '_find_claude_cli', return_value="/usr/local/bin/claude"):
+                with patch.object(
+                    self.pr_tool.external_claude,
+                    "_find_claude_cli",
+                    return_value="/usr/local/bin/claude",
+                ):
                     result = self.pr_tool._check_claude_availability()
                     assert result is True
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_check_claude_availability_default_command(self, mock_run):
         """Test Claude availability check with default command."""
         mock_run.return_value = MagicMock(returncode=0)
-        
-        with patch('os.path.exists', return_value=False):
-            with patch('os.environ.get', return_value=None):
-                with patch.object(self.pr_tool.external_claude, '_find_claude_cli', return_value="claude"):
+
+        with patch("os.path.exists", return_value=False):
+            with patch("os.environ.get", return_value=None):
+                with patch.object(
+                    self.pr_tool.external_claude,
+                    "_find_claude_cli",
+                    return_value="claude",
+                ):
                     result = self.pr_tool._check_claude_availability()
                     assert result is True
 
@@ -217,14 +227,14 @@ class TestPRReviewExternalClaude:
             num_turns=1,
             execution_time=27.5,
             task_type="pr_review",
-            sdk_metadata={"model": "claude-3-sonnet", "provider": "anthropic"}
+            sdk_metadata={"model": "claude-3-sonnet", "provider": "anthropic"},
         )
 
-        with patch.object(self.pr_tool.external_claude, 'analyze_content', return_value=mock_result):
+        with patch.object(
+            self.pr_tool.external_claude, "analyze_content", return_value=mock_result
+        ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt",
-                data_content="Test data",
-                pr_number=42
+                prompt_content="Test prompt", data_content="Test data", pr_number=42
             )
 
         assert result is not None
@@ -242,14 +252,14 @@ class TestPRReviewExternalClaude:
             error="Claude CLI execution failed",
             exit_code=1,
             execution_time=5.0,
-            task_type="pr_review"
+            task_type="pr_review",
         )
 
-        with patch.object(self.pr_tool.external_claude, 'analyze_content', return_value=mock_result):
+        with patch.object(
+            self.pr_tool.external_claude, "analyze_content", return_value=mock_result
+        ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt",
-                data_content="Test data",
-                pr_number=42
+                prompt_content="Test prompt", data_content="Test data", pr_number=42
             )
 
         assert result is None
@@ -261,14 +271,14 @@ class TestPRReviewExternalClaude:
             success=True,
             output="OK",  # Very short output
             execution_time=1.0,
-            task_type="pr_review"
+            task_type="pr_review",
         )
 
-        with patch.object(self.pr_tool.external_claude, 'analyze_content', return_value=mock_result):
+        with patch.object(
+            self.pr_tool.external_claude, "analyze_content", return_value=mock_result
+        ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt",
-                data_content="Test data",
-                pr_number=42
+                prompt_content="Test prompt", data_content="Test data", pr_number=42
             )
 
         assert result is None  # Should reject short output
@@ -276,11 +286,13 @@ class TestPRReviewExternalClaude:
     @pytest.mark.asyncio
     async def test_run_claude_analysis_exception(self):
         """Test Claude analysis with exception."""
-        with patch.object(self.pr_tool.external_claude, 'analyze_content', side_effect=Exception("Network error")):
+        with patch.object(
+            self.pr_tool.external_claude,
+            "analyze_content",
+            side_effect=Exception("Network error"),
+        ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt",
-                data_content="Test data",
-                pr_number=42
+                prompt_content="Test prompt", data_content="Test data", pr_number=42
             )
 
         assert result is None
@@ -288,10 +300,7 @@ class TestPRReviewExternalClaude:
     @pytest.mark.asyncio
     async def test_generate_comprehensive_analysis_with_claude(self):
         """Test comprehensive analysis generation using Claude."""
-        size_analysis = {
-            "overall_size": "MEDIUM",
-            "review_strategy": "FULL_ANALYSIS"
-        }
+        size_analysis = {"overall_size": "MEDIUM", "review_strategy": "FULL_ANALYSIS"}
         review_context = {"is_re_review": False, "review_count": 0}
 
         mock_claude_result = ClaudeCliResult(
@@ -299,17 +308,23 @@ class TestPRReviewExternalClaude:
             output="Detailed PR analysis with recommendations",
             cost_usd=0.30,
             execution_time=25.0,
-            task_type="pr_review"
+            task_type="pr_review",
         )
 
-        with patch.object(self.pr_tool, '_check_claude_availability', return_value=True):
-            with patch.object(self.pr_tool.external_claude, 'analyze_content', return_value=mock_claude_result):
+        with patch.object(
+            self.pr_tool, "_check_claude_availability", return_value=True
+        ):
+            with patch.object(
+                self.pr_tool.external_claude,
+                "analyze_content",
+                return_value=mock_claude_result,
+            ):
                 result = await self.pr_tool._generate_comprehensive_analysis(
                     self.mock_pr_data,
                     size_analysis,
                     review_context,
                     "comprehensive",
-                    "standard"
+                    "standard",
                 )
 
         assert result["claude_analysis"] == "Detailed PR analysis with recommendations"
@@ -319,19 +334,18 @@ class TestPRReviewExternalClaude:
     @pytest.mark.asyncio
     async def test_generate_comprehensive_analysis_fallback(self):
         """Test comprehensive analysis with fallback when Claude unavailable."""
-        size_analysis = {
-            "overall_size": "MEDIUM",
-            "review_strategy": "FULL_ANALYSIS"
-        }
+        size_analysis = {"overall_size": "MEDIUM", "review_strategy": "FULL_ANALYSIS"}
         review_context = {"is_re_review": False, "review_count": 0}
 
-        with patch.object(self.pr_tool, '_check_claude_availability', return_value=False):
+        with patch.object(
+            self.pr_tool, "_check_claude_availability", return_value=False
+        ):
             result = await self.pr_tool._generate_comprehensive_analysis(
                 self.mock_pr_data,
                 size_analysis,
                 review_context,
                 "comprehensive",
-                "standard"
+                "standard",
             )
 
         assert result["analysis_method"] == "fallback"
@@ -343,10 +357,7 @@ class TestPRReviewExternalClaude:
         review_context = {"is_re_review": False, "review_count": 0}
 
         prompt = self.pr_tool._create_comprehensive_prompt(
-            self.mock_pr_data,
-            size_analysis,
-            review_context,
-            "standard"
+            self.mock_pr_data, size_analysis, review_context, "standard"
         )
 
         assert "expert code reviewer" in prompt.lower()
@@ -362,9 +373,7 @@ class TestPRReviewExternalClaude:
         review_context = {"is_re_review": False, "review_count": 0}
 
         content = self.pr_tool._create_pr_data_content(
-            self.mock_pr_data,
-            size_analysis,
-            review_context
+            self.mock_pr_data, size_analysis, review_context
         )
 
         assert f"PR #{self.mock_pr_data['metadata']['number']}" in content
@@ -376,15 +385,13 @@ class TestPRReviewExternalClaude:
         """Test PR data content creation for large PR."""
         size_analysis = {"overall_size": "LARGE"}
         review_context = {"is_re_review": False, "review_count": 0}
-        
+
         # Create large PR data
         large_pr_data = self.mock_pr_data.copy()
         large_pr_data["diff"] = "x" * 60000  # 60k chars
 
         content = self.pr_tool._create_pr_data_content(
-            large_pr_data,
-            size_analysis,
-            review_context
+            large_pr_data, size_analysis, review_context
         )
 
         assert "Large PR - Summary Analysis" in content
@@ -394,15 +401,13 @@ class TestPRReviewExternalClaude:
         """Test PR data content creation for very large PR."""
         size_analysis = {"overall_size": "VERY_LARGE"}
         review_context = {"is_re_review": False, "review_count": 0}
-        
+
         # Create very large PR data
         very_large_pr_data = self.mock_pr_data.copy()
         very_large_pr_data["statistics"]["total_changes"] = 15000
 
         content = self.pr_tool._create_pr_data_content(
-            very_large_pr_data,
-            size_analysis,
-            review_context
+            very_large_pr_data, size_analysis, review_context
         )
 
         assert "Very Large PR - File Summary Analysis" in content
@@ -411,9 +416,9 @@ class TestPRReviewExternalClaude:
     def test_parse_claude_output(self):
         """Test Claude output parsing."""
         claude_output = "Detailed analysis with recommendations"
-        
+
         result = self.pr_tool._parse_claude_output(claude_output, 42)
-        
+
         assert result["claude_analysis"] == claude_output
         assert result["analysis_method"] == "claude-cli"
         assert result["pr_number"] == 42
@@ -425,9 +430,7 @@ class TestPRReviewExternalClaude:
         review_context = {"is_re_review": False, "review_count": 0}
 
         result = self.pr_tool._generate_fallback_analysis(
-            self.mock_pr_data,
-            size_analysis,
-            review_context
+            self.mock_pr_data, size_analysis, review_context
         )
 
         assert result["analysis_method"] == "fallback"
@@ -442,17 +445,19 @@ class TestPRReviewExternalClaude:
         """Test the complete review_pull_request workflow."""
         # Mock all the subprocess calls for PR data collection
         mock_pr_result = MagicMock()
-        mock_pr_result.stdout = json.dumps({
-            "title": "Test PR",
-            "body": "Test description\nFixes #123",
-            "author": {"login": "testuser"},
-            "createdAt": "2023-01-01T00:00:00Z",
-            "baseRefName": "main",
-            "headRefName": "feature/test",
-            "additions": 100,
-            "deletions": 50,
-            "files": []
-        })
+        mock_pr_result.stdout = json.dumps(
+            {
+                "title": "Test PR",
+                "body": "Test description\nFixes #123",
+                "author": {"login": "testuser"},
+                "createdAt": "2023-01-01T00:00:00Z",
+                "baseRefName": "main",
+                "headRefName": "feature/test",
+                "additions": 100,
+                "deletions": 50,
+                "files": [],
+            }
+        )
 
         mock_diff_result = MagicMock()
         mock_diff_result.returncode = 0
@@ -461,12 +466,15 @@ class TestPRReviewExternalClaude:
         mock_comment_result = MagicMock()
         mock_comment_result.stdout = "Comment posted"
 
-        with patch('subprocess.run', side_effect=[mock_pr_result, mock_diff_result, mock_comment_result]):
-            with patch.object(self.pr_tool, '_check_claude_availability', return_value=False):
+        with patch(
+            "subprocess.run",
+            side_effect=[mock_pr_result, mock_diff_result, mock_comment_result],
+        ):
+            with patch.object(
+                self.pr_tool, "_check_claude_availability", return_value=False
+            ):
                 result = await self.pr_tool.review_pull_request(
-                    pr_number=42,
-                    repository="test/repo",
-                    analysis_mode="comprehensive"
+                    pr_number=42, repository="test/repo", analysis_mode="comprehensive"
                 )
 
         assert result["pr_number"] == 42
@@ -479,7 +487,7 @@ class TestPRReviewExternalClaude:
         analysis = {"test": "data"}
         review_context = {"is_re_review": False}
 
-        with patch('builtins.open', mock_open()) as mock_file:
+        with patch("builtins.open", mock_open()) as mock_file:
             result = self.pr_tool._save_permanent_log(42, analysis, review_context)
 
         assert result["log_saved"] is True
@@ -491,7 +499,7 @@ class TestPRReviewExternalClaude:
         analysis = {"test": "data"}
         review_context = {"is_re_review": False}
 
-        with patch('builtins.open', side_effect=Exception("Write error")):
+        with patch("builtins.open", side_effect=Exception("Write error")):
             result = self.pr_tool._save_permanent_log(42, analysis, review_context)
 
         assert "error" in result

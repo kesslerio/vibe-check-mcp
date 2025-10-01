@@ -45,19 +45,19 @@ class TestExternalClaudeIntegration:
             "duration_ms": 2500,
             "session_id": "test-session-123",
             "num_turns": 1,
-            "is_error": False
+            "is_error": False,
         }
 
         mock_process = MagicMock()
         mock_process.returncode = 0
         mock_process.communicate = asyncio.coroutine(
-            lambda: (json.dumps(mock_response).encode('utf-8'), b"")
+            lambda: (json.dumps(mock_response).encode("utf-8"), b"")
         )
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await self.cli.execute_claude_cli(
                 prompt="Analyze this test content for quality issues.",
-                task_type="general"
+                task_type="general",
             )
 
         assert result.success is True
@@ -77,10 +77,9 @@ class TestExternalClaudeIntegration:
             lambda: (b"", b"Error: API authentication failed")
         )
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await self.cli.execute_claude_cli(
-                prompt="Test prompt",
-                task_type="general"
+                prompt="Test prompt", task_type="general"
             )
 
         assert result.success is False
@@ -93,16 +92,15 @@ class TestExternalClaudeIntegration:
         """Test external Claude CLI timeout handling."""
         # Create a CLI with very short timeout for testing
         short_timeout_cli = ExternalClaudeCli(timeout_seconds=1)
-        
+
         mock_process = MagicMock()
         mock_process.kill = MagicMock()
         mock_process.wait = asyncio.coroutine(lambda: None)
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
-            with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError()):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
                 result = await short_timeout_cli.execute_claude_cli(
-                    prompt="Long running analysis",
-                    task_type="general"
+                    prompt="Long running analysis", task_type="general"
                 )
 
         assert result.success is False
@@ -117,20 +115,20 @@ class TestExternalClaudeIntegration:
         mock_response = {
             "result": "Code analysis: The function lacks error handling and documentation.",
             "cost_usd": 0.12,
-            "session_id": "analysis-session-456"
+            "session_id": "analysis-session-456",
         }
 
         mock_process = MagicMock()
         mock_process.returncode = 0
         mock_process.communicate = asyncio.coroutine(
-            lambda: (json.dumps(mock_response).encode('utf-8'), b"")
+            lambda: (json.dumps(mock_response).encode("utf-8"), b"")
         )
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await self.cli.analyze_content(
                 content="def hello(): print('hello')",
                 task_type="code_analysis",
-                additional_context="File: hello.py\nLanguage: Python"
+                additional_context="File: hello.py\nLanguage: Python",
             )
 
         assert result.success is True
@@ -149,26 +147,25 @@ def calculate_total(items):
     return total
 """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(test_content)
             temp_path = f.name
 
         try:
             mock_response = {
                 "result": "Function analysis: Missing input validation and error handling.",
-                "cost_usd": 0.08
+                "cost_usd": 0.08,
             }
 
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = asyncio.coroutine(
-                lambda: (json.dumps(mock_response).encode('utf-8'), b"")
+                lambda: (json.dumps(mock_response).encode("utf-8"), b"")
             )
 
-            with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+            with patch("asyncio.create_subprocess_exec", return_value=mock_process):
                 result = await self.cli.analyze_file(
-                    file_path=temp_path,
-                    task_type="code_analysis"
+                    file_path=temp_path, task_type="code_analysis"
                 )
 
             assert result.success is True
@@ -193,8 +190,8 @@ def calculate_total(items):
             "deletions": 30,
             "files": [
                 {"path": "src/auth.py", "additions": 200, "deletions": 10},
-                {"path": "tests/test_auth.py", "additions": 50, "deletions": 20}
-            ]
+                {"path": "tests/test_auth.py", "additions": 50, "deletions": 20},
+            ],
         }
 
         mock_diff = """
@@ -234,7 +231,7 @@ This PR implements user authentication functionality with secure password handli
 """,
             "cost_usd": 0.35,
             "duration_ms": 3200,
-            "session_id": "pr-review-789"
+            "session_id": "pr-review-789",
         }
 
         mock_pr_result = MagicMock()
@@ -250,7 +247,7 @@ This PR implements user authentication functionality with secure password handli
         mock_claude_process = MagicMock()
         mock_claude_process.returncode = 0
         mock_claude_process.communicate = asyncio.coroutine(
-            lambda: (json.dumps(mock_claude_response).encode('utf-8'), b"")
+            lambda: (json.dumps(mock_claude_response).encode("utf-8"), b"")
         )
 
         # Mock the subprocess calls in order: gh pr view, gh pr diff, Claude CLI, gh pr comment
@@ -259,17 +256,28 @@ This PR implements user authentication functionality with secure password handli
             "comment_result": "Comment posted successfully",
             "labels_added": [],
             "re_review_label": False,
-            "github_url": "https://github.com/test/repo/pull/456"
+            "github_url": "https://github.com/test/repo/pull/456",
         }
-        
-        with patch('subprocess.run', side_effect=[mock_pr_result, mock_diff_result, mock_comment_result]):
-            with patch('asyncio.create_subprocess_exec', return_value=mock_claude_process):
-                with patch.object(self.pr_tool, '_check_claude_availability', return_value=True):
-                    with patch.object(self.pr_tool, '_post_review_to_github', return_value=mock_github_result):
+
+        with patch(
+            "subprocess.run",
+            side_effect=[mock_pr_result, mock_diff_result, mock_comment_result],
+        ):
+            with patch(
+                "asyncio.create_subprocess_exec", return_value=mock_claude_process
+            ):
+                with patch.object(
+                    self.pr_tool, "_check_claude_availability", return_value=True
+                ):
+                    with patch.object(
+                        self.pr_tool,
+                        "_post_review_to_github",
+                        return_value=mock_github_result,
+                    ):
                         result = await self.pr_tool.review_pull_request(
                             pr_number=456,
                             repository="test/repo",
-                            analysis_mode="comprehensive"
+                            analysis_mode="comprehensive",
                         )
 
         assert result["pr_number"] == 456
@@ -300,6 +308,7 @@ This PR implements user authentication functionality with secure password handli
     def test_environment_isolation(self):
         """Test that execution environments are properly isolated."""
         import time
+
         env1 = self.cli._create_isolated_environment()
         time.sleep(0.001)  # Ensure different timestamps
         env2 = self.cli._create_isolated_environment()
@@ -325,19 +334,18 @@ This PR implements user authentication functionality with secure password handli
 
         mock_response = {
             "result": "Large content analysis completed successfully.",
-            "cost_usd": 0.50
+            "cost_usd": 0.50,
         }
 
         mock_process = MagicMock()
         mock_process.returncode = 0
         mock_process.communicate = asyncio.coroutine(
-            lambda: (json.dumps(mock_response).encode('utf-8'), b"")
+            lambda: (json.dumps(mock_response).encode("utf-8"), b"")
         )
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await self.cli.analyze_content(
-                content=large_content,
-                task_type="general"
+                content=large_content, task_type="general"
             )
 
         assert result.success is True
@@ -354,7 +362,7 @@ This PR implements user authentication functionality with secure password handli
 
         async def mock_communicate(response):
             await asyncio.sleep(0.1)  # Simulate some processing time
-            return (json.dumps(response).encode('utf-8'), b"")
+            return (json.dumps(response).encode("utf-8"), b"")
 
         mock_processes = []
         for response in mock_responses:
@@ -363,11 +371,10 @@ This PR implements user authentication functionality with secure password handli
             mock_process.communicate = lambda r=response: mock_communicate(r)
             mock_processes.append(mock_process)
 
-        with patch('asyncio.create_subprocess_exec', side_effect=mock_processes):
+        with patch("asyncio.create_subprocess_exec", side_effect=mock_processes):
             # Execute multiple analyses concurrently
             tasks = [
-                self.cli.analyze_content(f"Content {i}", "general")
-                for i in range(3)
+                self.cli.analyze_content(f"Content {i}", "general") for i in range(3)
             ]
             results = await asyncio.gather(*tasks)
 
@@ -383,7 +390,7 @@ This PR implements user authentication functionality with secure password handli
         self.cli.claude_cli_path = "/custom/path/to/claude"
         self.cli.timeout_seconds = 45
 
-        with patch('asyncio.create_subprocess_exec') as mock_exec:
+        with patch("asyncio.create_subprocess_exec") as mock_exec:
             mock_process = MagicMock()
             mock_process.returncode = 0
             mock_process.communicate = asyncio.coroutine(
@@ -391,22 +398,27 @@ This PR implements user authentication functionality with secure password handli
             )
             mock_exec.return_value = mock_process
 
-            asyncio.run(self.cli.execute_claude_cli(
-                prompt="Test analysis prompt",
-                task_type="code_analysis",
-                additional_args=["--verbose"]
-            ))
+            asyncio.run(
+                self.cli.execute_claude_cli(
+                    prompt="Test analysis prompt",
+                    task_type="code_analysis",
+                    additional_args=["--verbose"],
+                )
+            )
 
         # Verify command construction
         mock_exec.assert_called_once()
         args = mock_exec.call_args[0]
 
         expected_command = [
-            "timeout", "50",  # timeout + 5
+            "timeout",
+            "50",  # timeout + 5
             "/custom/path/to/claude",
-            "-p", "Test analysis prompt",
-            "--output-format", "json",
-            "--system-prompt"
+            "-p",
+            "Test analysis prompt",
+            "--output-format",
+            "json",
+            "--system-prompt",
             # system prompt content would be next
         ]
 
@@ -425,10 +437,9 @@ This PR implements user authentication functionality with secure password handli
             lambda: (b"Plain text response", b"")
         )
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             result = await self.cli.execute_claude_cli(
-                prompt="Test prompt",
-                task_type="general"
+                prompt="Test prompt", task_type="general"
             )
 
         assert result.success is True
@@ -440,7 +451,7 @@ This PR implements user authentication functionality with secure password handli
         """Test debug file creation and cleanup."""
         # This would test actual debug file creation in a real scenario
         # For now, we verify the debug logic exists in the PR review integration
-        assert hasattr(self.pr_tool, '_run_claude_analysis')
+        assert hasattr(self.pr_tool, "_run_claude_analysis")
 
         # In a real test, we would verify:
         # - Debug files are created in /tmp/

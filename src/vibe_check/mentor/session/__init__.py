@@ -9,8 +9,4 @@ from .manager import SessionManager
 from .state_tracker import StateTracker
 from .synthesis import SessionSynthesizer
 
-__all__ = [
-    "SessionManager",
-    "StateTracker", 
-    "SessionSynthesizer"
-]
+__all__ = ["SessionManager", "StateTracker", "SessionSynthesizer"]

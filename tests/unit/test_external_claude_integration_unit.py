@@ -24,8 +24,9 @@ from vibe_check.tools.analyze_llm.llm_models import (
     ExternalClaudeRequest,
     ExternalClaudeResponse,
     PullRequestAnalysisRequest,
-    CodeAnalysisRequest
+    CodeAnalysisRequest,
 )
+
 # Note: register_external_claude_tools function does not exist in the codebase
 
 
@@ -35,7 +36,7 @@ class TestExternalClaudeModels:
     def test_external_claude_request_default(self):
         """Test ExternalClaudeRequest with default values."""
         request = ExternalClaudeRequest(content="Test content")
-        
+
         assert request.content == "Test content"
         assert request.task_type == "general"
         assert request.additional_context is None
@@ -47,9 +48,9 @@ class TestExternalClaudeModels:
             content="Test content",
             task_type="pr_review",
             additional_context="PR #123",
-            timeout_seconds=120
+            timeout_seconds=120,
         )
-        
+
         assert request.content == "Test content"
         assert request.task_type == "pr_review"
         assert request.additional_context == "PR #123"
@@ -62,9 +63,9 @@ class TestExternalClaudeModels:
             output="Analysis complete",
             execution_time_seconds=2.5,
             task_type="general",
-            timestamp=1234567890.0
+            timestamp=1234567890.0,
         )
-        
+
         assert response.success is True
         assert response.output == "Analysis complete"
         assert response.error is None
@@ -81,9 +82,9 @@ class TestExternalClaudeModels:
             exit_code=1,
             execution_time_seconds=1.0,
             task_type="general",
-            timestamp=1234567890.0
+            timestamp=1234567890.0,
         )
-        
+
         assert response.success is False
         assert response.output is None
         assert response.error == "Command failed"
@@ -92,7 +93,7 @@ class TestExternalClaudeModels:
     def test_pull_request_analysis_request_default(self):
         """Test PullRequestAnalysisRequest with defaults."""
         request = PullRequestAnalysisRequest(pr_diff="diff content")
-        
+
         assert request.pr_diff == "diff content"
         assert request.pr_description == ""
         assert request.file_changes is None
@@ -104,9 +105,9 @@ class TestExternalClaudeModels:
             pr_diff="diff content",
             pr_description="Feature: Add new functionality",
             file_changes=["file1.py", "file2.py"],
-            timeout_seconds=120
+            timeout_seconds=120,
         )
-        
+
         assert request.pr_diff == "diff content"
         assert request.pr_description == "Feature: Add new functionality"
         assert request.file_changes == ["file1.py", "file2.py"]
@@ -115,7 +116,7 @@ class TestExternalClaudeModels:
     def test_code_analysis_request_default(self):
         """Test CodeAnalysisRequest with defaults."""
         request = CodeAnalysisRequest(code_content="def hello(): pass")
-        
+
         assert request.code_content == "def hello(): pass"
         assert request.file_path is None
         assert request.language is None
@@ -127,9 +128,9 @@ class TestExternalClaudeModels:
             code_content="def hello(): pass",
             file_path="test.py",
             language="python",
-            timeout_seconds=90
+            timeout_seconds=90,
         )
-        
+
         assert request.code_content == "def hello(): pass"
         assert request.file_path == "test.py"
         assert request.language == "python"
@@ -147,12 +148,12 @@ class TestMCPToolIntegration:
         self.tool_decorator_mock.return_value = lambda func: func
         self.mock_mcp.tool = self.tool_decorator_mock
 
-    # DISABLED: Function does not exist in codebase
-    # def test_register_external_claude_tools(self):
-    #     """Test that external Claude tools are registered correctly."""
-    #     # This will register the tools with our mock MCP instance
-    #     register_external_claude_tools(self.mock_mcp)
-        
+        # DISABLED: Function does not exist in codebase
+        # def test_register_external_claude_tools(self):
+        #     """Test that external Claude tools are registered correctly."""
+        #     # This will register the tools with our mock MCP instance
+        #     register_external_claude_tools(self.mock_mcp)
+
         # Verify that tool decorator was called for each tool
         assert self.tool_decorator_mock.call_count == 5  # 5 tools expected
 
@@ -173,7 +174,7 @@ class TestMCPToolIntegration:
     #         }).encode('utf-8'),
     #         b""
     #     )
-    # 
+    #
     #     with patch('asyncio.create_subprocess_exec', return_value=mock_process):
     #         with patch('asyncio.wait_for', return_value=mock_process.communicate.return_value):
     #             with patch('tempfile.NamedTemporaryFile') as mock_temp:
@@ -192,7 +193,7 @@ class TestMCPToolIntegration:
             output="PR review complete",
             execution_time_seconds=3.0,
             task_type="pr_review",
-            timestamp=1234567890.0
+            timestamp=1234567890.0,
         )
 
         # This test would verify the external_pr_review tool function
@@ -207,7 +208,7 @@ class TestMCPToolIntegration:
             output="Code analysis complete",
             execution_time_seconds=2.5,
             task_type="code_analysis",
-            timestamp=1234567890.0
+            timestamp=1234567890.0,
         )
 
         # Test the external_code_analysis tool function
@@ -221,7 +222,7 @@ class TestMCPToolIntegration:
             output="Issue analysis complete",
             execution_time_seconds=2.0,
             task_type="issue_analysis",
-            timestamp=1234567890.0
+            timestamp=1234567890.0,
         )
 
         # Test the external_issue_analysis tool function
@@ -231,24 +232,27 @@ class TestMCPToolIntegration:
     async def test_external_claude_status_tool(self):
         """Test external Claude status check tool."""
         # Mock subprocess calls for status checking
-        with patch('asyncio.create_subprocess_exec') as mock_exec:
+        with patch("asyncio.create_subprocess_exec") as mock_exec:
             # Mock Claude CLI version check
             claude_process = AsyncMock()
             claude_process.returncode = 0
             claude_process.communicate.return_value = (b"claude 1.0.0", b"")
-            
+
             # Mock Python version check
             python_process = AsyncMock()
             python_process.returncode = 0
             python_process.communicate.return_value = (b"Python 3.9.0", b"")
-            
+
             mock_exec.side_effect = [claude_process, python_process]
-            
-            with patch('asyncio.wait_for', side_effect=[
-                claude_process.communicate.return_value,
-                python_process.communicate.return_value
-            ]):
-                with patch('pathlib.Path.exists', return_value=True):
+
+            with patch(
+                "asyncio.wait_for",
+                side_effect=[
+                    claude_process.communicate.return_value,
+                    python_process.communicate.return_value,
+                ],
+            ):
+                with patch("pathlib.Path.exists", return_value=True):
                     # Test the external_claude_status tool function
                     pass
 
@@ -257,12 +261,16 @@ class TestMCPToolIntegration:
         # Test that valid parameters are accepted
         request = ExternalClaudeRequest(content="test content")
         assert request.content == "test content"
-        
+
         # Test timeout validation - negative timeout should still create the object
         # but we'll test that it gets handled properly in actual execution
-        request_with_negative_timeout = ExternalClaudeRequest(content="test", timeout_seconds=-1)
-        assert request_with_negative_timeout.timeout_seconds == -1  # Model accepts it, execution should handle it
-        
+        request_with_negative_timeout = ExternalClaudeRequest(
+            content="test", timeout_seconds=-1
+        )
+        assert (
+            request_with_negative_timeout.timeout_seconds == -1
+        )  # Model accepts it, execution should handle it
+
         # Test that empty content is actually valid (some use cases might need it)
         empty_request = ExternalClaudeRequest(content="")
         assert empty_request.content == ""
@@ -274,18 +282,21 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_subprocess_execution_failure(self):
         """Test handling of subprocess execution failures."""
-        with patch('asyncio.create_subprocess_exec', side_effect=Exception("Process creation failed")):
+        with patch(
+            "asyncio.create_subprocess_exec",
+            side_effect=Exception("Process creation failed"),
+        ):
             # Test that tools handle subprocess failures gracefully
             pass
 
     @pytest.mark.asyncio
     async def test_timeout_handling(self):
         """Test handling of execution timeouts."""
-        with patch('asyncio.create_subprocess_exec') as mock_exec:
+        with patch("asyncio.create_subprocess_exec") as mock_exec:
             mock_process = AsyncMock()
             mock_exec.return_value = mock_process
-            
-            with patch('asyncio.wait_for', side_effect=asyncio.TimeoutError()):
+
+            with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
                 # Test that tools handle timeouts gracefully
                 pass
 
@@ -296,15 +307,17 @@ class TestErrorHandling:
         mock_process.returncode = 0
         mock_process.communicate.return_value = (b"Invalid JSON", b"")
 
-        with patch('asyncio.create_subprocess_exec', return_value=mock_process):
-            with patch('asyncio.wait_for', return_value=mock_process.communicate.return_value):
+        with patch("asyncio.create_subprocess_exec", return_value=mock_process):
+            with patch(
+                "asyncio.wait_for", return_value=mock_process.communicate.return_value
+            ):
                 # Test that invalid JSON is handled gracefully
                 pass
 
     def test_file_cleanup(self):
         """Test that temporary files are cleaned up properly."""
-        with patch('tempfile.NamedTemporaryFile') as mock_temp:
-            with patch('os.unlink') as mock_unlink:
+        with patch("tempfile.NamedTemporaryFile") as mock_temp:
+            with patch("os.unlink") as mock_unlink:
                 # Test that temporary files are always cleaned up
                 pass
 
@@ -316,7 +329,7 @@ class TestIntegrationScenarios:
     async def test_large_content_handling(self):
         """Test handling of large content that requires file-based input."""
         large_content = "x" * 100000  # 100KB content
-        
+
         # Test that large content is handled efficiently
         pass
 
@@ -332,17 +345,18 @@ class TestIntegrationScenarios:
         # Verify that external executions don't interfere with each other
         pass
 
-    # DISABLED: Function register_external_claude_tools does not exist in codebase  
+    # DISABLED: Function register_external_claude_tools does not exist in codebase
     # def test_path_resolution(self):
     #     """Test external script path resolution."""
     #     # Test that the external script path is resolved correctly
     #     from vibe_check.tools.external_claude_integration import register_external_claude_tools
-    #     
+    #
     #     # Verify that the script path exists and is accessible
     #     pass
 
 
 # Integration test helpers
+
 
 def create_mock_external_response(success=True, output="Test output", error=None):
     """Helper to create mock external Claude responses."""
@@ -354,7 +368,7 @@ def create_mock_external_response(success=True, output="Test output", error=None
         "execution_time_seconds": 2.0,
         "task_type": "general",
         "timestamp": 1234567890.0,
-        "command_used": "claude test"
+        "command_used": "claude test",
     }
 
 

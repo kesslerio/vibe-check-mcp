@@ -12,13 +12,15 @@ from .persona import PersonaData
 
 # Configuration Constants
 DEFAULT_MAX_SESSIONS = 50  # Maximum number of mentor sessions to keep in memory
-SESSION_TIMESTAMP_FORMAT = "mentor-session-{timestamp}-{token}"  # Format for session IDs
+SESSION_TIMESTAMP_FORMAT = (
+    "mentor-session-{timestamp}-{token}"  # Format for session IDs
+)
 REFERENCE_DETECTION_WORD_COUNT = 5  # Number of words to check for reference detection
 
 
 class ExperienceStrings:
     """Constants for experience descriptions in persona responses"""
-    
+
     SENIOR_ENGINEER_YEARS = "15 years"
     PRODUCT_ENGINEER_FEATURES = "50+ features"
 
@@ -60,7 +62,7 @@ DEFAULT_PERSONAS: List[PersonaData] = [
         expertise=[
             "MVP development",
             "User value",
-            "Rapid iteration", 
+            "Rapid iteration",
             "Feature delivery",
         ],
         background=f"Startup experience, shipped {ExperienceStrings.PRODUCT_ENGINEER_FEATURES} under tight deadlines",

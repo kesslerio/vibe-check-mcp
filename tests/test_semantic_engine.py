@@ -16,100 +16,114 @@ from vibe_check.tools.semantic_engine import (
     QueryIntentClassifier,
     SemanticResponseMatcher,
     SemanticEngine,
-    QueryIntent
+    QueryIntent,
 )
 
 
 class TestQueryIntentClassifier:
     """Test intent classification accuracy"""
-    
+
     def setup_method(self):
         """Setup test instance"""
         self.classifier = QueryIntentClassifier()
-    
+
     def test_tool_evaluation_intent(self):
         """Test recognition of tool evaluation queries"""
         queries = [
             "Should I abandon ts-migrate that increased warnings?",
             "This tool is causing more problems than solving",
             "Is it worth continuing with this library?",
-            "The tool made things worse"  # Changed to be clearer
+            "The tool made things worse",  # Changed to be clearer
         ]
-        
+
         for query in queries:
             intent = self.classifier.classify_intent(query)
             # Allow both tool_evaluation and technical_debt for migration-related queries
             if "migration" in query.lower():
-                assert intent.intent_type in ["tool_evaluation", "technical_debt"], f"Failed for: {query}"
+                assert intent.intent_type in [
+                    "tool_evaluation",
+                    "technical_debt",
+                ], f"Failed for: {query}"
             else:
                 assert intent.intent_type == "tool_evaluation", f"Failed for: {query}"
             # Adjusted threshold - semantic matching doesn't always produce high confidence
-            assert intent.confidence > 0.3, f"Confidence {intent.confidence} too low for: {query}"
-    
+            assert (
+                intent.confidence > 0.3
+            ), f"Confidence {intent.confidence} too low for: {query}"
+
     def test_technical_debt_intent(self):
         """Test recognition of technical debt queries"""
         queries = [
             "Should I refactor this legacy code?",
             "Is this technical debt worth addressing?",
-            "We have three auth systems, should we consolidate?"
+            "We have three auth systems, should we consolidate?",
         ]
-        
+
         for query in queries:
             intent = self.classifier.classify_intent(query)
             assert intent.intent_type == "technical_debt", f"Failed for: {query}"
-            assert intent.confidence > 0.25, f"Confidence {intent.confidence} too low for: {query}"
-    
+            assert (
+                intent.confidence > 0.25
+            ), f"Confidence {intent.confidence} too low for: {query}"
+
     def test_debugging_intent(self):
         """Test recognition of debugging queries"""
         queries = [
             "How to debug this timeout issue?",
             "Finding the root cause of the crash",
-            "Why is this API failing?"
+            "Why is this API failing?",
         ]
-        
+
         for query in queries:
             intent = self.classifier.classify_intent(query)
             assert intent.intent_type == "debugging", f"Failed for: {query}"
-            assert intent.confidence > 0.25, f"Confidence {intent.confidence} too low for: {query}"
-    
+            assert (
+                intent.confidence > 0.25
+            ), f"Confidence {intent.confidence} too low for: {query}"
+
     def test_implementation_intent(self):
         """Test recognition of implementation queries"""
         queries = [
             "How to ship this feature quickly?",
             "Best way to implement authentication",
-            "MVP approach for this feature"
+            "MVP approach for this feature",
         ]
-        
+
         for query in queries:
             intent = self.classifier.classify_intent(query)
             assert intent.intent_type == "implementation", f"Failed for: {query}"
-            assert intent.confidence > 0.25, f"Confidence {intent.confidence} too low for: {query}"
-    
+            assert (
+                intent.confidence > 0.25
+            ), f"Confidence {intent.confidence} too low for: {query}"
+
     def test_entity_extraction(self):
         """Test extraction of key entities from queries"""
         query = "Should I abandon ts-migrate tool that's causing TypeScript warnings?"
         intent = self.classifier.classify_intent(query)
-        
+
         # Should extract tool names and technologies
-        assert any("ts-migrate" in entity or "TypeScript" in entity for entity in intent.key_entities)
-    
+        assert any(
+            "ts-migrate" in entity or "TypeScript" in entity
+            for entity in intent.key_entities
+        )
+
     def test_context_signals(self):
         """Test extraction of context signals"""
         query = "This tool is failing urgently and I've tried everything"
         intent = self.classifier.classify_intent(query)
-        
+
         assert "negative_experience" in intent.context_signals
         assert "prior_attempts" in intent.context_signals
 
 
 class TestSemanticResponseMatcher:
     """Test response matching without template substitution"""
-    
+
     def setup_method(self):
         """Setup test instance"""
         # Use test response bank if available, otherwise defaults
         self.matcher = SemanticResponseMatcher()
-    
+
     def test_no_template_substitution(self):
         """Ensure responses don't contain template patterns"""
         intent = QueryIntent(
@@ -117,22 +131,22 @@ class TestSemanticResponseMatcher:
             confidence=0.8,
             key_entities=["ts-migrate", "TypeScript"],
             context_signals=["negative_experience"],
-            suggested_response_category="tool_decisions"
+            suggested_response_category="tool_decisions",
         )
-        
+
         query = "Should I abandon ts-migrate that increased warnings?"
         response, confidence = self.matcher.find_best_response(query, intent)
-        
+
         # Check no template patterns remain
         assert "{technology}" not in response
         assert "{framework}" not in response
         assert "{tech}" not in response
         assert "{{" not in response
-        
+
         # Check response is contextually relevant
         assert len(response) > 50  # Not a placeholder
         assert confidence > 0.0
-    
+
     def test_tool_decision_responses(self):
         """Test responses for tool evaluation queries"""
         intent = QueryIntent(
@@ -140,16 +154,16 @@ class TestSemanticResponseMatcher:
             confidence=0.9,
             key_entities=["ts-migrate"],
             context_signals=["negative_experience"],
-            suggested_response_category="tool_decisions"
+            suggested_response_category="tool_decisions",
         )
-        
+
         query = "ts-migrate added 500 warnings instead of fixing them"
         response, confidence = self.matcher.find_best_response(query, intent)
-        
+
         # Should mention ROI, abandonment, or migration strategies
         relevant_terms = ["ROI", "abandon", "migration", "warnings", "manual"]
         assert any(term.lower() in response.lower() for term in relevant_terms)
-    
+
     def test_fallback_responses(self):
         """Test fallback responses for unmatched queries"""
         intent = QueryIntent(
@@ -157,12 +171,12 @@ class TestSemanticResponseMatcher:
             confidence=0.2,
             key_entities=[],
             context_signals=[],
-            suggested_response_category="general_advice"
+            suggested_response_category="general_advice",
         )
-        
+
         query = "random query with no clear intent"
         response, confidence = self.matcher.find_best_response(query, intent)
-        
+
         # Should still return a valid response
         assert len(response) > 20
         assert confidence >= 0.0
@@ -170,106 +184,126 @@ class TestSemanticResponseMatcher:
 
 class TestSemanticEngine:
     """Test the complete semantic engine integration"""
-    
+
     def setup_method(self):
         """Setup test instance"""
         self.engine = SemanticEngine()
-    
+
     def test_process_tool_evaluation_query(self):
         """Test processing a real tool evaluation query"""
         query = "Should I abandon ts-migrate that increased warnings from 0 to 500?"
         result = self.engine.process_query(query)
-        
-        assert result['success']
-        assert result['intent']['type'] in ["tool_evaluation", "decision"]
-        assert result['response']
-        assert "{" not in result['response']  # No templates
-        
+
+        assert result["success"]
+        assert result["intent"]["type"] in ["tool_evaluation", "decision"]
+        assert result["response"]
+        assert "{" not in result["response"]  # No templates
+
         # Response should be relevant to tool abandonment
-        response_lower = result['response'].lower()
-        assert any(term in response_lower for term in ["abandon", "roi", "time", "migration"])
-    
+        response_lower = result["response"].lower()
+        assert any(
+            term in response_lower for term in ["abandon", "roi", "time", "migration"]
+        )
+
     def test_process_with_context(self):
         """Test processing with additional context"""
         query = "Should I continue with this approach?"
-        context = "We're using ts-migrate for TypeScript migration but it's adding warnings"
-        
+        context = (
+            "We're using ts-migrate for TypeScript migration but it's adding warnings"
+        )
+
         result = self.engine.process_query(query, context)
-        
-        assert result['success']
+
+        assert result["success"]
         # Allow various intent types that make sense for this query
-        assert result['intent']['type'] in ["tool_evaluation", "decision", "architecture", "implementation"]
-        assert len(result['response']) > 50
-    
+        assert result["intent"]["type"] in [
+            "tool_evaluation",
+            "decision",
+            "architecture",
+            "implementation",
+        ]
+        assert len(result["response"]) > 50
+
     def test_clean_response_no_templates(self):
         """Ensure cleaned responses have no template artifacts"""
         queries = [
             "How to integrate with Stripe API?",
             "Should I use React or Vue?",
             "Debug this MongoDB connection issue",
-            "Refactor this legacy Python code"
+            "Refactor this legacy Python code",
         ]
-        
+
         for query in queries:
             result = self.engine.process_query(query)
-            response = result['response']
-            
+            response = result["response"]
+
             # Check for common template patterns
             assert "{technology}" not in response
             assert "{framework}" not in response
             assert "{tech}" not in response
             assert not any(c in response for c in ["{", "}"])
-    
+
     def test_confidence_scores(self):
         """Test that confidence scores are reasonable"""
         # Clear intent should have decent confidence
         clear_query = "Should I abandon this failing tool?"
         result = self.engine.process_query(clear_query)
-        assert result['intent']['confidence'] > 0.4, f"Confidence too low: {result['intent']['confidence']}"
-        
+        assert (
+            result["intent"]["confidence"] > 0.4
+        ), f"Confidence too low: {result['intent']['confidence']}"
+
         # Vague query should have lower confidence
         vague_query = "What about this thing?"
         result = self.engine.process_query(vague_query)
-        assert result['intent']['confidence'] < 0.6, f"Confidence too high: {result['intent']['confidence']}"
+        assert (
+            result["intent"]["confidence"] < 0.6
+        ), f"Confidence too high: {result['intent']['confidence']}"
 
 
 class TestIntegrationScenarios:
     """Test real-world integration scenarios"""
-    
+
     def setup_method(self):
         """Setup test instance"""
         self.engine = SemanticEngine()
-    
+
     def test_ts_migrate_scenario(self):
         """Test the specific ts-migrate scenario from Issue #185"""
         query = "Should I abandon ts-migrate that increased warnings?"
         result = self.engine.process_query(query)
-        
+
         # Should recognize this as tool evaluation
-        assert result['intent']['type'] == "tool_evaluation"
-        
+        assert result["intent"]["type"] == "tool_evaluation"
+
         # Response should address tool ROI and abandonment
-        response = result['response'].lower()
+        response = result["response"].lower()
         assert "abandon" in response or "roi" in response or "migration" in response
-        
+
         # Should not have generic templates
         assert "ship context + typescript this week" not in response.lower()
-        assert "{technology}" not in result['response']
-    
+        assert "{technology}" not in result["response"]
+
     def test_multiple_tool_comparison(self):
         """Test comparing multiple tools/frameworks"""
         query = "Should I use React or Vue for this project?"
         result = self.engine.process_query(query)
-        
+
         # Allow multiple valid intent types for framework comparison
-        assert result['intent']['type'] in ["decision", "architecture", "integration", "implementation"]
-        assert result['response']
-        
+        assert result["intent"]["type"] in [
+            "decision",
+            "architecture",
+            "integration",
+            "implementation",
+        ]
+        assert result["response"]
+
         # Most important: Should NOT have template patterns
-        response = result['response']
+        response = result["response"]
         assert "{" not in response, "Response contains template braces"
-        assert "ship context" not in response.lower(), "Response contains template phrase"
-        
+        assert (
+            "ship context" not in response.lower()
+        ), "Response contains template phrase"
+
         # Response should be substantive (not a short placeholder)
         assert len(response) > 50, "Response is too short to be meaningful"
 
@@ -277,24 +311,24 @@ class TestIntegrationScenarios:
 @pytest.mark.skip(reason="Requires pytest-benchmark package")
 class TestPerformance:
     """Performance benchmarks for semantic engine"""
-    
+
     def test_classification_speed(self, benchmark):
         """Benchmark intent classification speed"""
         classifier = QueryIntentClassifier()
         query = "Should I abandon this tool that's causing problems?"
-        
+
         # Should complete in under 100ms
         result = benchmark(classifier.classify_intent, query)
         assert result.intent_type is not None
-    
+
     def test_response_matching_speed(self, benchmark):
         """Benchmark response matching speed"""
         engine = SemanticEngine()
         query = "How to debug this API timeout?"
-        
+
         # Should complete in under 200ms
         result = benchmark(engine.process_query, query)
-        assert result['success']
+        assert result["success"]
 
 
 if __name__ == "__main__":

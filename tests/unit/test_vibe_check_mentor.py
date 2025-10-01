@@ -28,7 +28,10 @@ from vibe_check.tools.vibe_mentor import (
     _generate_summary,
 )
 from vibe_check.mentor.models.persona import PersonaData
-from vibe_check.mentor.models.session import ContributionData, CollaborativeReasoningSession
+from vibe_check.mentor.models.session import (
+    ContributionData,
+    CollaborativeReasoningSession,
+)
 
 
 class TestPersonaData:
@@ -382,7 +385,7 @@ class TestCreateMentorEngine:
         engine1 = create_mentor_engine()
         engine2 = create_mentor_engine(test_mode=False)
         singleton = get_mentor_engine()
-        
+
         # All should return the same singleton instance
         assert engine1 is singleton
         assert engine2 is singleton
@@ -394,24 +397,26 @@ class TestCreateMentorEngine:
         mock_session_manager = MagicMock()
         mock_pattern_detector = MagicMock()
         mock_response_coordinator = MagicMock()
-        
+
         # Create test engine with injected dependencies
         engine = create_mentor_engine(
             test_mode=True,
             session_manager=mock_session_manager,
             pattern_detector=mock_pattern_detector,
-            response_coordinator=mock_response_coordinator
+            response_coordinator=mock_response_coordinator,
         )
-        
+
         # Should return TestMentorEngine instance, not singleton
         assert isinstance(engine, TestMentorEngine)
-        assert not isinstance(engine, VibeMentorEngine) or isinstance(engine, TestMentorEngine)
-        
+        assert not isinstance(engine, VibeMentorEngine) or isinstance(
+            engine, TestMentorEngine
+        )
+
         # Should use injected dependencies
         assert engine.session_manager is mock_session_manager
         assert engine.pattern_detector is mock_pattern_detector
         assert engine.response_coordinator is mock_response_coordinator
-        
+
         # Should be different from singleton
         singleton = get_mentor_engine()
         assert engine is not singleton
@@ -419,18 +424,18 @@ class TestCreateMentorEngine:
     def test_create_mentor_engine_test_mode_defaults(self):
         """Test TestMentorEngine creates default dependencies when none provided"""
         engine = create_mentor_engine(test_mode=True)
-        
+
         # Should be TestMentorEngine instance
         assert isinstance(engine, TestMentorEngine)
-        
+
         # Should have created default dependencies (not None)
         assert engine.session_manager is not None
         assert engine.pattern_detector is not None
         assert engine.response_coordinator is not None
-        
+
         # Should maintain backward compatibility
-        assert hasattr(engine, 'DEFAULT_PERSONAS')
-        
+        assert hasattr(engine, "DEFAULT_PERSONAS")
+
         # Enhanced mode disabled by default for test isolation
         assert engine._enhanced_mode is False
 
@@ -539,22 +544,24 @@ class TestInterruptMode:
     def test_generate_interrupt_intervention_planning_phase(self):
         """Test interrupt intervention generation for planning phase"""
         engine = VibeMentorEngine()
-        
+
         # Test infrastructure pattern
         primary_pattern = {
             "pattern_type": "infrastructure_without_implementation",
             "detected": True,
-            "confidence": 0.9
+            "confidence": 0.9,
         }
-        
+
         result = engine.generate_interrupt_intervention(
             query="I'll build a custom HTTP client for the API",
             phase="planning",
             primary_pattern=primary_pattern,
-            pattern_confidence=0.9
+            pattern_confidence=0.9,
         )
-        
-        assert result["question"] == "Have you checked if an official SDK exists for this?"
+
+        assert (
+            result["question"] == "Have you checked if an official SDK exists for this?"
+        )
         assert result["severity"] == "high"
         assert result["suggestion"] == "Check for official SDK with retry/auth handling"
         assert result["pattern_type"] == "infrastructure_without_implementation"
@@ -563,45 +570,49 @@ class TestInterruptMode:
     def test_generate_interrupt_intervention_implementation_phase(self):
         """Test interrupt intervention generation for implementation phase"""
         engine = VibeMentorEngine()
-        
+
         # Test complexity escalation pattern
         primary_pattern = {
             "pattern_type": "complexity_escalation",
             "detected": True,
-            "confidence": 0.75
+            "confidence": 0.75,
         }
-        
+
         result = engine.generate_interrupt_intervention(
             query="Adding abstraction layer for future flexibility",
             phase="implementation",
             primary_pattern=primary_pattern,
-            pattern_confidence=0.75
+            pattern_confidence=0.75,
         )
-        
+
         assert result["question"] == "Could this be done with half the code?"
         assert result["severity"] == "low"
-        assert result["suggestion"] == "Start concrete, abstract only when patterns emerge"
+        assert (
+            result["suggestion"] == "Start concrete, abstract only when patterns emerge"
+        )
         assert result["pattern_type"] == "complexity_escalation"
 
     def test_generate_interrupt_intervention_review_phase(self):
         """Test interrupt intervention generation for review phase"""
         engine = VibeMentorEngine()
-        
+
         # Test custom solution pattern
         primary_pattern = {
             "pattern_type": "custom_solution_preferred",
             "detected": True,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
-        
+
         result = engine.generate_interrupt_intervention(
             query="Completed custom authentication system",
             phase="review",
             primary_pattern=primary_pattern,
-            pattern_confidence=0.8
+            pattern_confidence=0.8,
         )
-        
-        assert result["question"] == "What would happen if we removed this custom layer?"
+
+        assert (
+            result["question"] == "What would happen if we removed this custom layer?"
+        )
         assert result["severity"] == "medium"
         assert result["suggestion"] == "Use established auth library (OAuth2, JWT)"
         assert result["pattern_type"] == "custom_solution_preferred"
@@ -609,21 +620,21 @@ class TestInterruptMode:
     def test_generate_interrupt_intervention_unknown_pattern(self):
         """Test interrupt intervention with unknown pattern type"""
         engine = VibeMentorEngine()
-        
+
         # Unknown pattern
         primary_pattern = {
             "pattern_type": "unknown_pattern",
             "detected": True,
-            "confidence": 0.7
+            "confidence": 0.7,
         }
-        
+
         result = engine.generate_interrupt_intervention(
             query="Some technical decision",
             phase="planning",
             primary_pattern=primary_pattern,
-            pattern_confidence=0.7
+            pattern_confidence=0.7,
         )
-        
+
         # Should use default questions/suggestions
         assert "validated" in result["question"].lower()
         assert result["severity"] == "low"
@@ -632,63 +643,63 @@ class TestInterruptMode:
     def test_interrupt_mode_phase_awareness(self):
         """Test that interrupt mode provides phase-specific questions"""
         engine = VibeMentorEngine()
-        
+
         pattern = {
             "pattern_type": "documentation_neglect",
             "detected": True,
-            "confidence": 0.85
+            "confidence": 0.85,
         }
-        
+
         # Test same pattern in different phases
         phases = ["planning", "implementation", "review"]
         questions_seen = set()
-        
+
         for phase in phases:
             result = engine.generate_interrupt_intervention(
                 query="Building integration without checking docs",
                 phase=phase,
                 primary_pattern=pattern,
-                pattern_confidence=0.85
+                pattern_confidence=0.85,
             )
             questions_seen.add(result["question"])
-        
+
         # Should have different questions for different phases
         assert len(questions_seen) == 3
 
     def test_interrupt_mode_keyword_based_suggestions(self):
         """Test that suggestions adapt based on query keywords"""
         engine = VibeMentorEngine()
-        
+
         pattern = {
             "pattern_type": "custom_solution_preferred",
             "detected": True,
-            "confidence": 0.8
+            "confidence": 0.8,
         }
-        
+
         # Test HTTP client query
         result1 = engine.generate_interrupt_intervention(
             query="Building custom HTTP client",
             phase="planning",
             primary_pattern=pattern,
-            pattern_confidence=0.8
+            pattern_confidence=0.8,
         )
         assert "SDK" in result1["suggestion"]
-        
+
         # Test auth query
         result2 = engine.generate_interrupt_intervention(
             query="Custom auth implementation",
-            phase="planning", 
+            phase="planning",
             primary_pattern=pattern,
-            pattern_confidence=0.8
+            pattern_confidence=0.8,
         )
         assert "OAuth2" in result2["suggestion"] or "JWT" in result2["suggestion"]
-        
+
         # Test abstraction query
         result3 = engine.generate_interrupt_intervention(
             query="Adding abstraction layer",
             phase="planning",
             primary_pattern=pattern,
-            pattern_confidence=0.8
+            pattern_confidence=0.8,
         )
         assert "concrete" in result3["suggestion"].lower()
 

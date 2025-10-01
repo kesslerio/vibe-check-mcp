@@ -29,7 +29,7 @@ git pull
 
 # Run tests (unit tests only for faster release)
 echo "🧪 Running unit tests..."
-PYTHONPATH=src:. pytest tests/unit/ -v --tb=short --timeout=60 || {
+PYTHONPATH=src:. pytest tests/unit/ -v --tb=short || {
     echo "⚠️  Some unit tests failed. Continue? (y/n)"
     read -r response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then

@@ -9,8 +9,4 @@ from .senior_engineer import SeniorEngineerGenerator
 from .product_engineer import ProductEngineerGenerator
 from .ai_engineer import AIEngineerGenerator
 
-__all__ = [
-    "SeniorEngineerGenerator",
-    "ProductEngineerGenerator", 
-    "AIEngineerGenerator"
-]
+__all__ = ["SeniorEngineerGenerator", "ProductEngineerGenerator", "AIEngineerGenerator"]

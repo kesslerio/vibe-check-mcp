@@ -12,7 +12,7 @@ This module implements:
 
 Usage:
     from vibe_check.tools.async_analysis import start_async_analysis
-    
+
     analysis_id = await start_async_analysis(pr_number, repository, pr_data)
     status = await check_analysis_status(analysis_id)
 """
@@ -20,7 +20,4 @@ Usage:
 # Import only what's needed to avoid circular dependencies
 from .config import AsyncAnalysisConfig, DEFAULT_ASYNC_CONFIG
 
-__all__ = [
-    "AsyncAnalysisConfig",
-    "DEFAULT_ASYNC_CONFIG"
-]
+__all__ = ["AsyncAnalysisConfig", "DEFAULT_ASYNC_CONFIG"]

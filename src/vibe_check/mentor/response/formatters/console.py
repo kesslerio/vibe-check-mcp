@@ -9,7 +9,7 @@ from vibe_check.mentor.models.session import CollaborativeReasoningSession
 
 class ConsoleFormatter:
     """Formats collaborative reasoning sessions for console display"""
-    
+
     # ANSI color codes
     BLUE = "\033[34m"
     GREEN = "\033[32m"
@@ -18,7 +18,7 @@ class ConsoleFormatter:
     CYAN = "\033[36m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
-    
+
     @classmethod
     def format_session_output(cls, session: CollaborativeReasoningSession) -> str:
         """
@@ -26,7 +26,9 @@ class ConsoleFormatter:
         Using ANSI codes for terminal colors.
         """
 
-        output = f"\n{cls.BOLD}{cls.BLUE}🧠 Collaborative Reasoning Session{cls.RESET}\n"
+        output = (
+            f"\n{cls.BOLD}{cls.BLUE}🧠 Collaborative Reasoning Session{cls.RESET}\n"
+        )
         output += f"{cls.BOLD}{cls.GREEN}Topic:{cls.RESET} {session.topic}\n"
         output += f"{cls.BOLD}{cls.YELLOW}Stage:{cls.RESET} {session.stage} (Iteration: {session.iteration})\n"
 
@@ -36,9 +38,7 @@ class ConsoleFormatter:
         )
         if active_persona:
             output += f"\n{cls.BOLD}{cls.MAGENTA}Active Persona:{cls.RESET} {active_persona.name}\n"
-            output += (
-                f"{cls.BOLD}{cls.CYAN}Expertise:{cls.RESET} {', '.join(active_persona.expertise)}\n"
-            )
+            output += f"{cls.BOLD}{cls.CYAN}Expertise:{cls.RESET} {', '.join(active_persona.expertise)}\n"
             output += f"{cls.BOLD}{cls.CYAN}Perspective:{cls.RESET} {active_persona.perspective}\n"
 
         # Contributions

@@ -19,37 +19,50 @@ logger = logging.getLogger(__name__)
 def _check_common_file_patterns(pr_diff: str, repository: str) -> str:
     """
     Check for common file patterns that are often unnecessarily suggested.
-    
+
     Returns context string about existing implementations to prevent redundant suggestions.
     Uses regex to match actual file additions in git diff format.
     """
     import re
+
     context_parts = []
-    
+
     # Check for barrel exports (index.ts/js files) - match actual file additions
-    if re.search(r'^\+\+\+ b/.*index\.(ts|js)$', pr_diff, re.MULTILINE):
-        context_parts.append("✅ Barrel exports already implemented (index files found in PR)")
-    
+    if re.search(r"^\+\+\+ b/.*index\.(ts|js)$", pr_diff, re.MULTILINE):
+        context_parts.append(
+            "✅ Barrel exports already implemented (index files found in PR)"
+        )
+
     # Check for README files - match actual file additions
-    if re.search(r'^\+\+\+ b/.*README\.md$', pr_diff, re.MULTILINE | re.IGNORECASE):
-        context_parts.append("✅ Documentation already present (README files found in PR)")
-    
+    if re.search(r"^\+\+\+ b/.*README\.md$", pr_diff, re.MULTILINE | re.IGNORECASE):
+        context_parts.append(
+            "✅ Documentation already present (README files found in PR)"
+        )
+
     # Check for common directory structures - match actual directories being added
-    common_patterns = [r'validators/', r'transformers/', r'constants/', r'utils/', r'helpers/']
+    common_patterns = [
+        r"validators/",
+        r"transformers/",
+        r"constants/",
+        r"utils/",
+        r"helpers/",
+    ]
     found_patterns = []
     for pattern in common_patterns:
-        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
-            found_patterns.append(pattern.rstrip('/'))
+        if re.search(rf"^\+\+\+ b/.*{pattern}", pr_diff, re.MULTILINE):
+            found_patterns.append(pattern.rstrip("/"))
     if found_patterns:
-        context_parts.append(f"✅ Well-organized modular structure detected: {', '.join(found_patterns)}")
-    
+        context_parts.append(
+            f"✅ Well-organized modular structure detected: {', '.join(found_patterns)}"
+        )
+
     # Check for TypeScript/configuration files - match actual file additions
-    config_patterns = [r'\.eslintrc', r'tsconfig\.json', r'prettier\.config']
+    config_patterns = [r"\.eslintrc", r"tsconfig\.json", r"prettier\.config"]
     for pattern in config_patterns:
-        if re.search(rf'^\+\+\+ b/.*{pattern}', pr_diff, re.MULTILINE):
+        if re.search(rf"^\+\+\+ b/.*{pattern}", pr_diff, re.MULTILINE):
             context_parts.append("✅ Code quality tooling already configured")
             break
-    
+
     if context_parts:
         return f"""
 **EXISTING IMPLEMENTATIONS DETECTED:**
@@ -60,30 +73,32 @@ def _check_common_file_patterns(pr_diff: str, repository: str) -> str:
     return ""
 
 
-def _extract_code_context(file_content: str, target_line: int, context_lines: int = 5) -> str:
+def _extract_code_context(
+    file_content: str, target_line: int, context_lines: int = 5
+) -> str:
     """
     Extract code context around a specific line number.
-    
+
     Args:
         file_content: Full file content as string
         target_line: Line number to center on (1-indexed)
         context_lines: Number of lines before and after to include
-        
+
     Returns:
         Code snippet with line numbers
     """
     try:
-        lines = file_content.split('\n')
+        lines = file_content.split("\n")
         start_line = max(0, target_line - context_lines - 1)
         end_line = min(len(lines), target_line + context_lines)
-        
+
         context_snippet = []
         for i in range(start_line, end_line):
             line_num = i + 1
             prefix = ">>> " if line_num == target_line else "    "
             context_snippet.append(f"{prefix}{line_num:3d}: {lines[i]}")
-        
-        return '\n'.join(context_snippet)
+
+        return "\n".join(context_snippet)
     except Exception:
         return ""
 
@@ -93,7 +108,7 @@ async def analyze_pr_llm(
     pr_description: str = "",
     file_changes: Optional[List[str]] = None,
     timeout_seconds: int = 90,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ExternalClaudeResponse:
     """
     Comprehensive PR review using Claude CLI reasoning.
@@ -102,7 +117,7 @@ async def analyze_pr_llm(
     logger.info("Starting external PR review")
 
     # Validate input - detect if URL was passed instead of diff content
-    if pr_diff.startswith(('http://', 'https://', 'github.com', 'api.github.com')):
+    if pr_diff.startswith(("http://", "https://", "github.com", "api.github.com")):
         error_msg = (
             "❌ Invalid input: analyze_pr_llm expects actual PR diff content, not a URL.\n\n"
             f"Received: {pr_diff}\n\n"
@@ -118,7 +133,7 @@ async def analyze_pr_llm(
             error=error_msg,
             exit_code=1,
             execution_time_seconds=0.0,
-            task_type="pr_review"
+            task_type="pr_review",
         )
 
     # Validate that pr_diff has content
@@ -137,7 +152,7 @@ async def analyze_pr_llm(
             error=error_msg,
             exit_code=1,
             execution_time_seconds=0.0,
-            task_type="pr_review"
+            task_type="pr_review",
         )
 
     # Build context
@@ -154,7 +169,7 @@ async def analyze_pr_llm(
         task_type="pr_review",
         additional_context=additional_context,
         timeout_seconds=timeout_seconds,
-        model=model
+        model=model,
     )
 
 
@@ -163,29 +178,29 @@ async def analyze_code_llm(
     file_path: Optional[str] = None,
     language: Optional[str] = None,
     timeout_seconds: int = 60,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ExternalClaudeResponse:
     """
     Deep code analysis using Claude CLI reasoning.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external code analysis for {language or 'unknown'} code")
-    
+
     # Build context
     context_parts = []
     if file_path:
         context_parts.append(f"File: {file_path}")
     if language:
         context_parts.append(f"Language: {language}")
-    
+
     additional_context = "\n".join(context_parts) if context_parts else None
-    
+
     return await analyze_text_llm(
         content=code_content,
         task_type="code_analysis",
         additional_context=additional_context,
         timeout_seconds=timeout_seconds,
-        model=model
+        model=model,
     )
 
 
@@ -194,29 +209,29 @@ async def analyze_issue_llm(
     issue_title: str = "",
     issue_labels: Optional[List[str]] = None,
     timeout_seconds: int = 60,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> ExternalClaudeResponse:
     """
     GitHub issue analysis using Claude CLI reasoning.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Starting external issue analysis")
-    
+
     # Build context
     context_parts = []
     if issue_title:
         context_parts.append(f"Issue Title: {issue_title}")
     if issue_labels:
         context_parts.append(f"Labels: {', '.join(issue_labels)}")
-    
+
     additional_context = "\n".join(context_parts) if context_parts else None
-    
+
     return await analyze_text_llm(
         content=issue_content,
         task_type="issue_analysis",
         additional_context=additional_context,
         timeout_seconds=timeout_seconds,
-        model=model
+        model=model,
     )
 
 
@@ -227,26 +242,28 @@ async def analyze_github_issue_llm(
     analysis_mode: str = "comprehensive",
     detail_level: str = "standard",
     timeout_seconds: int = 90,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> Dict[str, Any]:
     """
     GitHub issue vibe check with Claude CLI reasoning and optional comment posting.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
-    logger.info(f"Starting external GitHub issue vibe check for {repository}#{issue_number}")
-    
+    logger.info(
+        f"Starting external GitHub issue vibe check for {repository}#{issue_number}"
+    )
+
     # Use the GitHub abstraction layer
     github_ops = get_default_github_operations()
-    
+
     # Check authentication first
     auth_result = github_ops.check_authentication()
     if not auth_result.success:
         return {
             "status": "error",
             "error": "GitHub authentication not available",
-            "solution": auth_result.error or "Check GitHub authentication"
+            "solution": auth_result.error or "Check GitHub authentication",
         }
-    
+
     try:
         # Fetch issue data using abstraction layer
         issue_result = github_ops.get_issue(repository, issue_number)
@@ -255,74 +272,93 @@ async def analyze_github_issue_llm(
                 "status": "error",
                 "error": f"Failed to fetch issue: {issue_result.error}",
                 "issue_number": issue_number,
-                "repository": repository
+                "repository": repository,
             }
-        
+
         issue = issue_result.data
-        
+
         # ENHANCEMENT #152: Extract code references from issue content with improved validation
         code_context = ""
         referenced_files = []
         try:
-            from vibe_check.core.code_reference_extractor import CodeReferenceExtractor, ExtractionConfig
-            
+            from vibe_check.core.code_reference_extractor import (
+                CodeReferenceExtractor,
+                ExtractionConfig,
+            )
+
             # Use configurable extraction with review feedback improvements
             config = ExtractionConfig(
                 max_context_lines=timeout_seconds // 10,  # Scale context with timeout
                 max_files_per_issue=3,
                 max_line_refs_per_file=2,
-                enable_metrics_logging=True
+                enable_metrics_logging=True,
             )
             extractor = CodeReferenceExtractor(config)
-            
+
             issue_text = f"{issue.title}\n\n{issue.body or ''}"
             references = extractor.extract_references(issue_text)
-            
+
             # Get unique files, respecting limits
             unique_files = extractor.get_unique_files(references)
             file_lines = extractor.get_file_with_lines(references)
-            
+
             if unique_files:
-                logger.info(f"Found {len(unique_files)} validated file references in issue #{issue_number}")
-                
+                logger.info(
+                    f"Found {len(unique_files)} validated file references in issue #{issue_number}"
+                )
+
                 # Fetch actual code content for referenced files
                 code_snippets = []
-                for file_path in unique_files[:config.max_files_per_issue]:
+                for file_path in unique_files[: config.max_files_per_issue]:
                     try:
-                        file_result = github_ops.get_file_contents(repository, file_path)
+                        file_result = github_ops.get_file_contents(
+                            repository, file_path
+                        )
                         if file_result.success:
-                            file_content = file_result.data.get('content', '')
-                            
+                            file_content = file_result.data.get("content", "")
+
                             # If specific lines are referenced, extract context around them
                             if file_path in file_lines:
                                 line_numbers = file_lines[file_path]
-                                for line_num in line_numbers[:config.max_line_refs_per_file]:
-                                    context_lines = _extract_code_context(file_content, line_num, config.max_context_lines)
+                                for line_num in line_numbers[
+                                    : config.max_line_refs_per_file
+                                ]:
+                                    context_lines = _extract_code_context(
+                                        file_content, line_num, config.max_context_lines
+                                    )
                                     if context_lines:
-                                        code_snippets.append(f"""
+                                        code_snippets.append(
+                                            f"""
 **File: {file_path}** (lines around {line_num})
 ```
 {context_lines}
-```""")
+```"""
+                                        )
                             else:
                                 # Show first 20 lines for context
-                                lines = file_content.split('\n')[:20]
-                                code_snippets.append(f"""
+                                lines = file_content.split("\n")[:20]
+                                code_snippets.append(
+                                    f"""
 **File: {file_path}** (first 20 lines)
 ```
 {chr(10).join(lines)}
-```""")
-                            
+```"""
+                                )
+
                             referenced_files.append(file_path)
                         else:
-                            logger.warning(f"Could not fetch {file_path}: {file_result.error}")
+                            logger.warning(
+                                f"Could not fetch {file_path}: {file_result.error}"
+                            )
                     except Exception as e:
                         logger.warning(f"Error fetching {file_path}: {e}")
-                
+
                 if code_snippets:
                     # Get function names for summary
-                    function_names = [ref.value for ref in references if ref.type == 'function_name']
-                    
+                    function_names = [
+                        ref.value for ref in references if ref.type == "function_name"
+                    ]
+
                     code_context = f"""
 
 ## 📄 Referenced Code Analysis
@@ -336,7 +372,7 @@ async def analyze_github_issue_llm(
 """
         except Exception as e:
             logger.warning(f"Enhanced code reference extraction failed: {e}")
-        
+
         # Build comprehensive issue context with code
         issue_context = f"""# GitHub Issue Analysis
         
@@ -350,20 +386,25 @@ async def analyze_github_issue_llm(
 {issue.body or 'No content provided'}
 {code_context}
 """
-        
+
         # Create vibe check prompt based on detail level
         detail_instructions = {
             "brief": "Provide a concise 3-section analysis with key points only.",
             "standard": "Provide a balanced analysis with practical guidance and clear recommendations.",
-            "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities."
+            "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities.",
         }
-        
-        detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
-        
+
+        detail_instruction = detail_instructions.get(
+            detail_level, detail_instructions["standard"]
+        )
+
         # Enhanced prompt with integration pattern detection
         integration_context = ""
         try:
-            from vibe_check.tools.integration_pattern_analysis import quick_technology_scan
+            from vibe_check.tools.integration_pattern_analysis import (
+                quick_technology_scan,
+            )
+
             tech_scan = quick_technology_scan(issue_context)
             if tech_scan.get("status") == "technologies_detected":
                 tech_list = [t["technology"] for t in tech_scan.get("technologies", [])]
@@ -378,7 +419,10 @@ async def analyze_github_issue_llm(
         doom_loop_context = ""
         try:
             from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops
-            doom_analysis = analyze_text_for_doom_loops(issue_context, tool_name="analyze_github_issue_llm")
+
+            doom_analysis = analyze_text_for_doom_loops(
+                issue_context, tool_name="analyze_github_issue_llm"
+            )
             if doom_analysis.get("status") == "doom_loop_detected":
                 severity = doom_analysis.get("severity", "unknown")
                 doom_loop_context = f"""
@@ -442,16 +486,16 @@ Please provide a vibe check analysis in this format:
 [2-3 educational suggestions based on patterns detected, include integration best practices if relevant]
 
 Use friendly, coaching language that helps developers learn rather than intimidate. If integration technologies are detected, gently guide toward researching official solutions first."""
-        
+
         # Run external Claude analysis
         result = await analyze_text_llm(
             content=vibe_prompt,
             task_type="issue_analysis",
             additional_context=f"Vibe check for GitHub issue {repository}#{issue_number}",
             timeout_seconds=timeout_seconds,
-            model=model
+            model=model,
         )
-        
+
         # Build response
         response = {
             "status": "vibe_check_complete",
@@ -465,15 +509,23 @@ Use friendly, coaching language that helps developers learn rather than intimida
             # ENHANCEMENT #152: Enhanced code-aware analysis metadata
             "code_analysis": {
                 "files_analyzed": referenced_files,
-                "references_extracted": len(references) if 'references' in locals() else 0,
-                "unique_files_found": len(unique_files) if 'unique_files' in locals() else 0,
-                "functions_detected": len([r for r in references if r.type == 'function_name']) if 'references' in locals() else 0,
+                "references_extracted": (
+                    len(references) if "references" in locals() else 0
+                ),
+                "unique_files_found": (
+                    len(unique_files) if "unique_files" in locals() else 0
+                ),
+                "functions_detected": (
+                    len([r for r in references if r.type == "function_name"])
+                    if "references" in locals()
+                    else 0
+                ),
                 "enhancement_active": len(referenced_files) > 0,
                 "validation_enabled": True,
-                "binary_filtering_enabled": True
-            }
+                "binary_filtering_enabled": True,
+            },
         }
-        
+
         # Post comment if requested and analysis succeeded
         if post_comment and result.success and result.output:
             comment_body = f"""## 🎯 Comprehensive Vibe Check
@@ -482,28 +534,37 @@ Use friendly, coaching language that helps developers learn rather than intimida
 
 ---
 *🤖 This vibe check was lovingly crafted by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) using the Claude Code SDK. Because your code deserves better than just "looks good to me" 🚀*"""
-            
-            comment_result = github_ops.post_issue_comment(repository, issue_number, comment_body)
+
+            comment_result = github_ops.post_issue_comment(
+                repository, issue_number, comment_body
+            )
             response["comment_posted"] = comment_result.success
-            
+
             if comment_result.success and comment_result.data.get("comment_url"):
                 response["comment_url"] = comment_result.data["comment_url"]
-                response["user_message"] = f"✅ Analysis posted to GitHub: {comment_result.data['comment_url']}"
-                
+                response["user_message"] = (
+                    f"✅ Analysis posted to GitHub: {comment_result.data['comment_url']}"
+                )
+
             if not comment_result.success:
-                response["comment_error"] = f"Failed to post comment: {comment_result.error}"
-        
+                response["comment_error"] = (
+                    f"Failed to post comment: {comment_result.error}"
+                )
+
         # Sanitize any GitHub API URLs to frontend URLs
-        from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
+        from vibe_check.tools.shared.github_helpers import (
+            sanitize_github_urls_in_response,
+        )
+
         return sanitize_github_urls_in_response(response)
-        
+
     except Exception as e:
         logger.error(f"Error in GitHub issue vibe check: {e}")
         return {
             "status": "error",
             "error": str(e),
             "issue_number": issue_number,
-            "repository": repository
+            "repository": repository,
         }
 
 
@@ -514,26 +575,26 @@ async def analyze_github_pr_llm(
     analysis_mode: str = "comprehensive",
     detail_level: str = "standard",
     timeout_seconds: int = 120,
-    model: str = "sonnet"
+    model: str = "sonnet",
 ) -> Dict[str, Any]:
     """
     GitHub PR vibe check with Claude CLI reasoning and optional review posting.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Starting external GitHub PR vibe check for {repository}#{pr_number}")
-    
+
     # Use the GitHub abstraction layer
     github_ops = get_default_github_operations()
-    
+
     # Check authentication first
     auth_result = github_ops.check_authentication()
     if not auth_result.success:
         return {
             "status": "error",
             "error": "GitHub authentication not available",
-            "solution": auth_result.error or "Check GitHub authentication"
+            "solution": auth_result.error or "Check GitHub authentication",
         }
-    
+
     try:
         # Fetch PR data using abstraction layer
         pr_result = github_ops.get_pull_request(repository, pr_number)
@@ -542,60 +603,65 @@ async def analyze_github_pr_llm(
                 "status": "error",
                 "error": f"Failed to fetch PR: {pr_result.error}",
                 "pr_number": pr_number,
-                "repository": repository
+                "repository": repository,
             }
-        
+
         pr = pr_result.data
-        
+
         # PHASE 1 IMPLEMENTATION: Extract PR size data for intelligent filtering
         pr_size_data = {
-            'number': pr.number,
-            'title': pr.title,
-            'additions': getattr(pr, 'additions', 0),
-            'deletions': getattr(pr, 'deletions', 0), 
-            'changed_files': getattr(pr, 'changed_files', 0)
+            "number": pr.number,
+            "title": pr.title,
+            "additions": getattr(pr, "additions", 0),
+            "deletions": getattr(pr, "deletions", 0),
+            "changed_files": getattr(pr, "changed_files", 0),
         }
-        
+
         # PHASE 1-4 IMPLEMENTATION: Complete analysis strategy with async processing
-        from vibe_check.core.pr_filtering import analyze_with_fallback, should_use_llm_analysis
+        from vibe_check.core.pr_filtering import (
+            analyze_with_fallback,
+            should_use_llm_analysis,
+        )
         from vibe_check.tools.analyze_pr_nollm import analyze_pr_nollm
         from vibe_check.tools.async_analysis.integration import start_async_analysis
         from vibe_check.tools.async_analysis.config import DEFAULT_ASYNC_CONFIG
-        
+
         # PHASE 4 CHECK: Determine if PR should use async processing
         async_config = DEFAULT_ASYNC_CONFIG
         if async_config.should_use_async_processing(pr_size_data):
             logger.info(
                 f"PR {repository}#{pr_number} is massive - using async processing",
                 extra={
-                    "total_changes": pr_size_data.get("additions", 0) + pr_size_data.get("deletions", 0),
-                    "changed_files": pr_size_data.get("changed_files", 0)
-                }
+                    "total_changes": pr_size_data.get("additions", 0)
+                    + pr_size_data.get("deletions", 0),
+                    "changed_files": pr_size_data.get("changed_files", 0),
+                },
             )
-            
+
             # Start async analysis
             async_result = await start_async_analysis(
-                pr_number=pr_number,
-                repository=repository,
-                pr_data=pr_size_data
+                pr_number=pr_number, repository=repository, pr_data=pr_size_data
             )
-            
+
             # Sanitize GitHub URLs and return
-            from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
+            from vibe_check.tools.shared.github_helpers import (
+                sanitize_github_urls_in_response,
+            )
+
             return sanitize_github_urls_in_response(async_result)
-        
+
         async def llm_analysis():
             """Perform LLM analysis for smaller PRs."""
             # Get PR diff for analysis using the fixed abstraction layer
             diff_result = github_ops.get_pull_request_diff(repository, pr_number)
             if not diff_result.success:
                 raise Exception(f"Failed to fetch PR diff: {diff_result.error}")
-            
+
             pr_diff = diff_result.data
-            
+
             # Check for existing implementations before suggesting improvements
             file_pattern_context = _check_common_file_patterns(pr_diff, repository)
-            
+
             # Build comprehensive PR context
             pr_context = f"""# GitHub Pull Request Analysis
             
@@ -614,23 +680,33 @@ async def analyze_github_pr_llm(
 **Code Changes:**
 {pr_diff}
 """
-            
+
             # Create vibe check prompt based on detail level
             detail_instructions = {
                 "brief": "Provide a concise 3-section analysis with key points only.",
                 "standard": "Provide a balanced analysis with practical guidance and clear recommendations.",
-                "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities."
+                "comprehensive": "Provide detailed analysis with extensive educational content, examples, and learning opportunities.",
             }
-            
-            detail_instruction = detail_instructions.get(detail_level, detail_instructions["standard"])
-            
+
+            detail_instruction = detail_instructions.get(
+                detail_level, detail_instructions["standard"]
+            )
+
             # Enhanced PR prompt with integration pattern detection
             pr_integration_context = ""
             try:
-                from vibe_check.tools.integration_pattern_analysis import analyze_integration_patterns_fast
-                integration_analysis = analyze_integration_patterns_fast(pr_context, detail_level="brief")
+                from vibe_check.tools.integration_pattern_analysis import (
+                    analyze_integration_patterns_fast,
+                )
+
+                integration_analysis = analyze_integration_patterns_fast(
+                    pr_context, detail_level="brief"
+                )
                 if integration_analysis.get("technologies_detected"):
-                    tech_list = [t["technology"] for t in integration_analysis.get("technologies_detected", [])]
+                    tech_list = [
+                        t["technology"]
+                        for t in integration_analysis.get("technologies_detected", [])
+                    ]
                     warning_level = integration_analysis.get("warning_level", "none")
                     pr_integration_context = f"""
 **INTEGRATION ANALYSIS:**
@@ -644,8 +720,13 @@ async def analyze_github_pr_llm(
             # Check for doom loop patterns in PR content
             pr_doom_loop_context = ""
             try:
-                from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops
-                doom_analysis = analyze_text_for_doom_loops(pr_context, tool_name="analyze_github_pr_llm")
+                from vibe_check.tools.doom_loop_analysis import (
+                    analyze_text_for_doom_loops,
+                )
+
+                doom_analysis = analyze_text_for_doom_loops(
+                    pr_context, tool_name="analyze_github_pr_llm"
+                )
                 if doom_analysis.get("status") == "doom_loop_detected":
                     severity = doom_analysis.get("severity", "unknown")
                     pr_doom_loop_context = f"""
@@ -697,16 +778,16 @@ Please provide a vibe check analysis in this format:
 [Final recommendation: approve, request changes, or needs discussion]
 
 Use friendly, coaching language that helps developers learn rather than intimidate. If integration technologies are detected, gently suggest verifying official alternatives."""
-            
+
             # Run external Claude analysis
             result = await analyze_text_llm(
                 content=vibe_prompt,
                 task_type="pr_review",
                 additional_context=f"Vibe check for GitHub PR {repository}#{pr_number}",
                 timeout_seconds=timeout_seconds,
-                model=model
+                model=model,
             )
-            
+
             if result.success:
                 return {
                     "status": "vibe_check_complete",
@@ -714,64 +795,67 @@ Use friendly, coaching language that helps developers learn rather than intimida
                     "repository": repository,
                     "analysis_mode": analysis_mode,
                     "claude_analysis": result.output,
-                    "github_implementation": pr_result.implementation
+                    "github_implementation": pr_result.implementation,
                 }
             else:
                 raise Exception(f"Claude analysis failed: {result.error}")
-        
+
         def fast_analysis():
             """Perform fast analysis fallback."""
             return analyze_pr_nollm(
                 pr_number=pr_number,
                 repository=repository,
                 analysis_mode="quick",
-                detail_level=detail_level
+                detail_level=detail_level,
             )
-        
+
         # PHASE 1 IMPLEMENTATION: Use intelligent analysis with fallback
         analysis_result = await analyze_with_fallback(
             pr_data=pr_size_data,
             llm_analyzer_func=llm_analysis,
-            fast_analyzer_func=fast_analysis
+            fast_analyzer_func=fast_analysis,
         )
-        
+
         # Ensure we have the required fields for posting
-        if 'pr_number' not in analysis_result:
-            analysis_result['pr_number'] = pr_number
-        if 'repository' not in analysis_result:
-            analysis_result['repository'] = repository
-        
+        if "pr_number" not in analysis_result:
+            analysis_result["pr_number"] = pr_number
+        if "repository" not in analysis_result:
+            analysis_result["repository"] = repository
+
         # Post review if requested and analysis succeeded
-        if post_comment and analysis_result.get('claude_analysis'):
+        if post_comment and analysis_result.get("claude_analysis"):
             review_body = f"""## 🎯 Comprehensive PR Vibe Check
 
 {analysis_result['claude_analysis']}
 
 ---
 *🤖 This vibe check was lovingly crafted by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) using the Claude Code SDK. Because your code deserves better than just "looks good to me" 🚀*"""
-            
+
             # For now, use create_and_submit_pull_request_review
             # TODO: Could enhance to use the abstraction layer when PR review methods are added
             try:
                 from vibe_check.tools.shared.github_helpers import get_github_client
+
                 client = get_github_client()
                 if client:
                     repo = client.get_repo(repository)
                     pr_obj = repo.get_pull(pr_number)
                     review = pr_obj.create_review(body=review_body, event="COMMENT")
                     analysis_result["comment_posted"] = True
-                    
+
                     # Build PR review URL
                     review_url = f"https://github.com/{repository}/pull/{pr_number}#pullrequestreview-{review.id}"
                     analysis_result["comment_url"] = review_url
-                    analysis_result["user_message"] = f"✅ Review posted to GitHub: {review_url}"
+                    analysis_result["user_message"] = (
+                        f"✅ Review posted to GitHub: {review_url}"
+                    )
                 else:
                     analysis_result["comment_error"] = "GitHub client not available"
             except Exception as e:
                 analysis_result["comment_error"] = f"Failed to post review: {str(e)}"
-        elif post_comment and not analysis_result.get('claude_analysis'):
+        elif post_comment and not analysis_result.get("claude_analysis"):
             # Post a simpler comment for fast analysis mode
-            if analysis_result.get('status') == 'large_pr_detected':
+            if analysis_result.get("status") == "large_pr_detected":
                 review_body = f"""## 🎯 Large PR Analysis
 
 {analysis_result.get('message', 'Large PR detected - providing fast analysis')}
@@ -785,27 +869,35 @@ Use friendly, coaching language that helps developers learn rather than intimida
 
 ---
 *🤖 Fast analysis by [Vibe Check MCP](https://github.com/kesslerio/vibe-check-mcp) - Large PRs get pattern detection to ensure reliable response 🚀*"""
-                
+
                 try:
                     from vibe_check.tools.shared.github_helpers import get_github_client
+
                     client = get_github_client()
                     if client:
                         repo = client.get_repo(repository)
                         pr_obj = repo.get_pull(pr_number)
                         review = pr_obj.create_review(body=review_body, event="COMMENT")
                         analysis_result["comment_posted"] = True
-                        
+
                         # Build PR review URL
                         review_url = f"https://github.com/{repository}/pull/{pr_number}#pullrequestreview-{review.id}"
                         analysis_result["comment_url"] = review_url
-                        analysis_result["user_message"] = f"✅ Fast analysis posted to GitHub: {review_url}"
+                        analysis_result["user_message"] = (
+                            f"✅ Fast analysis posted to GitHub: {review_url}"
+                        )
                 except Exception as e:
-                    analysis_result["comment_error"] = f"Failed to post review: {str(e)}"
-        
+                    analysis_result["comment_error"] = (
+                        f"Failed to post review: {str(e)}"
+                    )
+
         # Sanitize any GitHub API URLs to frontend URLs
-        from vibe_check.tools.shared.github_helpers import sanitize_github_urls_in_response
+        from vibe_check.tools.shared.github_helpers import (
+            sanitize_github_urls_in_response,
+        )
+
         return sanitize_github_urls_in_response(analysis_result)
-        
+
     except Exception as e:
         # PHASE 1 IMPLEMENTATION: Ultimate graceful degradation
         logger.error(f"Error in GitHub PR vibe check: {e}")
@@ -815,5 +907,5 @@ Use friendly, coaching language that helps developers learn rather than intimida
             "pr_number": pr_number,
             "repository": repository,
             "message": "Analysis encountered errors but system ensured response",
-            "note": "This implements graceful degradation from Issue #101 - system never fails completely"
+            "note": "This implements graceful degradation from Issue #101 - system never fails completely",
         }

@@ -7,12 +7,15 @@ and extract actionable insights and recommendations.
 
 from typing import Any, Dict, List
 
-from vibe_check.mentor.models.session import CollaborativeReasoningSession, ContributionData
+from vibe_check.mentor.models.session import (
+    CollaborativeReasoningSession,
+    ContributionData,
+)
 
 
 class SessionSynthesizer:
     """Synthesizes collaborative reasoning sessions into actionable insights"""
-    
+
     @staticmethod
     def synthesize_session(session: CollaborativeReasoningSession) -> Dict[str, Any]:
         """
@@ -28,10 +31,18 @@ class SessionSynthesizer:
             contributions_by_type[contrib.type].append(contrib)
 
         # Extract consensus points (similar content from multiple personas)
-        consensus = SessionSynthesizer._extract_consensus(session.contributions) if session.contributions else []
-        
+        consensus = (
+            SessionSynthesizer._extract_consensus(session.contributions)
+            if session.contributions
+            else []
+        )
+
         # Identify key insights (high confidence insights and syntheses)
-        key_insights = SessionSynthesizer._extract_key_insights(session.contributions) if session.contributions else []
+        key_insights = (
+            SessionSynthesizer._extract_key_insights(session.contributions)
+            if session.contributions
+            else []
+        )
 
         # Find disagreements
         disagreements = SessionSynthesizer._extract_disagreements(contributions_by_type)
@@ -53,7 +64,9 @@ class SessionSynthesizer:
             },
             "consensus_points": consensus,
             "key_insights": key_insights[:3],  # Top 3
-            "primary_concerns": [c.content for c in contributions_by_type.get("concern", [])[:2]],
+            "primary_concerns": [
+                c.content for c in contributions_by_type.get("concern", [])[:2]
+            ],
             "disagreements": disagreements,
             "recommendations": {
                 "immediate_actions": [
@@ -71,20 +84,20 @@ class SessionSynthesizer:
             },
             "final_recommendation": session.final_recommendation,
         }
-    
+
     @staticmethod
     def _extract_consensus(contributions: List[ContributionData]) -> List[str]:
         """Extract consensus points from contributions"""
         if not contributions:
             return []
-        
+
         consensus = []
         all_content = [c.content.lower() for c in contributions if c and c.content]
 
         # Simple consensus detection based on keyword overlap
         consensus_keywords = [
             "official",
-            "sdk", 
+            "sdk",
             "simple",
             "prototype",
             "user",
@@ -93,9 +106,9 @@ class SessionSynthesizer:
         for keyword in consensus_keywords:
             if sum(1 for content in all_content if keyword in content) >= 2:
                 consensus.append(f"Use {keyword} approaches when available")
-        
+
         return consensus
-    
+
     @staticmethod
     def _extract_key_insights(contributions: List[ContributionData]) -> List[str]:
         """Extract key insights from high-confidence contributions"""
@@ -104,9 +117,11 @@ class SessionSynthesizer:
             if contrib.type in ["insight", "synthesis"] and contrib.confidence > 0.85:
                 key_insights.append(contrib.content)
         return key_insights
-    
+
     @staticmethod
-    def _extract_disagreements(contributions_by_type: Dict[str, List[ContributionData]]) -> List[Dict[str, Any]]:
+    def _extract_disagreements(
+        contributions_by_type: Dict[str, List[ContributionData]],
+    ) -> List[Dict[str, Any]]:
         """Extract disagreements from concerns and challenges"""
         disagreements = []
         concerns = contributions_by_type.get("concern", [])
@@ -127,13 +142,13 @@ class SessionSynthesizer:
                         ],
                     }
                 )
-        
+
         return disagreements
-    
+
     @staticmethod
     def _generate_final_recommendation(
         session: CollaborativeReasoningSession,
-        contributions_by_type: Dict[str, List[ContributionData]]
+        contributions_by_type: Dict[str, List[ContributionData]],
     ) -> str:
         """Generate final recommendation based on session state and contributions"""
         if session.stage in ["decision", "reflection"]:

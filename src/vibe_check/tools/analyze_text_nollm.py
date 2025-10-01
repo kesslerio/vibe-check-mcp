@@ -16,22 +16,22 @@ logger = logging.getLogger(__name__)
 
 
 def analyze_text_demo(
-    text: str, 
+    text: str,
     detail_level: str = "standard",
     context: Optional[AnalysisContext] = None,
     use_project_context: bool = True,
-    project_root: str = "."
+    project_root: str = ".",
 ) -> Dict[str, Any]:
     """
     Analyze text for anti-patterns using the validated core engine with contextual awareness.
-    
+
     Args:
         text: Text content to analyze for anti-patterns
         detail_level: Level of detail for educational content (brief/standard/comprehensive)
         context: Analysis context with library and project information (optional)
         use_project_context: Whether to automatically load project context (default: true)
         project_root: Root directory for project context loading (default: current directory)
-        
+
     Returns:
         Dictionary containing pattern detection results and educational content with contextual recommendations
     """
@@ -41,64 +41,74 @@ def analyze_text_demo(
             try:
                 context_manager = get_context_manager(project_root)
                 context = context_manager.get_project_context()
-                logger.info(f"Loaded project context with {len(context.library_docs)} libraries")
+                logger.info(
+                    f"Loaded project context with {len(context.library_docs)} libraries"
+                )
             except Exception as e:
                 logger.warning(f"Failed to load project context: {e}")
                 context = None
-        
+
         # Initialize validated core components
         detector = PatternDetector()
         educator = EducationalContentGenerator()
-        
+
         # Analyze text using proven detection algorithms
         patterns = detector.analyze_text_for_patterns(text)
-        
+
         # Convert DetectionResult objects to dictionaries for JSON serialization
         patterns_dict = []
         contextual_recommendations = []
-        
+
         for result in patterns:
             pattern_data = {
                 "pattern_type": result.pattern_type,
                 "detected": result.detected,
                 "confidence": result.confidence,
                 "evidence": result.evidence,
-                "threshold": result.threshold
+                "threshold": result.threshold,
             }
-            
+
             # Add contextual analysis if available
             if context and result.detected:
-                contextual_rec = context.get_contextual_recommendation(result.pattern_type)
-                if contextual_rec != result.pattern_type:  # Context provided specific guidance
+                contextual_rec = context.get_contextual_recommendation(
+                    result.pattern_type
+                )
+                if (
+                    contextual_rec != result.pattern_type
+                ):  # Context provided specific guidance
                     pattern_data["contextual_recommendation"] = contextual_rec
                     contextual_recommendations.append(contextual_rec)
-                
+
                 # Check if this pattern is in project exceptions
                 if result.pattern_type in context.pattern_exceptions:
                     pattern_data["project_exception"] = True
                     pattern_data["exception_reason"] = context.conflict_resolution.get(
                         result.pattern_type, "Approved project exception"
                     )
-            
+
             patterns_dict.append(pattern_data)
-        
+
         # Generate educational content for detected patterns
         educational_content = {}
         if patterns and patterns[0].detected:
             # Get educational content for the first detected pattern as demo
             first_pattern = patterns[0]
             from ..core.educational_content import DetailLevel
-            detail_enum = getattr(DetailLevel, detail_level.upper(), DetailLevel.STANDARD)
+
+            detail_enum = getattr(
+                DetailLevel, detail_level.upper(), DetailLevel.STANDARD
+            )
             educational_response = educator.generate_educational_response(
                 pattern_type=first_pattern.pattern_type,
                 confidence=first_pattern.confidence,
                 evidence=first_pattern.evidence,
-                detail_level=detail_enum
+                detail_level=detail_enum,
             )
             # Convert EducationalResponse dataclass to dict for JSON serialization
             from dataclasses import asdict
+
             educational_content = asdict(educational_response)
-        
+
         # Build contextual summary
         context_summary = {}
         if context:
@@ -106,29 +116,29 @@ def analyze_text_demo(
                 "libraries_detected": list(context.library_docs.keys()),
                 "pattern_exceptions": len(context.pattern_exceptions),
                 "contextual_recommendations": contextual_recommendations,
-                "project_aware": True
+                "project_aware": True,
             }
-        
+
         return {
             "analysis_results": {
                 "text_length": len(text),
                 "patterns_detected": len([p for p in patterns if p.detected]),
                 "analysis_method": "Phase 1 validated core engine with contextual awareness",
-                "context_applied": context is not None
+                "context_applied": context is not None,
             },
             "patterns": patterns_dict,
             "educational_content": educational_content,
             "contextual_analysis": context_summary,
             "server_status": "✅ FastMCP server operational with core engine integration",
-            "accuracy_note": "Using validated detection engine (87.5% accuracy, 0% false positives) with project context"
+            "accuracy_note": "Using validated detection engine (87.5% accuracy, 0% false positives) with project context",
         }
-        
+
     except Exception as e:
         logger.error(f"Text analysis failed: {e}")
         return {
             "error": f"Analysis failed: {str(e)}",
             "analysis_results": {
                 "patterns_detected": 0,
-                "analysis_method": "Error occurred"
-            }
+                "analysis_method": "Error occurred",
+            },
         }

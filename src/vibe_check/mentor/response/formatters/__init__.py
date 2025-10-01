@@ -6,6 +6,4 @@ Contains formatters for different output formats like console display.
 
 from .console import ConsoleFormatter
 
-__all__ = [
-    "ConsoleFormatter"
-]
+__all__ = ["ConsoleFormatter"]

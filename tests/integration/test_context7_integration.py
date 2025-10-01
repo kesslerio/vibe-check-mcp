@@ -10,9 +10,10 @@ from unittest.mock import MagicMock
 
 # Import the Context7 components
 from vibe_check.server.tools.context7_integration import (
-    Context7Manager, 
-    register_context7_tools
+    Context7Manager,
+    register_context7_tools,
 )
+
 
 # Mock MCP Client
 class MockMCPClient:
@@ -23,6 +24,7 @@ class MockMCPClient:
         def decorator(func):
             self.tools[name] = {"function": func, "description": description}
             return func
+
         return decorator
 
     async def call_tool(self, tool_name, **kwargs):
@@ -36,7 +38,7 @@ class MockMCPClient:
                             "library_id": "/facebook/react",
                             "description": "A JavaScript library for building user interfaces.",
                             "code_snippets": 5000,
-                            "trust_score": 9.5
+                            "trust_score": 9.5,
                         }
                     ]
                 }
@@ -45,14 +47,16 @@ class MockMCPClient:
             return {"documentation": "Mock documentation"}
         return None
 
+
 @pytest.fixture
 def manager():
     """Fixture for a Context7Manager with a mock MCP client."""
     return Context7Manager(mcp_client=MockMCPClient())
 
+
 class TestContext7Manager:
     """Test Context7Manager core functionality."""
-    
+
     def test_manager_initialization(self, manager):
         """Test Context7Manager initialization with proper defaults."""
         assert manager._max_cache_size == 1000
@@ -68,7 +72,9 @@ class TestContext7Manager:
     def test_invalid_mcp_client(self):
         """Test that an invalid MCP client raises a ValueError."""
         with pytest.raises(ValueError):
-            Context7Manager(mcp_client=object())  # Pass an object without a call_tool method
+            Context7Manager(
+                mcp_client=object()
+            )  # Pass an object without a call_tool method
 
     @pytest.mark.asyncio
     async def test_resolve_library_id_metrics(self, manager):
@@ -80,6 +86,7 @@ class TestContext7Manager:
         await manager.resolve_library_id("non-existent-library")
         assert manager._context7_resolve_success == 1
         assert manager._context7_resolve_failure == 1
+
 
 class TestMCPToolRegistration:
     """Test the registration of MCP tools."""
@@ -106,6 +113,7 @@ class TestMCPToolRegistration:
         assert response["status"] == "error"
         assert "message" in response
         assert "details" in response
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

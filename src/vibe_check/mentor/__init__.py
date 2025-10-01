@@ -12,9 +12,9 @@ from .models.config import ConfidenceScores, ExperienceStrings
 
 __all__ = [
     "PersonaData",
-    "CollaborativeReasoningSession", 
+    "CollaborativeReasoningSession",
     "ContributionData",
     "DisagreementData",
     "ConfidenceScores",
-    "ExperienceStrings"
+    "ExperienceStrings",
 ]

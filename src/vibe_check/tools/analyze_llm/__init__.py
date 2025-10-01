@@ -10,13 +10,13 @@ from .llm_models import (
     ExternalClaudeRequest,
     ExternalClaudeResponse,
     PullRequestAnalysisRequest,
-    CodeAnalysisRequest
+    CodeAnalysisRequest,
 )
 
 __all__ = [
     "register_llm_analysis_tools",
-    "ExternalClaudeRequest", 
+    "ExternalClaudeRequest",
     "ExternalClaudeResponse",
     "PullRequestAnalysisRequest",
-    "CodeAnalysisRequest"
+    "CodeAnalysisRequest",
 ]

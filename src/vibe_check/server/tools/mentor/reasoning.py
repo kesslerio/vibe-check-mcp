@@ -6,9 +6,11 @@ from vibe_check.core.vibe_coaching import VibeCoachingFramework, CoachingTone
 
 logger = logging.getLogger(__name__)
 
+
 def get_reasoning_engine():
     """Returns the mentor engine instance."""
     return get_mentor_engine()
+
 
 async def generate_response(
     engine,
@@ -20,10 +22,10 @@ async def generate_response(
     mode: str,
     phase: str,
     analysis_result: Dict[str, Any],
-    workspace_warning: str
+    workspace_warning: str,
 ) -> Dict[str, Any]:
     """Generates the final response from the mentor."""
-    
+
     vibe_level = analysis_result["vibe_level"]
     pattern_confidence = analysis_result["pattern_confidence"]
     detected_patterns = analysis_result["detected_patterns"]
@@ -36,7 +38,7 @@ async def generate_response(
                 query=query,
                 phase=phase,
                 primary_pattern=primary_pattern,
-                pattern_confidence=pattern_confidence
+                pattern_confidence=pattern_confidence,
             )
             return {
                 "status": "success",
@@ -50,17 +52,17 @@ async def generate_response(
                 "confidence": pattern_confidence,
                 "phase": phase,
                 "can_escalate": True,
-                "escalation_hint": "Use mode='standard' with same session_id for full analysis"
+                "escalation_hint": "Use mode='standard' with same session_id for full analysis",
             }
         else:
             return {
-                "status": "success", 
+                "status": "success",
                 "mode": "interrupt",
                 "interrupt": False,
                 "proceed": True,
                 "affirmation": _get_phase_affirmation(phase, query),
                 "confidence": pattern_confidence,
-                "phase": phase
+                "phase": phase,
             }
 
     if continue_session and session_id and session_id in engine.sessions:
@@ -75,18 +77,14 @@ async def generate_response(
             session = engine.create_session(topic=query)
             logger.info(f"Created new session with generated ID: {session.session_id}")
 
-    contribution_counts = {
-        "quick": 1,
-        "standard": 2,
-        "comprehensive": 3
-    }
+    contribution_counts = {"quick": 1, "standard": 2, "comprehensive": 3}
     num_contributions = contribution_counts.get(reasoning_depth, 2)
 
     for i in range(num_contributions):
         if i < len(session.personas):
             persona = session.personas[i]
             session.active_persona_id = persona.id
-            
+
             contribution = engine.generate_contribution(
                 session=session,
                 persona=persona,
@@ -95,9 +93,9 @@ async def generate_response(
                 project_context=analysis_result.get("project_context"),
                 file_contexts=analysis_result.get("file_contexts"),
             )
-            
+
             session.contributions.append(contribution)
-            
+
             if reasoning_depth == "comprehensive" and i < num_contributions - 1:
                 engine.advance_stage(session)
 
@@ -109,7 +107,7 @@ async def generate_response(
         vibe_level=vibe_level,
         detected_patterns=[],
         issue_context={"query": query},
-        tone=CoachingTone.ENCOURAGING
+        tone=CoachingTone.ENCOURAGING,
     )
 
     response = {
@@ -118,7 +116,7 @@ async def generate_response(
             "summary": _generate_summary(vibe_level, detected_patterns, synthesis),
             "confidence": pattern_confidence,
             "detected_patterns": [p["pattern_type"] for p in detected_patterns],
-            "vibe_level": vibe_level
+            "vibe_level": vibe_level,
         },
         "collaborative_insights": {
             "consensus": synthesis["consensus_points"],
@@ -126,32 +124,39 @@ async def generate_response(
                 contrib.persona_id: {
                     "message": contrib.content,
                     "type": contrib.type,
-                    "confidence": contrib.confidence
+                    "confidence": contrib.confidence,
                 }
                 for contrib in session.contributions
             },
             "key_insights": synthesis["key_insights"],
             "concerns": synthesis["primary_concerns"],
-            "recommendations": synthesis["recommendations"]
+            "recommendations": synthesis["recommendations"],
         },
         "coaching_guidance": {
-            "primary_recommendation": coaching_recs[0].title if coaching_recs else "Proceed with implementation",
+            "primary_recommendation": (
+                coaching_recs[0].title
+                if coaching_recs
+                else "Proceed with implementation"
+            ),
             "action_steps": coaching_recs[0].action_items[:3] if coaching_recs else [],
-            "prevention_checklist": coaching_recs[0].prevention_checklist[:3] if coaching_recs else []
+            "prevention_checklist": (
+                coaching_recs[0].prevention_checklist[:3] if coaching_recs else []
+            ),
         },
         "session_info": {
             "session_id": session.session_id,
             "stage": session.stage,
             "iteration": session.iteration,
-            "can_continue": session.next_contribution_needed
+            "can_continue": session.next_contribution_needed,
         },
         "reasoning_depth": reasoning_depth,
-        "formatted_output": engine.format_session_output(session) + workspace_warning
+        "formatted_output": engine.format_session_output(session) + workspace_warning,
     }
-    
+
     logger.info(response["formatted_output"])
-    
+
     return response
+
 
 def _get_phase_affirmation(phase: str, query: str) -> str:
     """Generate phase-specific affirmation when no interrupt is needed"""
@@ -159,20 +164,20 @@ def _get_phase_affirmation(phase: str, query: str) -> str:
         "planning": [
             "Good choice - using standard tools",
             "Solid approach - keep it simple",
-            "Great! Following established patterns"
+            "Great! Following established patterns",
         ],
         "implementation": [
             "Clean implementation - well done",
             "Following best practices - excellent",
-            "Standard approach confirmed - proceed"
+            "Standard approach confirmed - proceed",
         ],
         "review": [
             "Implementation looks clean",
             "Matches requirements well",
-            "Ready for next steps"
-        ]
+            "Ready for next steps",
+        ],
     }
-    
+
     if "pandas" in query.lower() or "standard" in query.lower():
         return phase_affirmations[phase][0]
     elif "official" in query.lower() or "sdk" in query.lower():

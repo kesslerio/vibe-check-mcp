@@ -43,5 +43,5 @@ failure_outcome = {
     "functionality_delivered": "Zero working vector search",
     "technical_debt": "Massive custom infrastructure that doesn't work",
     "opportunity_cost": "Could have had working solution in 1 week",
-    "lesson": "Test standard approach before building custom"
+    "lesson": "Test standard approach before building custom",
 }

@@ -7,9 +7,11 @@ from .reasoning import get_reasoning_engine, generate_response
 
 logger = logging.getLogger(__name__)
 
+
 def register_mentor_tools(mcp_instance):
     """Registers mentor tools with the MCP server."""
     mcp_instance.add_tool(vibe_check_mentor)
+
 
 @mcp.tool()
 async def vibe_check_mentor(
@@ -23,14 +25,16 @@ async def vibe_check_mentor(
     phase: str = "planning",
     confidence_threshold: float = 0.7,
     file_paths: Optional[List[str]] = None,
-    working_directory: Optional[str] = None
+    working_directory: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Multi-persona technical decision analysis with anti-pattern detection.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
-    logger.info(f"Vibe mentor activated: mode={mode}, depth={reasoning_depth}, phase={phase} for query: {query[:100]}...")
-    
+    logger.info(
+        f"Vibe mentor activated: mode={mode}, depth={reasoning_depth}, phase={phase} for query: {query[:100]}..."
+    )
+
     # 1. Load context
     full_context, session_id, workspace_warning = await load_workspace_context(
         query, context, session_id, file_paths, working_directory
@@ -58,5 +62,5 @@ async def vibe_check_mentor(
         analysis_result=analysis_result,
         workspace_warning=workspace_warning,
     )
-    
+
     return response

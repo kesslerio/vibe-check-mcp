@@ -29,22 +29,35 @@ class CustomSolutionHandler(PatternHandler):
                 "and error handling. Let's check for an official solution first - it could save weeks of work.",
                 ConfidenceScores.HIGH,
             )
-        
+
         # Enhanced: Check for specific technical decision patterns
         if PatternHandler.has_topic_keywords(
-            topic, ["option", "approach", "choose", "decision", "vs", "or", "better", "should"]
+            topic,
+            [
+                "option",
+                "approach",
+                "choose",
+                "decision",
+                "vs",
+                "or",
+                "better",
+                "should",
+            ],
         ):
             # Extract options if present (e.g., "Option A", "Option B", etc.)
             import re
+
             try:
                 # Validate and compile pattern safely
-                pattern = re.compile(r'option [a-c]|approach [a-c]|[a-c]\)', re.IGNORECASE)
+                pattern = re.compile(
+                    r"option [a-c]|approach [a-c]|[a-c]\)", re.IGNORECASE
+                )
                 options_match = pattern.findall(topic.lower())
             except re.error as e:
                 # Handle regex compilation error gracefully
                 logger.warning(f"Regex pattern error in CustomSolutionHandler: {e}")
                 options_match = []
-            
+
             if options_match:
                 return (
                     "insight",
@@ -55,7 +68,7 @@ class CustomSolutionHandler(PatternHandler):
                     f"and requirements to give targeted advice on which option best fits your use case.",
                     ConfidenceScores.GOOD,
                 )
-            
+
             return (
                 "suggestion",
                 f"For this technical decision, let's apply a structured approach: "
@@ -65,10 +78,11 @@ class CustomSolutionHandler(PatternHandler):
                 f"The best solution often emerges from practical experimentation rather than theoretical analysis.",
                 ConfidenceScores.GOOD,
             )
-        
+
         # Enhanced: Check for data/field related queries
         if PatternHandler.has_topic_keywords(
-            topic, ["field", "data", "deduplicate", "duplicate", "merge", "combine", "filter"]
+            topic,
+            ["field", "data", "deduplicate", "duplicate", "merge", "combine", "filter"],
         ):
             return (
                 "insight",
@@ -79,10 +93,19 @@ class CustomSolutionHandler(PatternHandler):
                 f"The specific approach depends on your data volume, quality requirements, and user expectations.",
                 ConfidenceScores.GOOD,
             )
-        
+
         # Enhanced: Check for architecture/design queries
         if PatternHandler.has_topic_keywords(
-            topic, ["architecture", "design", "pattern", "structure", "system", "microservice", "monolith"]
+            topic,
+            [
+                "architecture",
+                "design",
+                "pattern",
+                "structure",
+                "system",
+                "microservice",
+                "monolith",
+            ],
         ):
             return (
                 "insight",
@@ -93,7 +116,7 @@ class CustomSolutionHandler(PatternHandler):
                 f"5) Design for replaceability, not reusability. Most 'future-proof' architectures become technical debt.",
                 ConfidenceScores.HIGH,
             )
-        
+
         # Default response - but more contextual
         return (
             "suggestion",
