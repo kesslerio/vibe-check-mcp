@@ -175,7 +175,6 @@ Desktop.ini
 .mcp_cache/
 
 # Project specific
-CLAUDE*.md
 CLAUDE.md.bak
 .claude/
 .qodo/
