@@ -14,9 +14,9 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from ..shared.pr_classifier import PrSizeCategory, PrSizeMetrics, classify_pr_size
-from ..shared.claude_integration import analyze_content_async_with_circuit_breaker
-from ..shared.circuit_breaker import ClaudeCliError, CircuitBreakerOpenError
+from vibe_check.tools.shared.pr_classifier import PrSizeCategory, PrSizeMetrics, classify_pr_size
+from vibe_check.tools.shared.claude_integration import analyze_content_async_with_circuit_breaker
+from vibe_check.tools.shared.circuit_breaker import ClaudeCliError, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 

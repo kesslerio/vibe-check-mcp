@@ -5,6 +5,12 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
+# CRITICAL: Ensure package root is in sys.path for MCP stdio mode
+# When running via stdio (Claude CLI), PYTHONPATH may not be set
+_package_root = Path(__file__).parent.parent.parent
+if str(_package_root) not in sys.path:
+    sys.path.insert(0, str(_package_root))
+
 # CRITICAL: Fix LOG_LEVEL environment variable before FastMCP imports
 _original_log_level = os.environ.get('LOG_LEVEL', None)
 if _original_log_level and _original_log_level.lower() == 'error':
@@ -15,7 +21,7 @@ elif _original_log_level and _original_log_level.lower() in ['debug', 'info', 'w
 from .core import mcp
 from .transport import detect_transport_mode
 from .registry import register_all_tools
-from ..tools.config_validation import validate_configuration, format_validation_results, log_validation_results
+from vibe_check.tools.config_validation import validate_configuration, format_validation_results, log_validation_results
 from .utils import get_version # Import the new function
 
 # Configure logging with safe file handler (handle read-only filesystems in MCP mode)
