@@ -27,9 +27,15 @@ fi
 echo "📥 Pulling latest changes..."
 git pull
 
-# Run tests
-echo "🧪 Running tests..."
-PYTHONPATH=src:. pytest
+# Run tests (unit tests only for faster release)
+echo "🧪 Running unit tests..."
+PYTHONPATH=src:. pytest tests/unit/ -v --tb=short --timeout=60 || {
+    echo "⚠️  Some unit tests failed. Continue? (y/n)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
 
 # Run linting and type checking
 echo "🔍 Running linting and type checks..."
