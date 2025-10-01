@@ -22,6 +22,7 @@ import logging
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
 from typing import Dict, Any, Optional, List
@@ -186,42 +187,73 @@ Promote good engineering practices through constructive analysis.""",
         self.claude_cli_path = self._find_claude_cli()
     
     def _find_claude_cli(self) -> str:
-        """Find the Claude CLI executable path using claude-code-mcp approach."""
+        """
+        Find the Claude CLI executable path using claude-code-mcp approach.
+
+        IMPORTANT: Always prefers full path ~/.claude/local/claude to avoid PATH issues in MCP stdio mode.
+        See Issue #240 for context on MCP environment challenges.
+        """
         logger.debug('[Debug] Attempting to find Claude CLI...')
-        
+
+        # Log environment context for MCP stdio debugging (Issue #240)
+        import shutil
+        logger.debug(f'[Debug] Current PATH: {os.environ.get("PATH", "NOT SET")}')
+        logger.debug(f'[Debug] Current working directory: {os.getcwd()}')
+        logger.debug(f'[Debug] MCP environment indicators: stdio={sys.stdin.isatty()}, VIBE_CHECK_INTERNAL_CALL={os.environ.get("VIBE_CHECK_INTERNAL_CALL")}')
+
         # Check for custom CLI name from environment variable
         custom_cli_name = os.environ.get('CLAUDE_CLI_NAME')
         if custom_cli_name:
             logger.debug(f'[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}')
-            
+
             # If it's an absolute path, use it directly
             if os.path.isabs(custom_cli_name):
                 logger.debug(f'[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}')
-                return custom_cli_name
-            
+                if os.path.exists(custom_cli_name) and os.access(custom_cli_name, os.X_OK):
+                    logger.info(f'[Info] Using custom Claude CLI: {custom_cli_name}')
+                    return custom_cli_name
+                else:
+                    logger.error(f'[Error] Custom Claude CLI path not found or not executable: {custom_cli_name}')
+                    raise FileNotFoundError(f"Claude CLI not found at custom path: {custom_cli_name}")
+
             # If it contains path separators (relative path), reject it
             if '/' in custom_cli_name or '\\\\' in custom_cli_name:
                 raise ValueError(
                     f"Invalid CLAUDE_CLI_NAME: Relative paths are not allowed. "
                     f"Use either a simple name (e.g., 'claude') or an absolute path"
                 )
-        
+
         cli_name = custom_cli_name or 'claude'
-        
-        # Try local install path: ~/.claude/local/claude
+
+        # Try local install path: ~/.claude/local/claude (ALWAYS prefer this - Issue #240)
         user_path = os.path.expanduser('~/.claude/local/claude')
         logger.debug(f'[Debug] Checking for Claude CLI at local user path: {user_path}')
-        
+
         if os.path.exists(user_path):
-            logger.debug(f'[Debug] Found Claude CLI at local user path: {user_path}')
-            return user_path
+            # Check if file is executable
+            if os.access(user_path, os.X_OK):
+                logger.info(f'[Info] Found Claude CLI at local user path: {user_path}')
+                return user_path
+            else:
+                logger.warning(f'[Warning] Claude CLI found at {user_path} but not executable. Permissions: {oct(os.stat(user_path).st_mode)}')
+                # Try to use it anyway, subprocess will fail with clear error
+                return user_path
         else:
-            logger.debug(f'[Debug] Claude CLI not found at local user path: {user_path}')
-        
-        # Fallback to CLI name (PATH lookup)
-        logger.debug(f'[Debug] Falling back to "{cli_name}" command name, relying on PATH lookup')
-        logger.warning(f'[Warning] Claude CLI not found at ~/.claude/local/claude. Falling back to "{cli_name}" in PATH')
-        return cli_name
+            logger.warning(f'[Warning] Claude CLI not found at local user path: {user_path}')
+
+        # Fallback to CLI name (PATH lookup) - log extensively for debugging
+        which_result = shutil.which(cli_name)
+        logger.debug(f'[Debug] shutil.which("{cli_name}") result: {which_result}')
+
+        if which_result:
+            logger.info(f'[Info] Found "{cli_name}" in PATH at: {which_result}')
+            return which_result
+        else:
+            logger.error(f'[Error] Claude CLI not found in PATH. Tried: ~/.claude/local/claude and PATH lookup for "{cli_name}"')
+            logger.error(f'[Error] Current PATH: {os.environ.get("PATH", "NOT SET")}')
+            logger.error('[Error] To fix: Install Claude CLI at ~/.claude/local/claude or add to PATH')
+            # Return cli_name anyway for clearer subprocess error
+            return cli_name
     
     def _get_claude_md_content(self) -> str:
         """
@@ -601,30 +633,64 @@ Please apply these guidelines throughout your analysis and recommendations."""
                     }
                 )
             else:
-                # Handle error response
+                # Handle error response with detailed diagnostics (Issue #240)
                 error_msg = result.stderr.strip() if result.stderr else "Claude CLI failed"
                 output = result.stdout.strip() if result.stdout else ""
-                
-                # Check if error is related to model parameter
-                if "model" in error_msg.lower() or "invalid" in error_msg.lower():
-                    error_msg = f"Model '{model}' error: {error_msg}"
-                
-                logger.error(f"Claude CLI failed. Exit code: {result.returncode}. Stderr: {error_msg}")
-                
+
+                # Enhanced error analysis and logging
+                logger.error(f"[Error] Claude CLI failed with exit code {result.returncode}")
+                logger.error(f"[Error] Command: {self.claude_cli_path}")
+                logger.error(f"[Error] Working directory: {isolation_dir}")
+                logger.error(f"[Error] Full stderr: {error_msg}")
+                if output:
+                    logger.error(f"[Error] Stdout: {output}")
+
+                # Analyze error type and provide actionable guidance
+                # Check authentication first (before generic "invalid" check)
+                troubleshooting_hint = ""
+                if result.returncode == 127 or "not found" in error_msg.lower():
+                    troubleshooting_hint = (
+                        f"Claude CLI not found at {self.claude_cli_path}. "
+                        "Install Claude CLI or set CLAUDE_CLI_NAME environment variable."
+                    )
+                elif result.returncode == 126 or "permission denied" in error_msg.lower():
+                    troubleshooting_hint = (
+                        f"Permission denied executing {self.claude_cli_path}. "
+                        f"Run: chmod +x {self.claude_cli_path}"
+                    )
+                elif "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+                    troubleshooting_hint = "Authentication failed. Run 'claude login' or check ANTHROPIC_API_KEY."
+                elif "model" in error_msg.lower() or "invalid" in error_msg.lower():
+                    troubleshooting_hint = f"Model '{model}' error. Check Claude CLI version and model availability."
+                else:
+                    troubleshooting_hint = "Check Claude CLI installation and configuration."
+
+                logger.error(f"[Error] Troubleshooting: {troubleshooting_hint}")
+
+                # Include troubleshooting hint in error message
+                enhanced_error_msg = f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+
                 return ClaudeCliResult(
                     success=False,
                     output=output,
-                    error=error_msg,
+                    error=enhanced_error_msg,
                     exit_code=result.returncode,
                     execution_time=execution_time,
                     command_used="claude_cli_direct",
-                    task_type=task_type
+                    task_type=task_type,
+                    sdk_metadata={
+                        "error_analysis": {
+                            "cli_path": self.claude_cli_path,
+                            "exit_code": result.returncode,
+                            "troubleshooting": troubleshooting_hint
+                        }
+                    }
                 )
                 
         except subprocess.TimeoutExpired:
             execution_time = time.time() - start_time
             logger.warning(f"Claude CLI timed out after {self.timeout_seconds}s (subprocess timeout)")
-            
+
             return ClaudeCliResult(
                 success=False,
                 error=f"Claude CLI timeout after {self.timeout_seconds} seconds",
@@ -633,17 +699,78 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 command_used="claude_cli_direct",
                 task_type=task_type
             )
-        except Exception as e:
+        except FileNotFoundError as e:
+            # Specific handling for file not found (Issue #240 - common in MCP stdio mode)
             execution_time = time.time() - start_time
-            logger.error(f"Error executing Claude CLI: {e}")
-            
+            logger.error(f"[Error] Claude CLI executable not found: {self.claude_cli_path}")
+            logger.error(f"[Error] Current PATH: {os.environ.get('PATH', 'NOT SET')}")
+            logger.error(f"[Error] Working directory: {os.getcwd()}")
+
+            troubleshooting = (
+                f"Claude CLI not found at {self.claude_cli_path}.\n\n"
+                "Troubleshooting steps:\n"
+                "1. Install Claude CLI: npm install -g @anthropic-ai/claude-cli\n"
+                "2. Or set CLAUDE_CLI_NAME to full path: export CLAUDE_CLI_NAME=~/.claude/local/claude\n"
+                "3. Ensure ~/.claude/local/claude exists and is executable\n"
+                f"4. Current PATH: {os.environ.get('PATH', 'NOT SET')}"
+            )
+
             return ClaudeCliResult(
                 success=False,
-                error=f"Claude CLI execution error: {str(e)}",
+                error=troubleshooting,
+                exit_code=127,
+                execution_time=execution_time,
+                command_used="claude_cli_direct",
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": "FileNotFoundError",
+                    "cli_path": self.claude_cli_path,
+                    "path_env": os.environ.get('PATH', 'NOT SET')
+                }
+            )
+        except PermissionError as e:
+            # Handle permission errors explicitly (Issue #240)
+            execution_time = time.time() - start_time
+            logger.error(f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}")
+
+            troubleshooting = (
+                f"Permission denied: {self.claude_cli_path}\n\n"
+                f"Run: chmod +x {self.claude_cli_path}"
+            )
+
+            return ClaudeCliResult(
+                success=False,
+                error=troubleshooting,
+                exit_code=126,
+                execution_time=execution_time,
+                command_used="claude_cli_direct",
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": "PermissionError",
+                    "cli_path": self.claude_cli_path
+                }
+            )
+        except Exception as e:
+            # General exception handler with enhanced logging
+            execution_time = time.time() - start_time
+            logger.error(f"[Error] Unexpected error executing Claude CLI: {type(e).__name__}: {e}")
+            logger.error(f"[Error] CLI path: {self.claude_cli_path}")
+            logger.error(f"[Error] Environment: MCP_stdio={not sys.stdin.isatty()}")
+
+            import traceback
+            logger.debug(f"[Debug] Full traceback: {traceback.format_exc()}")
+
+            return ClaudeCliResult(
+                success=False,
+                error=f"Claude CLI execution error: {type(e).__name__}: {str(e)}",
                 exit_code=-1,
                 execution_time=execution_time,
                 command_used="claude_cli_direct",
-                task_type=task_type
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": type(e).__name__,
+                    "cli_path": self.claude_cli_path
+                }
             )
     
     async def execute_async(
@@ -713,24 +840,59 @@ Please apply these guidelines throughout your analysis and recommendations."""
                     task_type=task_type
                 )
             else:
-                # Handle error
-                error_msg = stderr.decode('utf-8') if stderr else "Unknown error"
-                
-                # Check if error is related to model parameter
-                if "model" in error_msg.lower() or "invalid" in error_msg.lower():
-                    error_msg = f"Model '{model}' error: {error_msg}"
-                
-                logger.error(f"Claude CLI failed: {error_msg}")
-                
+                # Handle error with enhanced diagnostics (Issue #240)
+                error_msg = stderr.decode('utf-8').strip() if stderr else "Unknown error"
+                output_text = stdout.decode('utf-8').strip() if stdout else ""
+
+                # Enhanced error analysis and logging
+                logger.error(f"[Error] Claude CLI async failed with exit code {process.returncode}")
+                logger.error(f"[Error] Command: {self.claude_cli_path}")
+                logger.error(f"[Error] Working directory: {isolation_dir}")
+                logger.error(f"[Error] Full stderr: {error_msg}")
+                if output_text:
+                    logger.error(f"[Error] Stdout: {output_text}")
+
+                # Analyze error type and provide actionable guidance
+                # Check authentication first (before generic "invalid" check)
+                troubleshooting_hint = ""
+                if process.returncode == 127 or "not found" in error_msg.lower():
+                    troubleshooting_hint = (
+                        f"Claude CLI not found at {self.claude_cli_path}. "
+                        "Install Claude CLI or set CLAUDE_CLI_NAME environment variable."
+                    )
+                elif process.returncode == 126 or "permission denied" in error_msg.lower():
+                    troubleshooting_hint = (
+                        f"Permission denied executing {self.claude_cli_path}. "
+                        f"Run: chmod +x {self.claude_cli_path}"
+                    )
+                elif "authentication" in error_msg.lower() or "api key" in error_msg.lower():
+                    troubleshooting_hint = "Authentication failed. Run 'claude login' or check ANTHROPIC_API_KEY."
+                elif "model" in error_msg.lower() or "invalid" in error_msg.lower():
+                    troubleshooting_hint = f"Model '{model}' error. Check Claude CLI version and model availability."
+                else:
+                    troubleshooting_hint = "Check Claude CLI installation and configuration."
+
+                logger.error(f"[Error] Troubleshooting: {troubleshooting_hint}")
+
+                # Include troubleshooting hint in error message
+                enhanced_error_msg = f"{error_msg}\n\nTroubleshooting: {troubleshooting_hint}"
+
                 return ClaudeCliResult(
                     success=False,
-                    error=f"Claude CLI error: {error_msg}",
+                    error=enhanced_error_msg,
                     exit_code=process.returncode,
                     execution_time=execution_time,
                     command_used="claude_cli_async",
-                    task_type=task_type
+                    task_type=task_type,
+                    sdk_metadata={
+                        "error_analysis": {
+                            "cli_path": self.claude_cli_path,
+                            "exit_code": process.returncode,
+                            "troubleshooting": troubleshooting_hint
+                        }
+                    }
                 )
-                    
+
         except asyncio.TimeoutError:
             execution_time = time.time() - start_time
             logger.warning(f"Claude CLI async timed out after {self.timeout_seconds + 10}s")
@@ -742,17 +904,80 @@ Please apply these guidelines throughout your analysis and recommendations."""
                 command_used="claude_cli_async",
                 task_type=task_type
             )
-            
-        except Exception as e:
+
+        except FileNotFoundError as e:
+            # Specific handling for file not found (Issue #240 - common in MCP stdio mode)
             execution_time = time.time() - start_time
-            logger.error(f"Error in Claude CLI async execution: {e}")
+            logger.error(f"[Error] Claude CLI executable not found: {self.claude_cli_path}")
+            logger.error(f"[Error] Current PATH: {os.environ.get('PATH', 'NOT SET')}")
+
+            troubleshooting = (
+                f"Claude CLI not found at {self.claude_cli_path}.\n\n"
+                "Troubleshooting steps:\n"
+                "1. Install Claude CLI: npm install -g @anthropic-ai/claude-cli\n"
+                "2. Or set CLAUDE_CLI_NAME to full path: export CLAUDE_CLI_NAME=~/.claude/local/claude\n"
+                "3. Ensure ~/.claude/local/claude exists and is executable\n"
+                f"4. Current PATH: {os.environ.get('PATH', 'NOT SET')}"
+            )
+
             return ClaudeCliResult(
                 success=False,
-                error=f"Integration error: {str(e)}",
+                error=troubleshooting,
+                exit_code=127,
+                execution_time=execution_time,
+                command_used="claude_cli_async",
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": "FileNotFoundError",
+                    "cli_path": self.claude_cli_path,
+                    "path_env": os.environ.get('PATH', 'NOT SET')
+                }
+            )
+
+        except PermissionError as e:
+            # Handle permission errors explicitly (Issue #240)
+            execution_time = time.time() - start_time
+            logger.error(f"[Error] Permission denied executing Claude CLI: {self.claude_cli_path}")
+
+            troubleshooting = (
+                f"Permission denied: {self.claude_cli_path}\n\n"
+                f"Run: chmod +x {self.claude_cli_path}"
+            )
+
+            return ClaudeCliResult(
+                success=False,
+                error=troubleshooting,
+                exit_code=126,
+                execution_time=execution_time,
+                command_used="claude_cli_async",
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": "PermissionError",
+                    "cli_path": self.claude_cli_path
+                }
+            )
+
+        except Exception as e:
+            # General exception handler with enhanced logging
+            execution_time = time.time() - start_time
+            logger.error(f"[Error] Unexpected error in Claude CLI async execution: {type(e).__name__}: {e}")
+            logger.error(f"[Error] CLI path: {self.claude_cli_path}")
+            logger.error(f"[Error] Environment: MCP_stdio={not sys.stdin.isatty()}")
+
+            import traceback
+            logger.debug(f"[Debug] Full traceback: {traceback.format_exc()}")
+
+            return ClaudeCliResult(
+                success=False,
+                error=f"Claude CLI async execution error: {type(e).__name__}: {str(e)}",
                 exit_code=-1,
                 execution_time=execution_time,
                 command_used="claude_cli_async",
-                task_type=task_type
+                task_type=task_type,
+                sdk_metadata={
+                    "error_type": type(e).__name__,
+                    "cli_path": self.claude_cli_path
+                }
             )
 
 
