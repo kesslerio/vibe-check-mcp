@@ -6,8 +6,8 @@ Tests detection algorithms against realistic examples
 
 import sys
 from pathlib import Path
-from detect_patterns import PatternDetector
-from timing_utils import PerformanceTimer
+from validation.detect_patterns import PatternDetector
+from validation.timing_utils import PerformanceTimer
 
 def test_sample_files():
     """Test detection against sample code files"""
