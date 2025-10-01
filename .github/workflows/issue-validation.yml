@@ -141,4 +141,3 @@ jobs:
                 labels: ['phase2']
               });
             }
-EOF < /dev/null
