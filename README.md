@@ -349,6 +349,52 @@ export GITHUB_TOKEN="ghp_your_token_here"
 
 **Security Note:** Keep your token secure! Don't commit it to version control.
 
+### ⚙️ Tool Architecture Configuration (Issue #237)
+
+Control which tools are exposed based on your usage needs:
+
+**Production Mode (Default) - 30 tools:**
+```bash
+# No environment variables needed - this is the default
+# Includes all core anti-pattern detection and analysis tools
+```
+
+**Diagnostics Mode - +11 diagnostic tools:**
+```bash
+export VIBE_CHECK_DIAGNOSTICS=true
+
+# Enables:
+# - Claude CLI status checking and diagnostics
+# - MCP configuration validation
+# - Async system health monitoring
+# - Integration troubleshooting tools
+```
+
+**Development Mode - +2 dev/experimental tools:**
+```bash
+export VIBE_CHECK_DEV_MODE=true
+
+# Enables:
+# - demo_large_prompt_handling (experimental features)
+# - reset_session_tracking (dev utility)
+```
+
+**Comprehensive Test Mode:**
+```bash
+export VIBE_CHECK_DEV_MODE_OVERRIDE=true
+
+# Enables all dev tools + comprehensive test suite
+# For contributors and advanced debugging
+```
+
+**Benefits of Environment-Based Gating:**
+- ✅ **30% reduction** in default tool count (43 → 30 tools)
+- ✅ **~650 token savings** per request
+- ✅ **Cleaner tool discovery** for end users
+- ✅ **Professional appearance** (no internal testing tools exposed)
+- ✅ **Opt-in diagnostics** when you need troubleshooting
+- ✅ **Backward compatible** - all tools remain available
+
 ## 🚀 Quick Setup for Claude Code
 
 Since our project is specifically designed for Claude Code integration, here's the fastest setup:

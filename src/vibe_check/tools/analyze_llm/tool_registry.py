@@ -23,31 +23,62 @@ from .llm_models import ExternalClaudeResponse
 logger = logging.getLogger(__name__)
 
 
-def register_llm_analysis_tools(mcp) -> None:
-    """Register LLM-powered analysis tools with the MCP server."""
-    
+def register_llm_production_tools(mcp) -> None:
+    """Register production LLM-powered analysis tools with the MCP server.
+
+    These are the core analysis tools that end users need for anti-pattern detection
+    and code analysis. Always enabled in production mode.
+
+    Tools registered (6 total):
+    - analyze_text_llm
+    - analyze_pr_llm
+    - analyze_code_llm
+    - analyze_issue_llm
+    - analyze_github_issue_llm
+    - analyze_github_pr_llm
+    """
+    logger.info("Registering production LLM analysis tools...")
+
     # Register the text analyzer
     mcp.tool()(analyze_text_llm)
-    
-    # Register specialized analyzers  
+
+    # Register specialized analyzers
     mcp.tool()(analyze_pr_llm)
     mcp.tool()(analyze_code_llm)
     mcp.tool()(analyze_issue_llm)
     mcp.tool()(analyze_github_issue_llm)
     mcp.tool()(analyze_github_pr_llm)
-    
-    # Register async analysis tools
+
+
+def register_llm_diagnostic_tools(mcp) -> None:
+    """Register diagnostic LLM tools with the MCP server.
+
+    These tools are for system monitoring, health checking, and debugging.
+    Only enabled when VIBE_CHECK_DIAGNOSTICS=true.
+
+    Tools registered (7 total):
+    - check_async_analysis_status
+    - get_async_system_status
+    - async_system_health_check
+    - async_system_metrics
+    - async_system_degradation_status
+    - analyze_llm_status
+    - test_claude_cli_with_env
+    """
+    logger.info("Registering diagnostic LLM tools...")
+
+    # Register async analysis monitoring tools
     mcp.tool()(check_async_analysis_status)
     mcp.tool()(get_async_system_status)
     mcp.tool()(async_system_health_check)
     mcp.tool()(async_system_metrics)
     mcp.tool()(async_system_degradation_status)
-    
+
     # Register status tool
     @mcp.tool()
     async def analyze_llm_status() -> Dict[str, Any]:
         """
-        Check the status of external Claude CLI integration.
+        [DIAGNOSTIC] Check the status of external Claude CLI integration.
         
         Returns:
             Status information about external Claude CLI availability and configuration
@@ -107,7 +138,7 @@ def register_llm_analysis_tools(mcp) -> None:
         timeout_seconds: int = 30
     ) -> Dict[str, Any]:
         """
-        Test Claude CLI without environment isolation (inherits all env vars).
+        [DIAGNOSTIC] Test Claude CLI without environment isolation (inherits all env vars).
         """
         logger.info(f"Testing Claude CLI with full environment inheritance...")
         
@@ -189,7 +220,7 @@ def register_llm_analysis_tools(mcp) -> None:
 # Async Analysis Tools
 async def check_async_analysis_status(analysis_id: str) -> Dict[str, Any]:
     """
-    Check the status of a queued async analysis.
+    [DIAGNOSTIC] Check the status of a queued async analysis.
     
     This tool allows users to monitor the progress of massive PRs that are
     being processed in the background queue system.
@@ -223,7 +254,7 @@ async def check_async_analysis_status(analysis_id: str) -> Dict[str, Any]:
 
 async def get_async_system_status() -> Dict[str, Any]:
     """
-    Get the overall status of the async analysis system.
+    [DIAGNOSTIC] Get the overall status of the async analysis system.
     
     This tool provides system-wide information about the background processing
     queue, active workers, and performance metrics.
@@ -254,7 +285,7 @@ async def get_async_system_status() -> Dict[str, Any]:
 # Health Monitoring Tools
 async def async_system_health_check(detailed: bool = False) -> Dict[str, Any]:
     """
-    Perform comprehensive health check of the async analysis system.
+    [DIAGNOSTIC] Perform comprehensive health check of the async analysis system.
     
     This tool provides detailed health diagnostics for all system components
     including queue, workers, resource monitoring, and external dependencies.
@@ -309,7 +340,7 @@ async def async_system_metrics(
     include_history: bool = False
 ) -> Dict[str, Any]:
     """
-    Get comprehensive metrics for the async analysis system.
+    [DIAGNOSTIC] Get comprehensive metrics for the async analysis system.
     
     This tool provides performance metrics, resource utilization,
     and system statistics for monitoring and optimization.
@@ -405,7 +436,7 @@ async def async_system_degradation_status(
     pr_data: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """
-    Get graceful degradation status and recommendations.
+    [DIAGNOSTIC] Get graceful degradation status and recommendations.
     
     This tool provides information about system availability, fallback usage,
     and recommended strategies for handling requests during system issues.
@@ -459,3 +490,17 @@ async def async_system_degradation_status(
             "status": "error",
             "error": f"Degradation status check failed: {str(e)}"
         }
+
+
+def register_llm_analysis_tools(mcp) -> None:
+    """Register all LLM-powered analysis tools with the MCP server.
+
+    Backward-compatible wrapper that registers both production and diagnostic tools.
+    This function is maintained for backward compatibility with existing tests.
+
+    Use register_llm_production_tools() and register_llm_diagnostic_tools()
+    separately for fine-grained control in production deployments.
+    """
+    logger.info("Registering all LLM analysis tools (production + diagnostic)...")
+    register_llm_production_tools(mcp)
+    register_llm_diagnostic_tools(mcp)

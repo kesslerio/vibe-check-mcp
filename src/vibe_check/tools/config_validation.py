@@ -432,7 +432,7 @@ def register_config_validation_tools(mcp) -> None:
     @mcp.tool()
     def validate_mcp_configuration() -> Dict[str, Any]:
         """
-        🔍 Validate Claude CLI and MCP configuration for integration issues.
+        [DIAGNOSTIC] 🔍 Validate Claude CLI and MCP configuration for integration issues.
         
         Comprehensive validation of Claude CLI installation, MCP configuration files,
         tool permissions, and startup validation for critical components. Helps prevent
@@ -529,7 +529,7 @@ def register_config_validation_tools(mcp) -> None:
     @mcp.tool()
     def check_claude_cli_integration() -> Dict[str, Any]:
         """
-        🔧 Quick Claude CLI integration health check.
+        [DIAGNOSTIC] 🔧 Quick Claude CLI integration health check.
         
         Fast validation focused specifically on Claude CLI availability and basic
         integration health. Useful for troubleshooting Claude CLI timeout issues
