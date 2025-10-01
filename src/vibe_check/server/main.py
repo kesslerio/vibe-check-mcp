@@ -18,14 +18,28 @@ from .registry import register_all_tools
 from ..tools.config_validation import validate_configuration, format_validation_results, log_validation_results
 from .utils import get_version # Import the new function
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('vibe_check.log')
-    ]
-)
+# Configure logging with safe file handler (handle read-only filesystems in MCP mode)
+def _setup_logging():
+    """Setup logging with graceful fallback for read-only filesystems."""
+    handlers = [logging.StreamHandler()]
+
+    # Try to add file handler in a writable location
+    try:
+        import tempfile
+        log_dir = tempfile.gettempdir()
+        log_file = os.path.join(log_dir, 'vibe_check.log')
+        handlers.append(logging.FileHandler(log_file))
+    except (OSError, PermissionError):
+        # Skip file logging if filesystem is read-only (common in MCP stdio mode)
+        pass
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+
+_setup_logging()
 logger = logging.getLogger(__name__)
 
 def run_server(transport: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = None):
