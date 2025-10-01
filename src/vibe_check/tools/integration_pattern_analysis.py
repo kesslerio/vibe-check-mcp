@@ -17,7 +17,7 @@ import logging
 import threading
 from typing import Dict, Any, List, Optional
 
-from ..core.integration_pattern_detector import IntegrationPatternDetector
+from vibe_check.core.integration_pattern_detector import IntegrationPatternDetector
 
 logger = logging.getLogger(__name__)
 

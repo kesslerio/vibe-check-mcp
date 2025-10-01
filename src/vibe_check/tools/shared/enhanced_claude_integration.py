@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from .claude_integration import ClaudeCliExecutor
-from ...config.vibe_check_config import VibeCheckConfigLoader, VibeCheckConfig
-from ...tools.contextual_documentation import get_context_manager, AnalysisContext
+from vibe_check.config.vibe_check_config import VibeCheckConfigLoader, VibeCheckConfig
+from vibe_check.tools.contextual_documentation import get_context_manager, AnalysisContext
 
 logger = logging.getLogger(__name__)
 

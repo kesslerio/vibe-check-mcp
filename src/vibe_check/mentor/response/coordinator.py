@@ -8,9 +8,9 @@ and manages the integration with pattern detection.
 import logging
 from typing import Any, Dict, List, Optional
 
-from ..models.config import REFERENCE_DETECTION_WORD_COUNT
-from ..models.persona import PersonaData
-from ..models.session import CollaborativeReasoningSession, ContributionData
+from vibe_check.mentor.models.config import REFERENCE_DETECTION_WORD_COUNT
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import CollaborativeReasoningSession, ContributionData
 from .generators.senior_engineer import SeniorEngineerGenerator
 from .generators.product_engineer import ProductEngineerGenerator
 from .generators.ai_engineer import AIEngineerGenerator

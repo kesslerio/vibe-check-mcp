@@ -7,7 +7,7 @@ user value, rapid delivery, and pragmatic solutions.
 
 from typing import Tuple
 
-from ...models.config import ConfidenceScores, ExperienceStrings
+from vibe_check.mentor.models.config import ConfidenceScores, ExperienceStrings
 from .base import PatternHandler
 
 

@@ -9,9 +9,9 @@ import secrets
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from ..models.config import DEFAULT_MAX_SESSIONS, DEFAULT_PERSONAS, SESSION_TIMESTAMP_FORMAT
-from ..models.persona import PersonaData
-from ..models.session import CollaborativeReasoningSession
+from vibe_check.mentor.models.config import DEFAULT_MAX_SESSIONS, DEFAULT_PERSONAS, SESSION_TIMESTAMP_FORMAT
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import CollaborativeReasoningSession
 
 logger = logging.getLogger(__name__)
 

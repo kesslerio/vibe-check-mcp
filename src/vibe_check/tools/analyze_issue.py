@@ -17,8 +17,8 @@ from typing import Dict, Any, Optional, List
 from github import Github, GithubException
 from github.Issue import Issue
 
-from ..core.pattern_detector import PatternDetector, DetectionResult
-from ..core.educational_content import DetailLevel
+from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_check.core.educational_content import DetailLevel
 from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
 
 # Import the proven ExternalClaudeCli wrapper from analyze_llm_backup.py

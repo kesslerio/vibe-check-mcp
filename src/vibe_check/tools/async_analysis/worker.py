@@ -14,8 +14,8 @@ from dataclasses import dataclass
 
 from .config import AsyncAnalysisConfig, DEFAULT_ASYNC_CONFIG
 from .queue_manager import AsyncAnalysisQueue, AnalysisJob, JobStatus
-from ..shared.claude_integration import analyze_content_async_with_circuit_breaker
-from ..pr_review.chunked_analyzer import analyze_pr_with_chunking, ChunkedAnalyzer
+from vibe_check.tools.shared.claude_integration import analyze_content_async_with_circuit_breaker
+from vibe_check.tools.pr_review.chunked_analyzer import analyze_pr_with_chunking, ChunkedAnalyzer
 
 logger = logging.getLogger(__name__)
 

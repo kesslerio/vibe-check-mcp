@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, Any
-from ..core import mcp
-from ...tools.analyze_text_nollm import analyze_text_demo
-from ...tools.large_prompt_demo import demo_large_prompt_analysis
+from vibe_check.server.core import mcp
+from vibe_check.tools.analyze_text_nollm import analyze_text_demo
+from vibe_check.tools.large_prompt_demo import demo_large_prompt_analysis
 
 logger = logging.getLogger(__name__)
 

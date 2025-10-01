@@ -21,7 +21,7 @@ try:
 except ImportError:
     GITHUB_AVAILABLE = False
 
-from ..core.pattern_detector import PatternDetector
+from vibe_check.core.pattern_detector import PatternDetector
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +319,7 @@ def _generate_basic_recommendations(
         changed_files = size_metrics.get("changed_files", 0)
         
         # Import the filtering configuration for consistent thresholds
-        from ...core.pr_filtering import FilteringConfig
+        from vibe_check.core.pr_filtering import FilteringConfig
         
         # More specific guidance based on size characteristics
         if total_changes > FilteringConfig.MAX_LINES_FOR_LLM:

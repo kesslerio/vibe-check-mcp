@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, Optional, List
-from ...core import mcp
+from vibe_check.server.core import mcp
 from .context import load_workspace_context
 from .analysis import analyze_query_and_context
 from .reasoning import get_reasoning_engine, generate_response

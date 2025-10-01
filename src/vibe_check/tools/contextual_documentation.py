@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
-from ..config.vibe_check_config import get_vibe_check_config, VibeCheckConfig
-from ..core.pattern_detector import PatternDetector
+from vibe_check.config.vibe_check_config import get_vibe_check_config, VibeCheckConfig
+from vibe_check.core.pattern_detector import PatternDetector
 
 logger = logging.getLogger(__name__)
 

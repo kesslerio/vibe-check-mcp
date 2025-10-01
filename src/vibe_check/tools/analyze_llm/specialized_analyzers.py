@@ -100,16 +100,55 @@ async def analyze_pr_llm(
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info("Starting external PR review")
-    
+
+    # Validate input - detect if URL was passed instead of diff content
+    if pr_diff.startswith(('http://', 'https://', 'github.com', 'api.github.com')):
+        error_msg = (
+            "❌ Invalid input: analyze_pr_llm expects actual PR diff content, not a URL.\n\n"
+            f"Received: {pr_diff}\n\n"
+            "💡 Use one of these tools instead:\n"
+            "  • review_pr_comprehensive(pr_number, repository) - Full PR review with GitHub integration\n"
+            "  • analyze_pr_nollm(pr_number, repository) - Fast pattern detection without LLM\n\n"
+            "These tools will fetch the PR data from GitHub automatically."
+        )
+        logger.error(error_msg)
+        return ExternalClaudeResponse(
+            success=False,
+            output=None,
+            error=error_msg,
+            exit_code=1,
+            execution_time_seconds=0.0,
+            task_type="pr_review"
+        )
+
+    # Validate that pr_diff has content
+    if not pr_diff or len(pr_diff.strip()) < 50:
+        error_msg = (
+            "❌ Invalid input: pr_diff is too short or empty.\n\n"
+            "Expected: Git diff output (typically starts with 'diff --git' or has file changes)\n"
+            f"Received: {len(pr_diff)} characters\n\n"
+            "💡 This tool requires actual diff content. Use review_pr_comprehensive() instead "
+            "if you want to analyze a PR by number."
+        )
+        logger.error(error_msg)
+        return ExternalClaudeResponse(
+            success=False,
+            output=None,
+            error=error_msg,
+            exit_code=1,
+            execution_time_seconds=0.0,
+            task_type="pr_review"
+        )
+
     # Build context
     context_parts = []
     if pr_description:
         context_parts.append(f"PR Description: {pr_description}")
     if file_changes:
         context_parts.append(f"Changed files: {', '.join(file_changes)}")
-    
+
     additional_context = "\n".join(context_parts) if context_parts else None
-    
+
     return await analyze_text_llm(
         content=pr_diff,
         task_type="pr_review",

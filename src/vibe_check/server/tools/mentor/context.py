@@ -2,7 +2,7 @@ import logging
 import time
 import secrets
 from typing import Optional, List, Tuple
-from ....mentor.context_manager import get_context_cache, SecurityValidator
+from vibe_check.mentor.context_manager import get_context_cache, SecurityValidator
 
 logger = logging.getLogger(__name__)
 

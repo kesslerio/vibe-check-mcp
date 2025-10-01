@@ -164,7 +164,8 @@ async def _generate_claude_analysis(
     # Generate file type-specific prompt section
     file_type_prompt = ""
     if file_type_analysis:
-        file_type_prompt = file_type_analyzer.generate_file_type_prompt(file_type_analysis)
+        analyzer = FileTypeAnalyzer()
+        file_type_prompt = analyzer.generate_file_type_prompt(file_type_analysis)
     
     # Enhanced prompt following CLAUDE.md PR review guidelines
     author_context = ""

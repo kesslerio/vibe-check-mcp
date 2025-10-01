@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Any
-from ..core import mcp
-from ...tools.doom_loop_analysis import analyze_text_for_doom_loops, get_session_health_analysis, force_doom_loop_intervention, reset_session_tracking as reset_session
+from vibe_check.server.core import mcp
+from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops, get_session_health_analysis, force_doom_loop_intervention, reset_session_tracking as reset_session
 
 logger = logging.getLogger(__name__)
 

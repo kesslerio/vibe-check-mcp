@@ -7,7 +7,7 @@ and extract actionable insights and recommendations.
 
 from typing import Any, Dict, List
 
-from ..models.session import CollaborativeReasoningSession, ContributionData
+from vibe_check.mentor.models.session import CollaborativeReasoningSession, ContributionData
 
 
 class SessionSynthesizer:

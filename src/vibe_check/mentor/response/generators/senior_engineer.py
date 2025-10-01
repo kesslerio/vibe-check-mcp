@@ -7,10 +7,10 @@ focusing on maintainability, best practices, and proven solutions.
 
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from ...models.config import ConfidenceScores, ExperienceStrings
-from ...models.session import ContributionData
-from ...patterns.handlers.infrastructure import InfrastructurePatternHandler
-from ...patterns.handlers.custom_solution import CustomSolutionHandler
+from vibe_check.mentor.models.config import ConfidenceScores, ExperienceStrings
+from vibe_check.mentor.models.session import ContributionData
+from vibe_check.mentor.patterns.handlers.infrastructure import InfrastructurePatternHandler
+from vibe_check.mentor.patterns.handlers.custom_solution import CustomSolutionHandler
 from .base_generator import BasePersonaGenerator
 
 if TYPE_CHECKING:

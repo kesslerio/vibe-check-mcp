@@ -12,8 +12,8 @@ import logging
 import sys
 from pathlib import Path
 
-from ..shared.claude_integration import ClaudeCliResult
-from ..shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
+from vibe_check.tools.shared.claude_integration import ClaudeCliResult
+from vibe_check.tools.shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
 
 # Configure logging
 logging.basicConfig(

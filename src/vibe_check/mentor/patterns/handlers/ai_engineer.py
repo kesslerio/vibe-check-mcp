@@ -7,8 +7,8 @@ modern tooling, AI integration, and tool-augmented development.
 
 from typing import List, Tuple
 
-from ...models.config import ConfidenceScores
-from ...models.session import ContributionData
+from vibe_check.mentor.models.config import ConfidenceScores
+from vibe_check.mentor.models.session import ContributionData
 from .base import PatternHandler
 
 
