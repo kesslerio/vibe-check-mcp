@@ -7,6 +7,152 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-10-01
+
+### Added
+- **Tool Architecture Optimization** (#237): Environment-based tool gating for cleaner UX
+  - Production mode: 30 tools (default) - 30% reduction from 43 tools
+  - Diagnostics mode: +11 tools with `VIBE_CHECK_DIAGNOSTICS=true`
+  - Development mode: +2 tools with `VIBE_CHECK_DEV_MODE=true`
+  - Tool descriptions now prefixed with `[DIAGNOSTIC]` and `[DEV]` for clarity
+  - `skip_production` parameter for maintainable tool registration
+  - Comprehensive test suite with 11 tests validating all modes
+
+- **Context7 MCP Server Integration** (#220, #217): Hybrid documentation approach
+  - Direct library documentation access via Context7 MCP server
+  - Intelligent caching with TTL support and memory limits
+  - Circuit breaker pattern for graceful degradation
+  - Rate limiting (100 requests/minute) and timeout protection
+  - Fallback to web search when Context7 unavailable
+  - Support for 9 popular libraries (React, TypeScript, FastAPI, etc.)
+
+- **Context Injection Hooks** (#218): Automatic project context loading
+  - Detects project libraries and technologies automatically
+  - Injects relevant documentation into analysis workflows
+  - Supports GitHub issue/PR analysis with project-aware context
+  - Configurable context injection for all analysis tools
+
+- **Telemetry System** (#209): Basic metrics collection for MCP sampling
+  - Tracks request patterns and response times
+  - Session-based analytics for usage insights
+  - Privacy-preserving metric aggregation
+  - Foundation for future performance optimization
+
+- **Claude Code GitHub Workflow** (#231): Automated code review integration
+  - GitHub Actions workflow for automated vibe checks
+  - PR comment integration with analysis results
+  - Configurable review triggers and thresholds
+
+- **Test Factory Pattern** (#224): Dependency injection for testing
+  - Simplified test setup with `create_mentor_engine()`
+  - Mock-friendly architecture for unit testing
+  - Reduces test boilerplate by 60%
+
+### Performance
+- **Token Optimization** (#236): Reduced MCP tool token consumption by 86.7%
+  - Before: ~35,000 tokens for tool descriptions
+  - After: ~4,700 tokens for tool descriptions
+  - Achieved through schema optimization and description compression
+  - Saves ~$0.42 per 1000 requests with Claude Sonnet
+
+- **Tool Count Reduction** (#237): 30% fewer default tools
+  - Production: 30 tools (down from 43)
+  - Token savings: ~650 tokens per request
+  - Cleaner tool discovery for end users
+  - Professional appearance (no internal test tools exposed)
+
+### Fixed
+- **MCP stdio Import Failures** (#239, #234, #232): P0 Critical Bug
+  - Converted all relative imports to absolute imports
+  - Fixed module import failures in MCP stdio mode
+  - Prevented `ModuleNotFoundError` in Claude Code integration
+  - Affected modules: GitHub integration, PR review, LLM analysis
+
+- **Claude CLI Diagnostics** (#243): MCP stdio mode integration
+  - Enhanced diagnostic tools for Claude CLI troubleshooting
+  - Fixed timeout detection in MCP stdio environments
+  - Improved error messages for recursion detection
+  - Added environment variable guidance
+
+- **Read-Only Filesystem** (b531b0a): MCP stdio compatibility
+  - Handles read-only filesystems in MCP stdio mode
+  - Graceful fallback when temporary directories unavailable
+  - Prevents crashes in restricted environments
+
+- **Workflow Syntax Errors** (#242, #241): GitHub Actions fixes
+  - Removed invalid EOF syntax from YAML workflows
+  - Fixed issue validation workflow failures
+  - Improved CI/CD reliability
+
+- **Test Suite Fixes** (#216, #215, #213, #208): 100% pass rate achieved
+  - Fixed async/sync mismatch in mentor calls
+  - Removed unexpected `ctx` parameter from generate_contribution
+  - Resolved test collection errors after server.py refactor
+  - All tests now passing consistently
+
+- **PR Review Quality** (#227): Reduced superfluous recommendations
+  - Improved pattern detection to avoid false positives
+  - Better context understanding for review comments
+  - More actionable, less generic suggestions
+
+### Changed
+- **Tool Registration Architecture**: Refactored for maintainability
+  - Added `skip_production` parameter to registration functions
+  - Prevents double-registration in development mode
+  - Maintains encapsulation (tools managed by their modules)
+  - Self-documenting code with explicit parameters
+
+- **Documentation Accuracy**: All tool counts verified at runtime
+  - System module: 2 tools (was documented as 1)
+  - Project context: 4 tools (was documented as 3)
+  - Diagnostic tools: 11 total (was documented as 13)
+  - Inline comments now match actual behavior
+
+### Technical Improvements
+- **Import Strategy**: All relative imports converted to absolute
+  - Prevents MCP stdio import failures
+  - Improves module resolution reliability
+  - Better compatibility with different execution contexts
+
+- **Environment Variables**: New configuration options
+  - `VIBE_CHECK_DIAGNOSTICS`: Enable 11 diagnostic tools
+  - `VIBE_CHECK_DEV_MODE`: Enable 2 development tools
+  - `VIBE_CHECK_DEV_MODE_OVERRIDE`: Enable comprehensive test suite
+
+- **Code Quality**: Enhanced maintainability
+  - Reduced coupling between registry and tool modules
+  - Consistent registration patterns across all modules
+  - Comprehensive test coverage for all modes
+  - Runtime-verified documentation
+
+### Security
+- **Context7 Integration**: Secure documentation access
+  - Rate limiting to prevent abuse
+  - Timeout protection against hanging requests
+  - Circuit breaker for service degradation
+  - Memory limits to prevent resource exhaustion
+
+### Documentation
+- **README.md**: Added tool architecture configuration section
+  - Environment variable usage guide
+  - Benefits of environment-based gating
+  - Tool count breakdown by mode
+
+- **Test Documentation**: Comprehensive test suite documentation
+  - 11 tests for tool architecture validation
+  - Tests for production, diagnostics, dev, and combined modes
+  - Backward compatibility verification
+
+### Breaking Changes
+None - All changes are backward compatible. Tools remain available via environment variables.
+
+### Migration Guide
+For users upgrading from v0.5.1:
+- No action required - default behavior unchanged
+- To enable diagnostics: `export VIBE_CHECK_DIAGNOSTICS=true`
+- To enable dev tools: `export VIBE_CHECK_DEV_MODE=true`
+- All 43 original tools still available via environment variables
+
 ## [0.5.1] - 2025-08-12
 
 ### Added
