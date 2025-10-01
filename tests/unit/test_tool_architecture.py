@@ -92,7 +92,7 @@ def test_production_mode_tool_count(mcp_instance, clean_env):
 
 
 def test_diagnostics_mode_tool_count(mcp_instance, clean_env):
-    """Verify +13 tools with VIBE_CHECK_DIAGNOSTICS=true."""
+    """Verify +11 diagnostic tools with VIBE_CHECK_DIAGNOSTICS=true."""
     from vibe_check.server.registry import register_all_tools
 
     # Enable diagnostics mode
@@ -104,14 +104,15 @@ def test_diagnostics_mode_tool_count(mcp_instance, clean_env):
     # Count tools
     tool_count = len(mcp_instance._tool_manager.tools)
 
-    # Expected: 30 + diagnostic tools
+    # Expected: 30 + 11 = 41 diagnostic tools
     # Additional diagnostic tools:
     # - diagnostics_claude_cli: 2 (claude_cli_status, claude_cli_diagnostics)
     # - config_validation: 2 (validate_mcp, check_integration)
     # - llm_diagnostic: 7 (async monitoring + analyze_llm_status + test_with_env)
+    # Total: 2 + 2 + 7 = 11 diagnostic tools
 
     assert tool_count >= 30, f"Should have at least 30 tools, got {tool_count}"
-    assert tool_count > 30, f"Diagnostics mode should add tools, got {tool_count}"
+    assert tool_count >= 41, f"Diagnostics mode should add 11 tools (30+11=41), got {tool_count}"
 
 
 def test_dev_mode_tool_count(mcp_instance, clean_env):
@@ -150,8 +151,11 @@ def test_all_modes_combined(mcp_instance, clean_env):
     # Count tools
     tool_count = len(mcp_instance._tool_manager.tools)
 
-    # Expected: 30 + diagnostic + dev tools (minimum 30 + 11 = 41+)
-    assert tool_count >= 41, f"Combined modes should have 41+ tools, got {tool_count}"
+    # Expected: 30 + 11 diagnostic + 2 dev = 43 tools
+    # Production: 30
+    # Diagnostic: 11 (2 + 2 + 7)
+    # Dev: 2
+    assert tool_count >= 43, f"Combined modes should have 43+ tools (30+11+2), got {tool_count}"
 
 
 def test_llm_production_tools_only():

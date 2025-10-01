@@ -364,10 +364,9 @@ Control which tools are exposed based on your usage needs:
 export VIBE_CHECK_DIAGNOSTICS=true
 
 # Enables:
-# - Claude CLI status checking and diagnostics
-# - MCP configuration validation
-# - Async system health monitoring
-# - Integration troubleshooting tools
+# - Claude CLI diagnostics (2 tools: status, diagnostics)
+# - Configuration validation (2 tools: validate_mcp, check_integration)
+# - Async LLM monitoring (7 tools: async analysis, health, metrics, status)
 ```
 
 **Development Mode - +2 dev/experimental tools:**

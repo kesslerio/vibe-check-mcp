@@ -41,10 +41,10 @@ def register_all_tools(mcp: FastMCP):
     - Core productivity and analysis capabilities
     - Professional, production-ready toolset
 
-    VIBE_CHECK_DIAGNOSTICS=true - Adds 13 diagnostic tools:
-    - Claude CLI diagnostics and status checking
-    - Async system monitoring and health checks
-    - Configuration validation tools
+    VIBE_CHECK_DIAGNOSTICS=true - Adds 11 diagnostic tools:
+    - Claude CLI diagnostics (2 tools: status, diagnostics)
+    - Configuration validation (2 tools: validate_mcp, check_integration)
+    - Async LLM monitoring (7 tools: async analysis, health, metrics, status)
 
     VIBE_CHECK_DEV_MODE=true - Adds 6 development tools:
     - Demo and experimental tools
@@ -63,15 +63,17 @@ def register_all_tools(mcp: FastMCP):
     # ========== PRODUCTION TOOLS (Always enabled) ==========
     logger.info("📦 Registering PRODUCTION tools...")
 
-    register_system_tools(mcp)  # 1: server_status
+    register_system_tools(mcp)  # 2: server_status, get_telemetry_summary
     register_text_analysis_tools(mcp, dev_mode=False)  # 1: analyze_text_nollm
-    register_project_context_tools(mcp)  # 3: detect_libraries, load_context, create_structure
+    register_project_context_tools(mcp)  # 4: detect_libraries, load_context, create_structure, register_project
     register_github_tools(mcp)  # 3: analyze_issue/pr_nollm, review_pr_comprehensive
     register_integration_decision_tools(mcp)  # 7: integration decision tools
     register_productivity_tools(mcp, dev_mode=False)  # 3: doom_loops, session_health, intervention
     register_mentor_tools(mcp)  # 1: vibe_check_mentor
     register_context7_tools(mcp)  # 3: resolve_lib, get_docs, get_hybrid_context
     register_llm_production_tools(mcp)  # 6: analyze_text/pr/code/issue/github_issue/github_pr_llm
+
+    # Total: 2 + 1 + 4 + 3 + 7 + 3 + 1 + 3 + 6 = 30 production tools
 
     production_count = _count_registered_tools(mcp)
     logger.info(f"✅ Registered {production_count} production tools")
@@ -81,8 +83,10 @@ def register_all_tools(mcp: FastMCP):
     if diagnostics_enabled:
         logger.info("🔍 DIAGNOSTICS mode enabled...")
         register_diagnostic_tools(mcp)  # 2: claude_cli_status, claude_cli_diagnostics
-        register_config_validation_tools(mcp)  # 3: validate_mcp, check_integration, register_project
+        register_config_validation_tools(mcp)  # 2: validate_mcp, check_integration
         register_llm_diagnostic_tools(mcp)  # 7: async monitoring + analyze_llm_status + test_with_env
+
+        # Total: 2 + 2 + 7 = 11 diagnostic tools
 
         diag_count = _count_registered_tools(mcp) - production_count
         logger.info(f"🔍 +{diag_count} diagnostic tools registered")
