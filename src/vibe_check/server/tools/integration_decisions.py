@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, Any
-from ..core import mcp
-from ...tools.integration_decision_check import check_official_alternatives, analyze_integration_text, ValidationError, SCORING
-from ...tools.integration_pattern_analysis import (
+from vibe_check.server.core import mcp
+from vibe_check.tools.integration_decision_check import check_official_alternatives, analyze_integration_text, ValidationError, SCORING
+from vibe_check.tools.integration_pattern_analysis import (
     analyze_integration_patterns_fast, 
     quick_technology_scan, 
     analyze_effort_complexity,

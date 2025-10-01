@@ -1,8 +1,8 @@
 import logging
 import secrets
 from typing import Dict, Any, Optional
-from ....tools.vibe_mentor import get_mentor_engine, _generate_summary
-from ....core.vibe_coaching import VibeCoachingFramework, CoachingTone
+from vibe_check.tools.vibe_mentor import get_mentor_engine, _generate_summary
+from vibe_check.core.vibe_coaching import VibeCoachingFramework, CoachingTone
 
 logger = logging.getLogger(__name__)
 

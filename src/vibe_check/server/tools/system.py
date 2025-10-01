@@ -1,8 +1,8 @@
 import os
 import logging
 from typing import Dict, Any
-from ..core import mcp
-from ...mentor.telemetry import get_telemetry_collector
+from vibe_check.server.core import mcp
+from vibe_check.mentor.telemetry import get_telemetry_collector
 
 logger = logging.getLogger(__name__)
 

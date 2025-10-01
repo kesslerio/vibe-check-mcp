@@ -1,9 +1,9 @@
 import logging
 from typing import Dict, Any
 from pathlib import Path
-from ..core import mcp
-from ...tools.contextual_documentation import get_context_manager
-from ...config.vibe_check_config import create_vibe_check_directory
+from vibe_check.server.core import mcp
+from vibe_check.tools.contextual_documentation import get_context_manager
+from vibe_check.config.vibe_check_config import create_vibe_check_directory
 
 logger = logging.getLogger(__name__)
 

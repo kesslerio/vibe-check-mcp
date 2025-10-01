@@ -4,10 +4,10 @@ import os
 import random
 import time
 from typing import Dict, Any, Optional
-from ....tools.analyze_text_nollm import analyze_text_demo
-from ....core.business_context_extractor import BusinessContextExtractor, ContextType
-from ....tools.shared.github_abstraction import get_default_github_operations
-from ....tools.contextual_documentation import get_context_manager
+from vibe_check.tools.analyze_text_nollm import analyze_text_demo
+from vibe_check.core.business_context_extractor import BusinessContextExtractor, ContextType
+from vibe_check.tools.shared.github_abstraction import get_default_github_operations
+from vibe_check.tools.contextual_documentation import get_context_manager
 
 logger = logging.getLogger(__name__)
 DEFAULT_MAX_DIFF_SIZE = 50000
