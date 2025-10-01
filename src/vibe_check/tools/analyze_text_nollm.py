@@ -8,8 +8,8 @@ Follows action_what naming convention: analyze_text.
 import logging
 from typing import Dict, Any, Optional
 
-from ..core.pattern_detector import PatternDetector
-from ..core.educational_content import EducationalContentGenerator
+from vibe_check.core.pattern_detector import PatternDetector
+from vibe_check.core.educational_content import EducationalContentGenerator
 from .contextual_documentation import AnalysisContext, get_context_manager
 
 logger = logging.getLogger(__name__)

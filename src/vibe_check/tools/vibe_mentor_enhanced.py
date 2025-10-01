@@ -14,13 +14,13 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 # Import existing structures
-from ..mentor.models.persona import PersonaData
-from ..mentor.models.session import ContributionData, CollaborativeReasoningSession
-from ..mentor.models.config import ConfidenceScores
-from ..mentor.patterns.handlers.base import PatternHandler
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import ContributionData, CollaborativeReasoningSession
+from vibe_check.mentor.models.config import ConfidenceScores
+from vibe_check.mentor.patterns.handlers.base import PatternHandler
 
 # Import strategy pattern components
-from ..strategies.response_strategies import get_strategy_manager, TechnicalContext
+from vibe_check.strategies.response_strategies import get_strategy_manager, TechnicalContext
 from .semantic_engine import SemanticEngine, QueryIntent
 
 # Import MCP sampling components

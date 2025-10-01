@@ -23,10 +23,10 @@ from pathlib import Path
 
 # Import the enhanced mentor and context manager
 from .vibe_mentor_enhanced import EnhancedVibeMentorEngine, ContextExtractor, TechnicalContext
-from ..mentor.context_manager import get_context_cache, SecurityValidator, FileContext
-from ..mentor.models.session import CollaborativeReasoningSession, ContributionData
-from ..mentor.models.persona import PersonaData
-from ..core.pattern_detector import PatternDetector
+from vibe_check.mentor.context_manager import get_context_cache, SecurityValidator, FileContext
+from vibe_check.mentor.models.session import CollaborativeReasoningSession, ContributionData
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.core.pattern_detector import PatternDetector
 
 logger = logging.getLogger(__name__)
 

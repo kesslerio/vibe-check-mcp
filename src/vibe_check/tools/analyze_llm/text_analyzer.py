@@ -11,7 +11,7 @@ import tempfile
 import time
 from typing import Optional
 
-from ..shared.claude_integration import analyze_content_async
+from vibe_check.tools.shared.claude_integration import analyze_content_async
 from .llm_models import ExternalClaudeResponse
 
 logger = logging.getLogger(__name__)

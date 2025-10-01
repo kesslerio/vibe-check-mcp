@@ -55,21 +55,21 @@ import secrets
 from typing import Dict, Any, List, Optional
 
 # Local imports - core functionality
-from ..core.pattern_detector import PatternDetector
-from ..core.vibe_coaching import VibeCoachingFramework, CoachingTone
-from ..tools.analyze_text_nollm import analyze_text_demo
-from ..utils.logging_framework import get_vibe_logger
+from vibe_check.core.pattern_detector import PatternDetector
+from vibe_check.core.vibe_coaching import VibeCoachingFramework, CoachingTone
+from vibe_check.tools.analyze_text_nollm import analyze_text_demo
+from vibe_check.utils.logging_framework import get_vibe_logger
 
 # Local imports - modular mentor components
-from ..mentor.models.persona import PersonaData
-from ..mentor.models.session import CollaborativeReasoningSession, ContributionData
-from ..mentor.models.config import DEFAULT_PERSONAS, DEFAULT_MAX_SESSIONS, ConfidenceScores
-from ..mentor.session.manager import SessionManager
-from ..mentor.session.state_tracker import StateTracker
-from ..mentor.session.synthesis import SessionSynthesizer
-from ..mentor.response.coordinator import ResponseCoordinator
-from ..mentor.response.formatters.console import ConsoleFormatter
-from ..mentor.config.constants import (
+from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import CollaborativeReasoningSession, ContributionData
+from vibe_check.mentor.models.config import DEFAULT_PERSONAS, DEFAULT_MAX_SESSIONS, ConfidenceScores
+from vibe_check.mentor.session.manager import SessionManager
+from vibe_check.mentor.session.state_tracker import StateTracker
+from vibe_check.mentor.session.synthesis import SessionSynthesizer
+from vibe_check.mentor.response.coordinator import ResponseCoordinator
+from vibe_check.mentor.response.formatters.console import ConsoleFormatter
+from vibe_check.mentor.config.constants import (
     PATTERN_SEVERITY_MAP, 
     PATTERN_SUGGESTIONS,
     PHASE_QUESTIONS,

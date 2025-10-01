@@ -18,7 +18,7 @@ import logging
 import time
 from typing import Dict, Any, Optional
 
-from ..core.doom_loop_detector import get_doom_loop_detector, LoopSeverity, LoopPattern
+from vibe_check.core.doom_loop_detector import get_doom_loop_detector, LoopSeverity, LoopPattern
 
 logger = logging.getLogger(__name__)
 

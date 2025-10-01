@@ -15,7 +15,7 @@ import logging
 from typing import Dict, Any
 
 # FastMCP import moved inside functions to avoid early environment loading
-from ..core.vibe_config import get_vibe_config, vibe_message
+from vibe_check.core.vibe_config import get_vibe_config, vibe_message
 
 logger = logging.getLogger(__name__)
 

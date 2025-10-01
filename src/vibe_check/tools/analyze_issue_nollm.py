@@ -15,12 +15,12 @@ from typing import Dict, Any, Optional, List
 from github import Github, GithubException
 from github.Issue import Issue
 
-from ..core.pattern_detector import PatternDetector, DetectionResult
-from ..core.educational_content import DetailLevel
-from ..core.vibe_config import get_vibe_config, vibe_message, vibe_error
-from ..core.architectural_concept_detector import ArchitecturalConceptDetector, ConceptDetectionResult
+from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_check.core.educational_content import DetailLevel
+from vibe_check.core.vibe_config import get_vibe_config, vibe_message, vibe_error
+from vibe_check.core.architectural_concept_detector import ArchitecturalConceptDetector, ConceptDetectionResult
 from .legacy.vibe_check_framework import VibeCheckFramework, VibeCheckMode, get_vibe_check_framework
-from ..utils.logging_framework import get_vibe_logger, create_migration_logger
+from vibe_check.utils.logging_framework import get_vibe_logger, create_migration_logger
 
 # Configure logging - maintain backward compatibility
 logger = logging.getLogger(__name__)
