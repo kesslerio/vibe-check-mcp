@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
 
-from ..config.config_loader import get_config_loader
-from ..mentor.models.config import ConfidenceScores
+from vibe_check.config.config_loader import get_config_loader
+from vibe_check.mentor.models.config import ConfidenceScores
 
 
 @dataclass

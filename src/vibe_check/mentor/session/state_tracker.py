@@ -7,7 +7,7 @@ and managing stage-specific logic.
 
 from typing import Dict, List
 
-from ..models.session import CollaborativeReasoningSession
+from vibe_check.mentor.models.session import CollaborativeReasoningSession
 
 
 class StateTracker:

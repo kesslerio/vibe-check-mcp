@@ -4,7 +4,7 @@ Console output formatter for collaborative reasoning sessions.
 Provides ANSI-colored terminal output for session display.
 """
 
-from ...models.session import CollaborativeReasoningSession
+from vibe_check.mentor.models.session import CollaborativeReasoningSession
 
 
 class ConsoleFormatter:

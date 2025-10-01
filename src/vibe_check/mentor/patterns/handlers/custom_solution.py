@@ -8,7 +8,7 @@ promoting standard solutions over custom implementations.
 import logging
 from typing import Tuple
 
-from ...models.config import ConfidenceScores
+from vibe_check.mentor.models.config import ConfidenceScores
 
 logger = logging.getLogger(__name__)
 from .base import PatternHandler

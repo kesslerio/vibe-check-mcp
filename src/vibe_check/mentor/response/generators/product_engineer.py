@@ -7,9 +7,9 @@ focusing on user value, rapid delivery, and pragmatic solutions.
 
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
-from ...models.config import ConfidenceScores, ExperienceStrings
-from ...models.session import ContributionData
-from ...patterns.handlers.product_engineer import ProductEngineerHandler
+from vibe_check.mentor.models.config import ConfidenceScores, ExperienceStrings
+from vibe_check.mentor.models.session import ContributionData
+from vibe_check.mentor.patterns.handlers.product_engineer import ProductEngineerHandler
 from .base_generator import BasePersonaGenerator
 
 if TYPE_CHECKING:

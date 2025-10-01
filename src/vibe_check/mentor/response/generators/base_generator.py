@@ -7,8 +7,8 @@ Provides common functionality for all persona generators to reduce duplication.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Tuple
 
-from ...models.session import ContributionData
-from ...patterns.handlers.base import PatternHandler
+from vibe_check.mentor.models.session import ContributionData
+from vibe_check.mentor.patterns.handlers.base import PatternHandler
 
 
 class BasePersonaGenerator(PatternHandler, ABC):
