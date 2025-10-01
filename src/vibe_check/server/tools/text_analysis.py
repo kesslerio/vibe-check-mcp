@@ -6,10 +6,22 @@ from vibe_check.tools.large_prompt_demo import demo_large_prompt_analysis
 
 logger = logging.getLogger(__name__)
 
-def register_text_analysis_tools(mcp_instance):
-    """Registers text analysis tools with the MCP server."""
-    mcp_instance.add_tool(analyze_text_nollm)
-    mcp_instance.add_tool(demo_large_prompt_handling)
+def register_text_analysis_tools(mcp_instance, dev_mode: bool = False, skip_production: bool = False):
+    """Registers text analysis tools with the MCP server.
+
+    Args:
+        mcp_instance: The MCP server instance
+        dev_mode: If True, registers development/demo tools
+        skip_production: If True, skips production tools (useful when they're already registered)
+    """
+    # Register production tools unless explicitly skipped
+    if not skip_production:
+        mcp_instance.add_tool(analyze_text_nollm)
+
+    # Only register dev/demo tools when dev_mode=True
+    if dev_mode:
+        logger.info("Registering demo_large_prompt_handling (dev mode)")
+        mcp_instance.add_tool(demo_large_prompt_handling)
 
 @mcp.tool()
 def analyze_text_nollm(
@@ -32,7 +44,7 @@ def demo_large_prompt_handling(
     detail_level: str = "standard"
 ) -> Dict[str, Any]:
     """
-    Demo: Zen-style Large Prompt Handling for MCP's 25K token limit.
+    [DEV] Demo: Zen-style Large Prompt Handling for MCP's 25K token limit.
     Docs: https://github.com/kesslerio/vibe-check-mcp/blob/main/data/tool_descriptions.json
     """
     logger.info(f"Large prompt demo requested for {len(content)} characters")

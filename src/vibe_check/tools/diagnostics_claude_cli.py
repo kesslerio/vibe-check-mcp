@@ -26,7 +26,7 @@ def register_diagnostic_tools(mcp) -> None:
     @mcp.tool()
     async def claude_cli_status() -> Dict[str, Any]:
         """
-        Check Claude CLI availability and version information.
+        [DIAGNOSTIC] Check Claude CLI availability and version information.
         
         Essential diagnostic tool for users to verify their Claude CLI installation
         and get version details. This tool helps troubleshoot basic setup issues.
@@ -89,7 +89,7 @@ def register_diagnostic_tools(mcp) -> None:
     @mcp.tool()
     async def claude_cli_diagnostics() -> Dict[str, Any]:
         """
-        Diagnose Claude CLI integration issues and timeout problems.
+        [DIAGNOSTIC] Diagnose Claude CLI integration issues and timeout problems.
         
         Essential diagnostic tool for users experiencing Claude CLI timeout issues
         or recursion problems when using Claude CLI from within Claude Code.

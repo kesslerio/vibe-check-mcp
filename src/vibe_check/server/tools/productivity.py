@@ -5,12 +5,24 @@ from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops, get
 
 logger = logging.getLogger(__name__)
 
-def register_productivity_tools(mcp_instance):
-    """Registers productivity tools with the MCP server."""
-    mcp_instance.add_tool(analyze_doom_loops)
-    mcp_instance.add_tool(session_health_check)
-    mcp_instance.add_tool(productivity_intervention)
-    mcp_instance.add_tool(reset_session_tracking)
+def register_productivity_tools(mcp_instance, dev_mode: bool = False, skip_production: bool = False):
+    """Registers productivity tools with the MCP server.
+
+    Args:
+        mcp_instance: The MCP server instance
+        dev_mode: If True, registers development/debug tools like reset_session_tracking
+        skip_production: If True, skips production tools (useful when they're already registered)
+    """
+    # Register production tools unless explicitly skipped
+    if not skip_production:
+        mcp_instance.add_tool(analyze_doom_loops)
+        mcp_instance.add_tool(session_health_check)
+        mcp_instance.add_tool(productivity_intervention)
+
+    # Only register dev tools when dev_mode=True
+    if dev_mode:
+        logger.info("Registering reset_session_tracking (dev mode)")
+        mcp_instance.add_tool(reset_session_tracking)
 
 @mcp.tool()
 def analyze_doom_loops(
@@ -228,7 +240,7 @@ def productivity_intervention() -> Dict[str, Any]:
 @mcp.tool()
 def reset_session_tracking() -> Dict[str, Any]:
     """
-    🔄 Reset Session Tracking for Fresh Start.
+    [DEV] 🔄 Reset Session Tracking for Fresh Start.
     
     Resets MCP session tracking to start fresh after completing implementations,
     breaking out of doom loops, or reaching natural stopping points. Useful
