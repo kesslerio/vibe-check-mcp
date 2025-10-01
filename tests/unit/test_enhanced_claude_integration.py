@@ -14,10 +14,10 @@ from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 
-from src.vibe_check.tools.shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
-from src.vibe_check.tools.shared.claude_integration import ClaudeCliResult
-from src.vibe_check.config.vibe_check_config import VibeCheckConfig, ContextLoadingConfig
-from src.vibe_check.tools.contextual_documentation import AnalysisContext
+from vibe_check.tools.shared.enhanced_claude_integration import EnhancedClaudeCliExecutor
+from vibe_check.tools.shared.claude_integration import ClaudeCliResult
+from vibe_check.config.vibe_check_config import VibeCheckConfig, ContextLoadingConfig
+from vibe_check.tools.contextual_documentation import AnalysisContext
 
 
 class TestEnhancedClaudeCliExecutor(unittest.TestCase):

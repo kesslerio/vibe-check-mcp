@@ -29,7 +29,7 @@ git pull
 
 # Run tests
 echo "🧪 Running tests..."
-pytest
+PYTHONPATH=src:. pytest
 
 # Run linting and type checking
 echo "🔍 Running linting and type checks..."
