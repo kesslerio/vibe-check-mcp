@@ -184,7 +184,7 @@ def test_llm_diagnostic_tools_only():
 
 
 def test_text_analysis_dev_mode():
-    """Test that text_analysis respects dev_mode parameter."""
+    """Test that text_analysis respects dev_mode and skip_production parameters."""
     from vibe_check.server.tools.text_analysis import register_text_analysis_tools
 
     # Test production mode
@@ -195,17 +195,25 @@ def test_text_analysis_dev_mode():
     register_text_analysis_tools(mcp_prod, dev_mode=False)
     assert len(tools_prod) == 1, "Production mode should register 1 tool"
 
-    # Test dev mode
+    # Test dev mode (with production)
     mcp_dev = Mock()
     tools_dev = []
     mcp_dev.add_tool = lambda func: tools_dev.append(func)
 
     register_text_analysis_tools(mcp_dev, dev_mode=True)
-    assert len(tools_dev) == 2, "Dev mode should register 2 tools"
+    assert len(tools_dev) == 2, "Dev mode should register 2 tools (production + dev)"
+
+    # Test dev mode with skip_production
+    mcp_dev_skip = Mock()
+    tools_dev_skip = []
+    mcp_dev_skip.add_tool = lambda func: tools_dev_skip.append(func)
+
+    register_text_analysis_tools(mcp_dev_skip, dev_mode=True, skip_production=True)
+    assert len(tools_dev_skip) == 1, "Dev mode with skip_production should register only 1 dev tool"
 
 
 def test_productivity_dev_mode():
-    """Test that productivity tools respect dev_mode parameter."""
+    """Test that productivity tools respect dev_mode and skip_production parameters."""
     from vibe_check.server.tools.productivity import register_productivity_tools
 
     # Test production mode
@@ -216,13 +224,21 @@ def test_productivity_dev_mode():
     register_productivity_tools(mcp_prod, dev_mode=False)
     assert len(tools_prod) == 3, "Production mode should register 3 tools"
 
-    # Test dev mode
+    # Test dev mode (with production)
     mcp_dev = Mock()
     tools_dev = []
     mcp_dev.add_tool = lambda func: tools_dev.append(func)
 
     register_productivity_tools(mcp_dev, dev_mode=True)
-    assert len(tools_dev) == 4, "Dev mode should register 4 tools"
+    assert len(tools_dev) == 4, "Dev mode should register 4 tools (3 production + 1 dev)"
+
+    # Test dev mode with skip_production
+    mcp_dev_skip = Mock()
+    tools_dev_skip = []
+    mcp_dev_skip.add_tool = lambda func: tools_dev_skip.append(func)
+
+    register_productivity_tools(mcp_dev_skip, dev_mode=True, skip_production=True)
+    assert len(tools_dev_skip) == 1, "Dev mode with skip_production should register only 1 dev tool"
 
 
 def test_diagnostic_prefix_in_descriptions():

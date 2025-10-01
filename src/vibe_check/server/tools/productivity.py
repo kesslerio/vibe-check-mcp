@@ -5,17 +5,19 @@ from vibe_check.tools.doom_loop_analysis import analyze_text_for_doom_loops, get
 
 logger = logging.getLogger(__name__)
 
-def register_productivity_tools(mcp_instance, dev_mode: bool = False):
+def register_productivity_tools(mcp_instance, dev_mode: bool = False, skip_production: bool = False):
     """Registers productivity tools with the MCP server.
 
     Args:
         mcp_instance: The MCP server instance
         dev_mode: If True, registers development/debug tools like reset_session_tracking
+        skip_production: If True, skips production tools (useful when they're already registered)
     """
-    # Always register production tools
-    mcp_instance.add_tool(analyze_doom_loops)
-    mcp_instance.add_tool(session_health_check)
-    mcp_instance.add_tool(productivity_intervention)
+    # Register production tools unless explicitly skipped
+    if not skip_production:
+        mcp_instance.add_tool(analyze_doom_loops)
+        mcp_instance.add_tool(session_health_check)
+        mcp_instance.add_tool(productivity_intervention)
 
     # Only register dev tools when dev_mode=True
     if dev_mode:

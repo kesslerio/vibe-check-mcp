@@ -96,13 +96,9 @@ def register_all_tools(mcp: FastMCP):
         logger.info("🔧 DEV mode enabled...")
         before_dev = _count_registered_tools(mcp)
 
-        # Register dev-only tools directly (production tools already registered above)
-        from .tools.text_analysis import demo_large_prompt_handling
-        from .tools.productivity import reset_session_tracking
-
-        mcp.add_tool(demo_large_prompt_handling)  # +1: demo_large_prompt_handling
-        mcp.add_tool(reset_session_tracking)  # +1: reset_session_tracking
-        logger.info("Registered dev-only tools: demo_large_prompt_handling, reset_session_tracking")
+        # Register dev-only tools (skip production since they're already registered above)
+        register_text_analysis_tools(mcp, dev_mode=True, skip_production=True)  # +1: demo_large_prompt_handling
+        register_productivity_tools(mcp, dev_mode=True, skip_production=True)  # +1: reset_session_tracking
 
         # Register comprehensive test suite (if OVERRIDE is set)
         if dev_mode_override:
