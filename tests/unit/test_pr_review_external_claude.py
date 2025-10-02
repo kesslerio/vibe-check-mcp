@@ -68,6 +68,14 @@ class TestPRReviewExternalClaude:
             ],
         }
 
+        # Default analysis context used by multiple tests
+        self.default_size_analysis = self.pr_tool._classify_pr_size(
+            self.mock_pr_data
+        )
+        self.default_review_context = self.pr_tool._detect_re_review(
+            self.mock_pr_data, False
+        )
+
     def test_pr_tool_initialization(self):
         """Test that PRReviewTool initializes with external Claude CLI."""
         assert hasattr(self.pr_tool, "external_claude")
@@ -234,7 +242,12 @@ class TestPRReviewExternalClaude:
             self.pr_tool.external_claude, "analyze_content", return_value=mock_result
         ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt", data_content="Test data", pr_number=42
+                prompt_content="Test prompt",
+                data_content="Test data",
+                pr_number=42,
+                pr_data=self.mock_pr_data,
+                size_analysis=self.default_size_analysis,
+                review_context=self.default_review_context,
             )
 
         assert result is not None
@@ -259,7 +272,12 @@ class TestPRReviewExternalClaude:
             self.pr_tool.external_claude, "analyze_content", return_value=mock_result
         ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt", data_content="Test data", pr_number=42
+                prompt_content="Test prompt",
+                data_content="Test data",
+                pr_number=42,
+                pr_data=self.mock_pr_data,
+                size_analysis=self.default_size_analysis,
+                review_context=self.default_review_context,
             )
 
         assert result is None
@@ -278,7 +296,12 @@ class TestPRReviewExternalClaude:
             self.pr_tool.external_claude, "analyze_content", return_value=mock_result
         ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt", data_content="Test data", pr_number=42
+                prompt_content="Test prompt",
+                data_content="Test data",
+                pr_number=42,
+                pr_data=self.mock_pr_data,
+                size_analysis=self.default_size_analysis,
+                review_context=self.default_review_context,
             )
 
         assert result is None  # Should reject short output
@@ -292,7 +315,12 @@ class TestPRReviewExternalClaude:
             side_effect=Exception("Network error"),
         ):
             result = await self.pr_tool._run_claude_analysis(
-                prompt_content="Test prompt", data_content="Test data", pr_number=42
+                prompt_content="Test prompt",
+                data_content="Test data",
+                pr_number=42,
+                pr_data=self.mock_pr_data,
+                size_analysis=self.default_size_analysis,
+                review_context=self.default_review_context,
             )
 
         assert result is None
@@ -309,6 +337,7 @@ class TestPRReviewExternalClaude:
             cost_usd=0.30,
             execution_time=25.0,
             task_type="pr_review",
+            sdk_metadata={"model": "claude-3-sonnet", "provider": "anthropic"},
         )
 
         with patch.object(
@@ -421,7 +450,7 @@ class TestPRReviewExternalClaude:
 
         assert result["claude_analysis"] == claude_output
         assert result["analysis_method"] == "claude-cli"
-        assert result["pr_number"] == 42
+        assert result["pr_number"] == "42"
         assert "timestamp" in result
 
     def test_fallback_analysis_generation(self):
