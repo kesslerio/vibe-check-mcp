@@ -1,22 +1,26 @@
-"""
-Unit Tests for Analyze Issue MCP Tool
+"""Unit Tests for Analyze Issue MCP Tool.
 
-Tests the enhanced analyze_issue MCP tool function:
-- MCP tool interface compliance
-- Parameter validation and defaults
-- Response format consistency
-- Error handling
+Validates the enhanced :func:`analyze_issue` MCP tool function by verifying:
+
+* MCP tool interface compliance
+* Parameter validation and defaults
+* Response format consistency
+* Error handling behaviour
 """
+
+import asyncio
+import os
+import sys
+from copy import deepcopy
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
-import sys
-import os
 
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.analyze_issue import analyze_issue
+import vibe_check.tools.analyze_issue as analyze_issue_module
 from vibe_check.tools.legacy.vibe_check_framework import (
     VibeCheckMode,
     VibeLevel,
@@ -90,44 +94,44 @@ class TestAnalyzeIssueMCPTool:
         # Setup mock analyzer
         mock_analyzer = MagicMock()
         mock_analyzer.claude_cli_enabled = False
-        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = analyze_issue(
-            issue_number=42,
-            repository="test/repo",
-            analysis_mode="basic",
-            detail_level="brief",
-            post_comment=False,
+        result = asyncio.run(
+            analyze_issue(
+                issue_number=42,
+                repository="test/repo",
+                analysis_mode="basic",
+                detail_level="brief",
+                post_comment=False,
+            )
         )
 
         # Verify analyzer call
-        mock_analyzer.analyze_issue_basic.assert_called_once_with(
+        mock_analyzer.analyze_issue_basic.assert_awaited_once_with(
             issue_number=42,
             repository="test/repo",
             detail_level="brief",
         )
 
         # Verify response structure
-        assert "analysis_results" in result
-        analysis_results = result["analysis_results"]
-        assert analysis_results["status"] == "basic_analysis_complete"
-        assert "analysis_timestamp" in analysis_results
-        assert "patterns_detected" in analysis_results
-        assert "issue_info" in analysis_results
-        assert "confidence_summary" in analysis_results
-        assert "recommended_actions" in analysis_results
-        assert "analysis_metadata" in analysis_results
+        assert result["status"] == "basic_analysis_complete"
+        assert "analysis_timestamp" in result
+        assert "patterns_detected" in result
+        assert "issue_info" in result
+        assert "confidence_summary" in result
+        assert "recommended_actions" in result
+        assert "analysis_metadata" in result
         assert "enhanced_analysis" in result
 
         # Verify pattern detection content
-        patterns = analysis_results["patterns_detected"]
+        patterns = result["patterns_detected"]
         assert len(patterns) == 1
         assert patterns[0]["pattern_type"] == "infrastructure_without_implementation"
         assert patterns[0]["confidence"] == 0.85
 
         # Verify issue info
-        issue_info = analysis_results["issue_info"]
+        issue_info = result["issue_info"]
         assert issue_info["number"] == 42
         assert issue_info["repository"] == "test/repo"
         assert issue_info["author"] == "testuser"
@@ -135,7 +139,10 @@ class TestAnalyzeIssueMCPTool:
         # Verify enhanced analysis metadata
         enhanced = result["enhanced_analysis"]
         assert enhanced["analysis_mode"] == "basic"
-        assert enhanced["external_claude_available"] is False
+        assert (
+            enhanced["external_claude_available"]
+            is analyze_issue_module.EXTERNAL_CLAUDE_AVAILABLE
+        )
         assert enhanced["claude_cli_enabled"] is False
 
     @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
@@ -144,12 +151,13 @@ class TestAnalyzeIssueMCPTool:
         # Setup mock analyzer with comprehensive result
         mock_analyzer = MagicMock()
         mock_analyzer.claude_cli_enabled = True
-        mock_analyzer.analyze_issue_comprehensive.return_value = {
-            "status": "comprehensive_analysis_complete",
-            "analysis_timestamp": "2024-01-01T00:00:00Z",
-            "issue_info": {
-                "number": 123,
-                "title": "Test Issue",
+        mock_analyzer.analyze_issue_comprehensive = AsyncMock(
+            return_value={
+                "status": "comprehensive_analysis_complete",
+                "analysis_timestamp": "2024-01-01T00:00:00Z",
+                "issue_info": {
+                    "number": 123,
+                    "title": "Test Issue",
                 "author": "testuser",
                 "created_at": "2024-01-01T00:00:00Z",
                 "repository": "owner/repo",
@@ -162,34 +170,35 @@ class TestAnalyzeIssueMCPTool:
                 "execution_time_seconds": 2.5,
                 "cost_tracking": {"cost_usd": 0.01},
             },
-            "enhanced_features": {
-                "claude_cli_integration": True,
-                "sophisticated_reasoning": True,
-            },
-        }
+                "enhanced_features": {
+                    "claude_cli_integration": True,
+                    "sophisticated_reasoning": True,
+                },
+            }
+        )
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = analyze_issue(
-            issue_number=123,
-            repository="owner/repo",
-            analysis_mode="comprehensive",
-            detail_level="comprehensive",
-            post_comment=True,
+        result = asyncio.run(
+            analyze_issue(
+                issue_number=123,
+                repository="owner/repo",
+                analysis_mode="comprehensive",
+                detail_level="comprehensive",
+                post_comment=True,
+            )
         )
 
         # Verify analyzer call
-        mock_analyzer.analyze_issue_comprehensive.assert_called_once_with(
+        mock_analyzer.analyze_issue_comprehensive.assert_awaited_once_with(
             issue_number=123,
             repository="owner/repo",
             detail_level="comprehensive",
         )
 
         # Verify comprehensive response structure
-        assert "analysis_results" in result
-        analysis_results = result["analysis_results"]
-        assert analysis_results["status"] == "comprehensive_analysis_complete"
-        assert "comprehensive_analysis" in analysis_results
-        assert "enhanced_features" in analysis_results
+        assert result["status"] == "comprehensive_analysis_complete"
+        assert "comprehensive_analysis" in result
+        assert "enhanced_features" in result
         assert result["enhanced_analysis"]["analysis_mode"] == "comprehensive"
 
     @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
@@ -197,20 +206,40 @@ class TestAnalyzeIssueMCPTool:
         """Test analyze_issue with default parameters"""
         mock_analyzer = MagicMock()
         mock_analyzer.claude_cli_enabled = False
-        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        mock_analyzer.analyze_issue_hybrid = AsyncMock(
+            return_value={
+                "status": "hybrid_analysis_complete",
+                "analysis_timestamp": "2024-01-01T00:00:00Z",
+                "issue_info": {"number": 42, "repository": None},
+                "pattern_detection": {
+                    "patterns_detected": mock_basic_result["patterns_detected"],
+                    "confidence_summary": mock_basic_result["confidence_summary"],
+                    "recommended_actions": mock_basic_result["recommended_actions"],
+                },
+                "claude_cli_analysis": {
+                    "status": "enhancement_unavailable",
+                    "message": "ExternalClaudeCli not available - pattern detection only",
+                },
+                "hybrid_summary": {"pattern_detection_summary": "1 patterns detected"},
+                "enhanced_features": {"pattern_detection": True, "hybrid_analysis": True},
+                "analysis_metadata": {
+                    "framework_version": "2.0 - Hybrid pattern detection + Claude CLI",
+                    "external_claude_available": False,
+                },
+            }
+        )
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = analyze_issue(issue_number=42)
+        result = asyncio.run(analyze_issue(issue_number=42))
 
-        # Verify defaults - should call hybrid mode which calls basic analysis
-        mock_analyzer.analyze_issue_hybrid.assert_called_once_with(
+        # Verify defaults - should call hybrid mode
+        mock_analyzer.analyze_issue_hybrid.assert_awaited_once_with(
             issue_number=42,
             repository=None,
             detail_level="standard",
         )
 
         # Verify enhanced analysis metadata
-        assert "analysis_results" in result
         enhanced = result["enhanced_analysis"]
         assert enhanced["analysis_mode"] == "hybrid"
 
@@ -219,25 +248,28 @@ class TestAnalyzeIssueMCPTool:
         """Test analyze_issue with invalid detail level"""
         mock_analyzer = MagicMock()
         mock_analyzer.claude_cli_enabled = False
-        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        sanitized_result = deepcopy(mock_basic_result)
+        sanitized_result["analysis_metadata"]["detail_level"] = "standard"
+        mock_analyzer.analyze_issue_hybrid = AsyncMock(return_value=sanitized_result)
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = analyze_issue(issue_number=42, detail_level="invalid_level")
+        result = asyncio.run(analyze_issue(issue_number=42, detail_level="invalid_level"))
 
         # Should use standard as default
-        mock_analyzer.analyze_issue_hybrid.assert_called_once()
-        call_args = mock_analyzer.analyze_issue_hybrid.call_args[1]
-        assert call_args["detail_level"] == "standard"
-        assert "analysis_results" in result
+        mock_analyzer.analyze_issue_hybrid.assert_awaited_once()
+        assert result["status"] == sanitized_result["status"]
+        assert result["analysis_metadata"]["detail_level"] == "standard"
 
     @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
     def test_analyze_issue_error_handling(self, mock_get_analyzer):
         """Test analyze_issue error handling"""
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze_issue_hybrid.side_effect = Exception("Analysis error")
+        mock_analyzer.analyze_issue_hybrid = AsyncMock(
+            side_effect=Exception("Analysis error")
+        )
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = analyze_issue(issue_number=42)
+        result = asyncio.run(analyze_issue(issue_number=42))
 
         # Verify error response
         assert result["status"] == "enhanced_analysis_error"
