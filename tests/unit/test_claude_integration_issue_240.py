@@ -68,7 +68,9 @@ class TestClaudeCliExecutorIssue240:
             
             assert any("PATH" in msg for msg in call_messages)
             assert any("Current working directory" in msg for msg in call_messages)
-            assert any("MCP environment indicators" in msg for msg in call_messages)    @patch("shutil.which")
+            assert any("MCP environment indicators" in msg for msg in call_messages)
+
+    @patch("shutil.which")
     @patch("os.path.exists")
     @patch("os.access")
     def test_find_claude_cli_not_executable(self, mock_access, mock_exists, mock_which):
@@ -109,7 +111,9 @@ class TestClaudeCliExecutorIssue240:
             
             assert "Claude CLI not found" in error_output
             assert "Current PATH" in error_output
-            assert "To fix" in error_output    @patch("subprocess.run")
+            assert "To fix" in error_output
+
+    @patch("subprocess.run")
     def test_execute_sync_file_not_found_error(self, mock_run):
         """Test enhanced error handling for FileNotFoundError (Issue #240)."""
         mock_run.side_effect = FileNotFoundError("claude: command not found")
