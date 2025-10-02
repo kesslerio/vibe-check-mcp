@@ -59,7 +59,7 @@ faker>=30.8.0  # Fake data generation
 # Security testing
 bandit>=1.7.0  # Security linting
 safety>=3.2.7  # Dependency vulnerability scanning
-semgrep>=1.0.0  # Static analysis security testing
+semgrep==1.86.0  # Static analysis security testing
 
 # Code quality and formatting
 black>=24.0.0

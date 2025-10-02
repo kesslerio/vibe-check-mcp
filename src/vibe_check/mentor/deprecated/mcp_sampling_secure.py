@@ -612,8 +612,36 @@ class EnhancedSecretsScanner:
     """Enhanced scanner for secrets and sensitive data"""
 
     # Comprehensive secret patterns
+    # NOTE: Order matters! More specific patterns must come before generic ones
     SECRET_PATTERNS = [
-        # API Keys
+        # Service-specific tokens (most specific first)
+        (r"sk-[a-zA-Z0-9]{48}", "OPENAI_API_KEY"),
+        (r"ghp_[a-zA-Z0-9]{36}", "GITHUB_TOKEN"),
+        (r"ghs_[a-zA-Z0-9]{36}", "GITHUB_SECRET"),
+        (
+            r'(?i)slack[_-]?token\s*[:=]\s*["\']?xox[baprs]-[a-zA-Z0-9\-]+["\']?',
+            "SLACK_TOKEN",
+        ),
+        # JWT (specific format)
+        (r"eyJ[a-zA-Z0-9_\-]+\.eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+", "JWT_TOKEN"),
+        # AWS
+        (r"AKIA[0-9A-Z]{16}", "AWS_ACCESS_KEY"),
+        (
+            r'(?i)aws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*["\']?([a-zA-Z0-9/+=]{40})["\']?',
+            "AWS_SECRET_KEY",
+        ),
+        # Private Keys
+        (r"-----BEGIN\s+(RSA|DSA|EC|OPENSSH|PGP)\s+PRIVATE\s+KEY-----", "PRIVATE_KEY"),
+        # Database URLs
+        (r"(?i)(postgres|mysql|mongodb|redis)://[^\s]+@[^\s]+", "DATABASE_URL"),
+        # Credit Cards (PCI compliance)
+        (
+            r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12})\b",
+            "CREDIT_CARD",
+        ),
+        # SSN (US)
+        (r"\b\d{3}-\d{2}-\d{4}\b", "SSN"),
+        # API Keys (semi-specific)
         (
             r'(?i)(api[_-]?key|apikey)\s*[:=]\s*["\']?([a-zA-Z0-9_\-]{20,})["\']?',
             "API_KEY",
@@ -623,40 +651,13 @@ class EnhancedSecretsScanner:
             "SECRET_KEY",
         ),
         # Passwords
-        (r'(?i)(password|passwd|pwd)\s*[:=]\s*["\']?([^"\'\\s]{8,})["\']?', "PASSWORD"),
-        # Tokens
+        (r'(?i)(password|passwd|pwd)\s*[:=]\s*["\']?([^"\'\s]{8,})["\']?', "PASSWORD"),
+        # Generic tokens (most generic - must be last)
         (
             r'(?i)(auth[_-]?token|token)\s*[:=]\s*["\']?([a-zA-Z0-9_\-\.]{20,})["\']?',
             "AUTH_TOKEN",
         ),
         (r"(?i)bearer\s+([a-zA-Z0-9_\-\.]+)", "BEARER_TOKEN"),
-        # AWS
-        (r"AKIA[0-9A-Z]{16}", "AWS_ACCESS_KEY"),
-        (
-            r'(?i)aws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*["\']?([a-zA-Z0-9/+=]{40})["\']?',
-            "AWS_SECRET_KEY",
-        ),
-        # Private Keys
-        (r"-----BEGIN\s+(RSA|DSA|EC|OPENSSH|PGP)\s+PRIVATE\s+KEY-----", "PRIVATE_KEY"),
-        # Service-specific
-        (r"sk-[a-zA-Z0-9]{48}", "OPENAI_API_KEY"),
-        (r"ghp_[a-zA-Z0-9]{36}", "GITHUB_TOKEN"),
-        (r"ghs_[a-zA-Z0-9]{36}", "GITHUB_SECRET"),
-        (
-            r'(?i)slack[_-]?token\s*[:=]\s*["\']?xox[baprs]-[a-zA-Z0-9\-]+["\']?',
-            "SLACK_TOKEN",
-        ),
-        # Database URLs
-        (r"(?i)(postgres|mysql|mongodb|redis)://[^\\s]+@[^\\s]+", "DATABASE_URL"),
-        # JWT
-        (r"eyJ[a-zA-Z0-9_\-]+\.eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+", "JWT_TOKEN"),
-        # Credit Cards (PCI compliance)
-        (
-            r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12})\b",
-            "CREDIT_CARD",
-        ),
-        # SSN (US)
-        (r"\b\d{3}-\d{2}-\d{4}\b", "SSN"),
     ]
 
     @classmethod
