@@ -1,7 +1,7 @@
 # Easy Unit Test Fixes for Colleague
 
 ## Overview
-58 straightforward unit test fixes needed. Most are simple assertion updates, mock path corrections, or file mocking.
+87 straightforward unit test fixes needed. Most are simple assertion updates, mock path corrections, or file mocking.
 
 ---
 
@@ -101,7 +101,7 @@
 
 ---
 
-## Category 7: Analyze Issue MCP Tool (4 tests - EASY)
+## Category 7: Analyze Issue MCP Tool (4 tests - EASY) - DONE
 **Difficulty**: ⭐⭐ Easy
 **Time**: 45 min total
 **Location**: `tests/unit/test_analyze_issue_mcp_tool.py`
@@ -115,7 +115,7 @@
 
 ---
 
-## Category 8: Integration Pattern Detector - File Mocking (4 tests - MEDIUM)
+## Category 8: Integration Pattern Detector - File Mocking (4 tests - MEDIUM) - DONE
 **Difficulty**: ⭐⭐⭐ Medium
 **Time**: 1-1.5 hours total
 **Location**: `tests/unit/test_integration_pattern_detector.py` - `TestRealWorldScenarios` class
@@ -242,7 +242,7 @@ def test_cognee_case_study_detection(mock_anti_patterns_file):
 
 ---
 
-## Category 15: Claude Integration Issue 240 (3 tests - MEDIUM)
+## Category 15: Claude Integration Issue 240 (3 tests - MEDIUM) - DONE
 **Difficulty**: ⭐⭐⭐ Medium
 **Time**: 45 min total
 **Location**: `tests/unit/test_claude_integration_issue_240.py`
@@ -251,11 +251,11 @@ def test_cognee_case_study_detection(mock_anti_patterns_file):
 56. `test_find_claude_cli_not_executable` - Fix permission check mocking
 57. `test_find_claude_cli_not_found_logs_error` - Fix error logging expectations
 
-**Fix Pattern**: Tests check logging behavior - verify log calls with correct arguments.
+**Fix Pattern**: Fixed logging assertion expectations by properly extracting call arguments instead of using str() on call objects. Changed from checking str(call) to checking args[0] for each call to get the actual log message.
 
 ---
 
-## Category 16: Enhanced Claude Integration Context (6 tests - MEDIUM)
+## Category 16: Enhanced Claude Integration Context (7 tests - MEDIUM) - DONE
 **Difficulty**: ⭐⭐⭐ Medium
 **Time**: 1.5-2 hours total
 **Location**: `tests/unit/test_enhanced_claude_integration.py`
@@ -267,7 +267,75 @@ def test_cognee_case_study_detection(mock_anti_patterns_file):
 62. `test_load_library_context` - Mock library loading properly
 63. `test_end_to_end_context_injection` - Fix full workflow integration
 
-**Fix Pattern**: Context injection system needs proper mocking of file loading and cache.
+**Fix Pattern**: Fixed incorrect patch paths that included "src." prefix and wrong module paths. Corrected paths to use proper module locations for get_context_manager and parent class methods. needs proper mocking of file loading and cache.
+
+✅ Issue Identified:
+The test file tests/unit/test_enhanced_claude_integration.py had incorrect @patch decorators using wrong module paths:
+
+Wrong: "src.vibe_check.tools.shared.enhanced_claude_integration.get_context_manager"
+Wrong: "src.vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_claude_args"
+✅ Root Cause:
+Patch decorators included "src." prefix and incorrect module references. The get_context_manager function is actually in vibe_check.tools.contextual_documentation, not in the enhanced_claude_integration module.
+
+✅ Tests Fixed (7 total):
+test_get_cached_analysis_context - Fixed get_context_manager patch path
+test_load_library_context - Fixed get_context_manager patch path
+test_get_claude_args_with_context_injection - Fixed parent class _get_claude_args patch path
+test_get_claude_args_without_context - Fixed parent class _get_claude_args patch path
+test_get_system_prompt_with_context_injection - Fixed parent class _get_system_prompt patch path
+test_graceful_degradation_on_context_error - Fixed subprocess patch path
+test_end_to_end_context_injection - Fixed get_context_manager patch path
+
+## Category 17: Vibe Check Framework Import Path (15 tests - EASY) - DONE
+**Difficulty**: ⭐⭐ Easy
+**Time**: 30-45 min total
+**Location**: `tests/unit/test_vibe_check_framework_*.py` (3 files)
+
+**Issue**: Tests use incorrect import path for vibe_check_framework - should be `legacy.vibe_check_framework`.
+
+55. `test_claude_availability_detection_unavailable` - Fix patch path
+56. `test_claude_analysis_execution_success` - Fix patch path
+57. `test_claude_analysis_execution_failure` - Fix patch path
+58. `test_claude_prompt_generation_comprehensive` - Fix patch path
+59. `test_claude_prompt_generation_brief` - Fix patch path
+60. `test_claude_security_prompt_sanitization` - Fix patch path
+61. `test_claude_timeout_handling` - Fix patch path
+62. `test_claude_file_cleanup` - Fix patch path
+63. `test_determine_vibe_level_infrastructure_pattern` - Fix patch path
+64. `test_determine_vibe_level_medium_confidence` - Fix patch path
+65. `test_determine_vibe_level_low_confidence` - Fix patch path
+66. `test_determine_vibe_level_no_patterns` - Fix patch path
+67. `test_determine_vibe_level_multiple_patterns` - Fix patch path
+68. `test_generate_friendly_summary_bad_vibes` - Fix patch path
+69. `test_generate_friendly_summary_good_vibes` - Fix patch path
+70. `test_generate_coaching_recommendations_with_patterns` - Fix patch path
+71. `test_generate_coaching_recommendations_no_patterns` - Fix patch path
+72. `test_generate_coaching_recommendations_brief_level` - Fix patch path
+73. `test_generate_coaching_recommendations_comprehensive_level` - Fix patch path
+74. `test_fetch_issue_data_success` - Fix patch path
+75. `test_fetch_issue_data_github_exception` - Fix patch path
+76. `test_create_vibe_check_result` - Fix patch path
+77. `test_pattern_detection_integration` - Fix patch path
+78. `test_post_vibe_check_comment_success` - Fix patch path
+79. `test_post_vibe_check_comment_github_exception` - Fix patch path
+80. `test_post_vibe_check_comment_format_bad_vibes` - Fix patch path
+81. `test_post_vibe_check_comment_format_comprehensive` - Fix patch path
+82. `test_format_vibe_check_comment_structure` - Fix patch path
+83. `test_github_api_error_handling` - Fix patch path
+
+**Fix Pattern**: Change all `@patch("vibe_check.tools.vibe_check_framework.Github")` to `@patch("vibe_check.tools.legacy.vibe_check_framework.Github")`.
+
+---
+
+## Category 18: Integration Tests (4 tests - MEDIUM) - DONE
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 1-1.5 hours total
+**Location**: `tests/integration/test_analyze_issue_workflow.py`
+
+**Note**: All tests in this file are now passing.
+
+**Estimated Total Time**: 4-6 hours
+**Branch**: `fix/test-failures-pre-v0.6.0` (already created)
 
 ---
 

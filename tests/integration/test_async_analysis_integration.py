@@ -20,7 +20,12 @@ class TestAsyncAnalysisIntegration:
     """Test complete async analysis integration."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Hangs - needs investigation of async mocking. Worker queue may be waiting indefinitely.")
+    @pytest.mark.skip(
+        reason="Hangs indefinitely - AsyncMock chain for get_global_queue may not be "
+        "properly awaiting. Need to investigate: (1) Worker queue polling behavior, "
+        "(2) Event loop interaction with nested AsyncMock, (3) Possible missing await "
+        "in queue_analysis call. See issue #248 for tracking."
+    )
     async def test_large_pr_async_flow(self):
         """Test complete flow for large PR requiring async processing."""
         # Large PR that should trigger async processing
@@ -96,7 +101,11 @@ class TestAsyncAnalysisIntegration:
         assert "pr_size_info" in result
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Hangs - same async mocking issue as test_large_pr_async_flow")
+    @pytest.mark.skip(
+        reason="Hangs indefinitely - Same AsyncMock chaining issue as test_large_pr_async_flow. "
+        "Status tracker and queue mocking interact poorly with async event loop. "
+        "Requires same investigation as test_large_pr_async_flow. See issue #248."
+    )
     async def test_status_checking_flow(self):
         """Test status checking for async analysis."""
         # Mock status checking

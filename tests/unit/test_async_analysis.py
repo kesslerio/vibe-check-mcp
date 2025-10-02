@@ -179,8 +179,6 @@ class TestAsyncAnalysisQueue:
             await self.queue.stop()
 
     @pytest.mark.asyncio
-    @pytest.mark.asyncio
-    @pytest.mark.asyncio
     async def test_get_next_job(self):
         """Test getting next job from queue."""
         await self.queue.start()
