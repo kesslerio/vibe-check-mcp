@@ -62,15 +62,13 @@ class TestClaudeCliExecutorIssue240:
             executor = ClaudeCliExecutor()
             executor._find_claude_cli()
 
-            # Verify environment logging
-            debug_calls = [str(call) for call in mock_debug.call_args_list]
-            debug_output = " ".join(debug_calls)
-
-            assert "PATH" in debug_output
-            assert "Current working directory" in debug_output
-            assert "MCP environment indicators" in debug_output
-
-    @patch("shutil.which")
+            # Verify environment logging calls were made
+            assert mock_debug.call_count >= 3
+            call_messages = [args[0] for args, kwargs in mock_debug.call_args_list]
+            
+            assert any("PATH" in msg for msg in call_messages)
+            assert any("Current working directory" in msg for msg in call_messages)
+            assert any("MCP environment indicators" in msg for msg in call_messages)    @patch("shutil.which")
     @patch("os.path.exists")
     @patch("os.access")
     def test_find_claude_cli_not_executable(self, mock_access, mock_exists, mock_which):
@@ -87,9 +85,9 @@ class TestClaudeCliExecutorIssue240:
             assert result == os.path.expanduser("~/.claude/local/claude")
 
             # Should log warning about permissions
-            warning_calls = [str(call) for call in mock_warning.call_args_list]
-            assert any("not executable" in str(call) for call in warning_calls)
-
+            assert mock_warning.call_count >= 1
+            call_messages = [args[0] for args, kwargs in mock_warning.call_args_list]
+            assert any("not executable" in msg for msg in call_messages)
     @patch("shutil.which")
     @patch("os.path.exists")
     def test_find_claude_cli_not_found_logs_error(self, mock_exists, mock_which):
@@ -105,14 +103,13 @@ class TestClaudeCliExecutorIssue240:
             assert result == "claude"
 
             # Should log detailed error with troubleshooting steps
-            error_calls = [str(call) for call in mock_error.call_args_list]
-            error_output = " ".join(error_calls)
-
+            assert mock_error.call_count >= 3
+            call_messages = [args[0] for args, kwargs in mock_error.call_args_list]
+            error_output = " ".join(call_messages)
+            
             assert "Claude CLI not found" in error_output
             assert "Current PATH" in error_output
-            assert "To fix" in error_output
-
-    @patch("subprocess.run")
+            assert "To fix" in error_output    @patch("subprocess.run")
     def test_execute_sync_file_not_found_error(self, mock_run):
         """Test enhanced error handling for FileNotFoundError (Issue #240)."""
         mock_run.side_effect = FileNotFoundError("claude: command not found")

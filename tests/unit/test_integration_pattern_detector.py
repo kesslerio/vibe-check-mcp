@@ -25,31 +25,23 @@ from vibe_check.tools.integration_pattern_analysis import (
 
 @pytest.fixture
 def mock_anti_patterns_file():
-    """Mock the anti_patterns.json and case studies file loading"""
-    def mock_open_side_effect(file_path, *args, **kwargs):
-        if "anti_patterns.json" in str(file_path):
-            sample_data = {
-                "schema_version": "1.1.0",
-                "integration_over_engineering": {
-                    "technologies": {
-                        "cognee": {
-                            "official_solution": "cognee/cognee:main Docker container",
-                            "red_flags": ["custom REST server", "manual JWT"]
-                        },
-                        "supabase": {
-                            "official_solution": "Supabase client libraries",
-                            "red_flags": ["custom auth server", "manual JWT handling"]
-                        }
-                    }
+    """Mock the anti_patterns.json file loading"""
+    sample_data = {
+        "schema_version": "1.1.0",
+        "integration_over_engineering": {
+            "technologies": {
+                "cognee": {
+                    "official_solution": "cognee/cognee:main Docker container",
+                    "red_flags": ["custom REST server", "manual JWT"]
+                },
+                "supabase": {
+                    "official_solution": "Supabase client libraries",
+                    "red_flags": ["custom auth server", "manual JWT handling"]
                 }
             }
-        else:  # case studies file
-            sample_data = {
-                "case_studies": []
-            }
-        return mock_open(read_data=json.dumps(sample_data))(*args, **kwargs)
-    
-    with patch("builtins.open", side_effect=mock_open_side_effect):
+        }
+    }
+    with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
         with patch("pathlib.Path.exists", return_value=True):
             yield
 

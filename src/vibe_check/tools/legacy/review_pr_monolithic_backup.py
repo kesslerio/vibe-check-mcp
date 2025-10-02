@@ -36,6 +36,8 @@ from ..analyze_llm_backup import ExternalClaudeCli
 logger = logging.getLogger(__name__)
 
 
+MAX_PROMPT_SIZE = 50000
+
 class PRReviewTool:
     """
     Comprehensive PR review tool that replicates review-pr.sh functionality.

@@ -900,7 +900,7 @@ async def analyze_issue(
             logger.info(
                 f"Running basic pattern detection analysis for issue #{issue_number}"
             )
-            result = analyzer.analyze_issue_basic(
+            result = await analyzer.analyze_issue_basic(
                 issue_number=issue_number,
                 repository=repository,
                 detail_level=detail_level,

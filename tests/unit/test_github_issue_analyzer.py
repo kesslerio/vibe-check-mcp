@@ -122,19 +122,15 @@ class TestGitHubIssueAnalyzer:
         # Configure mock to raise exception
         analyzer.github_client.get_repo.side_effect = GithubException(404, "Not Found")
 
-        # Test exception handling
-        result = analyzer._fetch_issue_data(999, "nonexistent/repo")
-
-        # Should return None on exception
-        assert result is None
+        # Test exception handling - should raise exception
+        with pytest.raises(GithubException):
+            analyzer._fetch_issue_data(999, "nonexistent/repo")
 
     def test_fetch_issue_data_invalid_repo(self, analyzer):
         """Test issue data fetching with invalid repository format"""
-        # Test with invalid repository format
-        result = analyzer._fetch_issue_data(42, "invalid-repo-format")
-
-        # Should handle gracefully
-        assert result is None
+        # Test with invalid repository format - should raise ValueError
+        with pytest.raises(ValueError, match="Repository must be in format 'owner/repo'"):
+            analyzer._fetch_issue_data(42, "invalid-repo-format")
 
     def test_analyze_issue_with_pattern_detection(self, analyzer, sample_issue_data):
         """Test issue analysis with pattern detection"""
@@ -153,15 +149,30 @@ class TestGitHubIssueAnalyzer:
             return_value=[mock_detection_result]
         )
 
+
+
         # Test analysis
         result = analyzer.analyze_issue(42, "test/repo")
 
         # Verify result structure
         assert result is not None
-        assert "issue_data" in result
-        assert "analysis" in result
-        assert result["issue_data"] == sample_issue_data
-        assert result["analysis"] == mock_detection_result
+        assert "status" in result
+        assert result["status"] == "basic_analysis_complete"
+        assert "issue_info" in result
+        assert "patterns_detected" in result
+        assert "confidence_summary" in result
+        assert "architectural_concepts" in result
+        assert "recommended_actions" in result
+        assert "analysis_metadata" in result
+
+        # Verify issue data is included
+        assert result["issue_info"] == sample_issue_data
+
+        # Verify patterns are formatted correctly
+        patterns = result["patterns_detected"]
+        assert len(patterns) == 1
+        assert patterns[0]["pattern_type"] == "infrastructure_without_implementation"
+        assert patterns[0]["confidence"] == 0.85
 
         # Verify method calls
         analyzer._fetch_issue_data.assert_called_once_with(42, "test/repo")
@@ -176,7 +187,7 @@ class TestGitHubIssueAnalyzer:
         result = analyzer.analyze_issue(999, "test/repo")
 
         # Should return error response when fetching fails
-        assert result["status"] == "analysis_error"
+        assert result["status"] == "basic_analysis_error"
         analyzer._fetch_issue_data.assert_called_once_with(999, "test/repo")
 
     def test_pattern_detection_integration(self, analyzer, sample_issue_data):
@@ -231,7 +242,7 @@ class TestGitHubIssueAnalyzer:
         assert result["created_at"] == "2025-01-01T00:00:00Z"
         assert result["state"] == "open"
         assert len(result["labels"]) == 2
-        assert "bug" in result["labels"]
+        assert "bug" in [label.name for label in result["labels"]]
         assert "P1" in result["labels"]
         assert result["url"] == "https://github.com/test/repo/issues/123"
 

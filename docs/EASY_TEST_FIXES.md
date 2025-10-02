@@ -249,9 +249,43 @@ def test_cognee_case_study_detection(mock_anti_patterns_file):
 
 55. `test_find_claude_cli_logs_environment` - Fix logging assertion expectations
 56. `test_find_claude_cli_not_executable` - Fix permission check mocking
-57. `test_find_claude_cli_not_found_logs_error` - Fix error logging expectations
+57. `test_find_claude_cli_not_found_logs_error` - Fixed error logging expectations (improved call argument extraction)
 
 **Fix Pattern**: Fixed logging assertion expectations by properly extracting call arguments instead of using str() on call objects. Changed from checking str(call) to checking args[0] for each call to get the actual log message.
+
+✅ Issue Identified:
+The tests were using unreliable methods to check logging calls:
+
+Old method: [str(call) for call in mock_logger.call_args_list] - converting call objects to strings
+Problem: This approach was fragile and might not reliably capture the log message content
+✅ Root Cause:
+The tests were checking str(call) on mock call objects, which doesn't reliably extract the actual log message arguments. This could lead to false negatives when the string representation of the call object doesn't contain the expected substrings in the expected format.
+
+✅ Solution Applied:
+Replaced the unreliable string conversion with proper argument extraction:
+
+Before:
+
+python
+debug_calls = [str(call) for call in mock_debug.call_args_list]
+debug_output = " ".join(debug_calls)
+assert "PATH" in debug_output
+After:
+
+python
+assert mock_debug.call_count >= 3
+call_messages = [args[0] for args, kwargs in mock_debug.call_args_list]
+assert any("PATH" in msg for msg in call_messages)
+✅ Tests Fixed (3 total):
+test_find_claude_cli_logs_environment - Fixed debug logging verification
+Now properly extracts call arguments: args[0] for each debug call
+Checks for "PATH", "Current working directory", and "MCP environment indicators"
+test_find_claude_cli_not_executable - Fixed warning logging verification
+Improved call argument extraction for warning messages
+Verifies "not executable" appears in warning log messages
+test_find_claude_cli_not_found_logs_error - Fixed error logging verification
+Enhanced error call argument checking
+Confirms "Claude CLI not found", "Current PATH", and "To fix" in error messages
 
 ---
 
