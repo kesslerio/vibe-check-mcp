@@ -31,7 +31,7 @@ class TestVibeCheckFrameworkGitHubIntegration:
     @pytest.fixture
     def framework(self):
         """Create framework instance for testing"""
-        with patch("vibe_check.tools.vibe_check_framework.Github"):
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github"):
             return VibeCheckFramework()
 
     def test_post_vibe_check_comment_success(self, framework):
@@ -206,14 +206,14 @@ class TestVibeCheckFrameworkGitHubIntegration:
 
     def test_github_client_initialization_with_token(self):
         """Test GitHub client initialization with token"""
-        with patch("vibe_check.tools.vibe_check_framework.Github") as mock_github:
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github") as mock_github:
             framework = VibeCheckFramework(github_token="test_token")
 
             mock_github.assert_called_once_with("test_token")
 
     def test_github_client_initialization_without_token(self):
         """Test GitHub client initialization without token"""
-        with patch("vibe_check.tools.vibe_check_framework.Github") as mock_github:
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github") as mock_github:
             framework = VibeCheckFramework()
 
             mock_github.assert_called_once_with()

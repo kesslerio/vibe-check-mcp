@@ -67,12 +67,12 @@ class TestVibeCheckFrameworkCore:
     @pytest.fixture
     def framework(self, mock_github_token):
         """Create framework instance for testing"""
-        with patch("vibe_check.tools.vibe_check_framework.Github"):
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github"):
             return VibeCheckFramework(github_token=mock_github_token)
 
     def test_framework_initialization(self, mock_github_token):
         """Test proper framework initialization"""
-        with patch("vibe_check.tools.vibe_check_framework.Github") as mock_github:
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github") as mock_github:
             framework = VibeCheckFramework(github_token=mock_github_token)
 
             # Verify initialization
@@ -83,7 +83,7 @@ class TestVibeCheckFrameworkCore:
 
     def test_framework_initialization_without_token(self):
         """Test framework initialization without GitHub token"""
-        with patch("vibe_check.tools.vibe_check_framework.Github") as mock_github:
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github") as mock_github:
             framework = VibeCheckFramework()
 
             # Should use default GitHub() constructor

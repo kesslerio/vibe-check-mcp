@@ -32,7 +32,7 @@ class TestVibeCheckFrameworkClaudeIntegration:
     @pytest.fixture
     def framework(self):
         """Create framework instance for testing"""
-        with patch("vibe_check.tools.vibe_check_framework.Github"):
+        with patch("vibe_check.tools.legacy.vibe_check_framework.Github"):
             return VibeCheckFramework()
 
     @patch("shutil.which")
