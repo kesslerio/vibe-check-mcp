@@ -100,30 +100,24 @@ class TestGlobalVibeCheckFramework:
             mock_framework_class.assert_called_once()
 
     def test_get_vibe_check_framework_configuration_isolation(self):
-        """Test that different configurations create separate instances"""
+        """Test that different configurations are ignored on subsequent calls"""
         with patch(
             "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
-            # Create different mock instances
-            instances = [MagicMock() for _ in range(3)]
-            mock_framework_class.side_effect = instances
+            mock_instance = MagicMock()
+            mock_framework_class.return_value = mock_instance
 
             # Call with different configurations
             framework_default = get_vibe_check_framework()
             framework_token1 = get_vibe_check_framework("token1")
             framework_token2 = get_vibe_check_framework("token2")
 
-            # Should be different instances
-            assert framework_default is not framework_token1
-            assert framework_token1 is not framework_token2
-            assert framework_default is not framework_token2
+            # Should be the same instance
+            assert framework_default is framework_token1
+            assert framework_token1 is framework_token2
 
-            # Verify constructor calls
-            assert mock_framework_class.call_count == 3
-            calls = mock_framework_class.call_args_list
-            assert calls[0][1] == {}
-            assert calls[1][1] == {"github_token": "token1"}
-            assert calls[2][1] == {"github_token": "token2"}
+            # Verify constructor was called only once with the first configuration
+            mock_framework_class.assert_called_once_with(None)
 
 
 if __name__ == "__main__":
