@@ -245,8 +245,12 @@ Promote good engineering practices through constructive analysis.""",
                 logger.info(f"[Info] Found Claude CLI at local user path: {user_path}")
                 return user_path
             else:
+                try:
+                    permissions = oct(os.stat(user_path).st_mode)
+                except OSError:
+                    permissions = "unknown"
                 logger.warning(
-                    f"[Warning] Claude CLI found at {user_path} but not executable. Permissions: {oct(os.stat(user_path).st_mode)}"
+                    f"[Warning] Claude CLI found at {user_path} but not executable. Permissions: {permissions}"
                 )
                 # Try to use it anyway, subprocess will fail with clear error
                 return user_path
