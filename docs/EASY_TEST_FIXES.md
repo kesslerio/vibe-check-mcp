@@ -31,12 +31,12 @@
 
 ---
 
-## Category 3: External Claude CLI Mocking (8 tests - EASY) - IN PROGRESS
+## Category 3: External Claude CLI Mocking (8 tests - EASY) - DONE
 **Difficulty**: ⭐⭐ Easy
 **Time**: 1-2 hours total
 **Location**: `tests/unit/test_external_claude_cli.py`
 
-**Note**: This category has more than 8 failures due to a major refactoring of the `ExternalClaudeCli` class into `ClaudeCliExecutor`. The work is in progress.
+**Note**: This category had more than 8 failures due to a major refactoring of the `ExternalClaudeCli` class into `ClaudeCliExecutor`. All tests in the file are now passing.
 
 6. `test_find_claude_cli_success` - Update mock path
 7. `test_find_claude_cli_not_found` - Update mock path

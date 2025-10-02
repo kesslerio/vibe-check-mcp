@@ -317,8 +317,8 @@ class AsyncAnalysisWorker:
                 "queued_at": job.queued_at,
                 "started_at": job.started_at,
                 "processing_duration": time.time() - (job.started_at or job.queued_at),
-                "chunk_size_used": self.chunked_config.chunk_size_lines,
-                "chunk_timeout_used": self.chunked_config.chunk_timeout_seconds,
+                "chunk_size_used": self.config.large_pr_chunk_size,
+                "chunk_timeout_used": self.config.chunk_timeout_seconds,
             },
         }
 

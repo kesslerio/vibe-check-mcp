@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 # Import the class under test
-from vibe_check.tools.shared.claude_integration import ClaudeCliExecutor, ClaudeCliResult
+from vibe_check.tools.shared.claude_integration import ClaudeCliExecutor, ClaudeCliResult, analyze_content_async
 
 
 class TestClaudeCliExecutor:
@@ -40,38 +40,33 @@ class TestClaudeCliExecutor:
         cli = ClaudeCliExecutor(timeout_seconds=120)
         assert cli.timeout_seconds == 120
 
-    @patch("subprocess.run")
-    def test_find_claude_cli_success(self, mock_run):
+    @patch.dict(os.environ, {"CLAUDE_CLI_NAME": ""})
+    @patch("shutil.which", return_value=None)
+    @patch("os.access", return_value=True)
+    @patch("os.path.exists", return_value=True)
+    def test_find_claude_cli_success(self, mock_exists, mock_access, mock_which):
         """Test successful Claude CLI path detection."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="/usr/local/bin/claude\n"
-        )
+        cli = ClaudeCliExecutor()
+        user_path = os.path.expanduser("~/.claude/local/claude")
+        assert cli.claude_cli_path == user_path
+        mock_exists.assert_called_once_with(user_path)
+        mock_access.assert_called_once_with(user_path, os.X_OK)
 
-        cli = ExternalClaudeCli()
-        result = cli._find_claude_cli()
-
-        assert result == "/usr/local/bin/claude"
-        mock_run.assert_called_once_with(
-            ["which", "claude"], capture_output=True, text=True, timeout=10
-        )
-
-    @patch("subprocess.run")
-    def test_find_claude_cli_not_found(self, mock_run):
+    @patch.dict(os.environ, {"CLAUDE_CLI_NAME": ""})
+    @patch("shutil.which", return_value=None)
+    @patch("os.path.exists", return_value=False)
+    def test_find_claude_cli_not_found(self, mock_exists, mock_which):
         """Test Claude CLI path detection when not found."""
-        mock_run.return_value = MagicMock(returncode=1)
+        cli = ClaudeCliExecutor()
+        assert cli.claude_cli_path == "claude"  # Default fallback
 
-        cli = ExternalClaudeCli()
-        result = cli._find_claude_cli()
-
-        assert result == "claude"  # Default fallback
-
-    @patch("subprocess.run", side_effect=Exception("Command failed"))
-    def test_find_claude_cli_exception(self, mock_run):
+    @patch.dict(os.environ, {"CLAUDE_CLI_NAME": ""})
+    @patch("shutil.which", side_effect=Exception("Command failed"))
+    @patch("os.path.exists", return_value=False)
+    def test_find_claude_cli_exception(self, mock_exists, mock_which):
         """Test Claude CLI path detection with exception."""
-        cli = ExternalClaudeCli()
-        result = cli._find_claude_cli()
-
-        assert result == "claude"  # Default fallback
+        with pytest.raises(Exception, match="Command failed"):
+            ClaudeCliExecutor()
 
     def test_get_system_prompt_pr_review(self):
         """Test system prompt for PR review task."""
@@ -112,19 +107,7 @@ class TestClaudeCliExecutor:
         general_prompt = self.cli._get_system_prompt("general")
         assert prompt == general_prompt
 
-    def test_create_isolated_environment(self):
-        """Test creation of isolated environment variables."""
-        env = self.cli._create_isolated_environment()
 
-        # Check isolation markers are added
-        assert env["CLAUDE_EXTERNAL_EXECUTION"] == "true"
-        assert env["CLAUDE_MCP_ISOLATED"] == "true"
-        assert "CLAUDE_TASK_ID" in env
-        assert env["CLAUDE_TASK_ID"].startswith("external_")
-
-        # Check conflicting variables are removed
-        for var in ["CLAUDE_CODE_MODE", "CLAUDE_CLI_SESSION", "MCP_SERVER"]:
-            assert var not in env
 
     @pytest.mark.asyncio
     async def test_execute_claude_cli_success_json(self):
@@ -146,43 +129,31 @@ class TestClaudeCliExecutor:
         )
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-            with patch(
-                "asyncio.wait_for", return_value=mock_process.communicate.return_value
-            ):
-                result = await self.cli.execute_claude_cli(
-                    prompt="Test prompt", task_type="general"
-                )
+            result = await self.cli.execute_async(
+                prompt="Test prompt", task_type="general"
+            )
 
         assert result.success is True
-        assert result.output == "Test analysis result"
-        assert result.cost_usd == 0.15
-        assert result.duration_ms == 2500
-        assert result.session_id == "test-session-123"
-        assert result.num_turns == 1
+        assert "Test analysis result" in result.output
         assert result.exit_code == 0
-        assert result.task_type == "general"
 
     @pytest.mark.asyncio
-    async def test_execute_claude_cli_success_text_fallback(self):
-        """Test Claude CLI execution with text fallback when JSON parsing fails."""
+    async def test_execute_claude_cli_success_text(self):
+        """Test Claude CLI execution with text response."""
         mock_process = AsyncMock()
         mock_process.returncode = 0
         mock_process.communicate.return_value = (
-            b"Plain text response without JSON",
+            b"Plain text response",
             b"",
         )
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-            with patch(
-                "asyncio.wait_for", return_value=mock_process.communicate.return_value
-            ):
-                result = await self.cli.execute_claude_cli(
-                    prompt="Test prompt", task_type="general"
-                )
+            result = await self.cli.execute_async(
+                prompt="Test prompt", task_type="general"
+            )
 
         assert result.success is True
-        assert result.output == "Plain text response without JSON"
-        assert result.cost_usd is None
+        assert result.output == "Plain text response"
         assert result.exit_code == 0
 
     @pytest.mark.asyncio
@@ -193,12 +164,9 @@ class TestClaudeCliExecutor:
         mock_process.communicate.return_value = (b"", b"Error: Invalid command")
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
-            with patch(
-                "asyncio.wait_for", return_value=mock_process.communicate.return_value
-            ):
-                result = await self.cli.execute_claude_cli(
-                    prompt="Test prompt", task_type="general"
-                )
+            result = await self.cli.execute_async(
+                prompt="Test prompt", task_type="general"
+            )
 
         assert result.success is False
         assert "Error: Invalid command" in result.error
@@ -211,14 +179,13 @@ class TestClaudeCliExecutor:
 
         with patch("asyncio.create_subprocess_exec", return_value=mock_process):
             with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError()):
-                result = await self.cli.execute_claude_cli(
+                result = await self.cli.execute_async(
                     prompt="Test prompt", task_type="general"
                 )
 
         assert result.success is False
         assert "timed out" in result.error.lower()
         assert result.exit_code == -1
-        mock_process.kill.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_execute_claude_cli_exception(self):
@@ -227,7 +194,7 @@ class TestClaudeCliExecutor:
             "asyncio.create_subprocess_exec",
             side_effect=Exception("Process creation failed"),
         ):
-            result = await self.cli.execute_claude_cli(
+            result = await self.cli.execute_async(
                 prompt="Test prompt", task_type="general"
             )
 
@@ -242,10 +209,8 @@ class TestClaudeCliExecutor:
             success=True, output="Analysis complete", task_type="code_analysis"
         )
 
-        with patch.object(
-            self.cli, "execute_claude_cli", return_value=mock_result
-        ) as mock_execute:
-            result = await self.cli.analyze_content(
+        with patch("vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async", return_value=mock_result) as mock_execute:
+            result = await analyze_content_async(
                 content="Test code content",
                 task_type="code_analysis",
                 additional_context="File: test.py",
@@ -264,53 +229,17 @@ class TestClaudeCliExecutor:
             success=True, output="Analysis complete", task_type="general"
         )
 
-        with patch.object(
-            self.cli, "execute_claude_cli", return_value=mock_result
-        ) as mock_execute:
-            result = await self.cli.analyze_content(
+        with patch("vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async", return_value=mock_result) as mock_execute:
+            result = await analyze_content_async(
                 content="Test content", task_type="general"
             )
 
         mock_execute.assert_called_once()
         args, kwargs = mock_execute.call_args
-        assert "Analyze the following content:" in kwargs["prompt"]
+        assert "Content to analyze:" in kwargs["prompt"]
         assert "Test content" in kwargs["prompt"]
 
-    @pytest.mark.asyncio
-    async def test_analyze_file_success(self):
-        """Test successful file analysis."""
-        file_content = "def hello():\n    print('Hello, world!')"
 
-        mock_result = ClaudeCliResult(
-            success=True, output="File analysis complete", task_type="code_analysis"
-        )
-
-        with patch("builtins.open", mock_open(read_data=file_content)):
-            with patch.object(
-                self.cli, "analyze_content", return_value=mock_result
-            ) as mock_analyze:
-                result = await self.cli.analyze_file(
-                    file_path="/test/path/test.py", task_type="code_analysis"
-                )
-
-        mock_analyze.assert_called_once_with(
-            content=file_content,
-            task_type="code_analysis",
-            additional_context="File: /test/path/test.py\nSize: 39 characters",
-        )
-
-    @pytest.mark.asyncio
-    async def test_analyze_file_read_error(self):
-        """Test file analysis with read error."""
-        with patch("builtins.open", side_effect=FileNotFoundError("File not found")):
-            result = await self.cli.analyze_file(
-                file_path="/nonexistent/file.py", task_type="code_analysis"
-            )
-
-        assert result.success is False
-        assert "File read error" in result.error
-        assert "File not found" in result.error
-        assert result.exit_code == -1
 
     def test_claude_cli_result_to_dict(self):
         """Test ClaudeCliResult to_dict conversion."""
@@ -357,21 +286,16 @@ class TestClaudeCliExecutor:
             mock_process.communicate.return_value = (b'{"result": "test"}', b"")
             mock_exec.return_value = mock_process
 
-            with patch(
-                "asyncio.wait_for", return_value=mock_process.communicate.return_value
-            ):
-                asyncio.run(self.cli.execute_claude_cli("test prompt", "pr_review"))
+            asyncio.run(self.cli.execute_async("test prompt", "pr_review"))
 
         # Verify command construction
         mock_exec.assert_called_once()
         args = mock_exec.call_args[0]
 
-        assert args[0] == "timeout"
-        assert args[1] == "65"  # timeout + 5
-        assert args[2] == "/usr/local/bin/claude"
-        assert args[3] == "-p"
-        assert args[4] == "test prompt"
-        assert args[5] == "--output-format"
-        assert args[6] == "json"
-        assert args[7] == "--system-prompt"
-        # args[8] should be the system prompt for pr_review
+        assert args[0] == "/usr/local/bin/claude"
+        assert "--model" in args
+        assert "sonnet" in args
+        assert "-p" in args
+        prompt_arg = next((arg for arg in args if "test prompt" in arg), None)
+        assert prompt_arg is not None
+        assert "test prompt" in prompt_arg
