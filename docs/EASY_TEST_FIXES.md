@@ -1,7 +1,7 @@
 # Easy Unit Test Fixes for Colleague
 
 ## Overview
-30 straightforward unit test fixes needed. Most are simple assertion updates or mock path corrections.
+58 straightforward unit test fixes needed. Most are simple assertion updates, mock path corrections, or file mocking.
 
 ---
 
@@ -51,10 +51,12 @@
 
 ---
 
-## Category 4: Doom Loop Detector (3 tests - EASY)
+## Category 4: Doom Loop Detector (3 tests - EASY) - DONE
 **Difficulty**: ⭐⭐ Easy
 **Time**: 30-45 min total
 **Location**: `tests/unit/test_doom_loop_detector.py`
+
+**Note**: This category had 5 failures. All are now fixed.
 
 14. `test_session_health_analysis_no_session` - Update expected response structure
 15. `test_session_health_analysis_active_session` - Update expected response structure
@@ -64,10 +66,12 @@
 
 ---
 
-## Category 5: Adaptive Prompt Sizing API Changes (6 tests - EASY)
+## Category 5: Adaptive Prompt Sizing API Changes (6 tests - EASY) - DONE
 **Difficulty**: ⭐⭐ Easy
 **Time**: 1 hour total
 **Location**: `tests/unit/test_adaptive_prompt_sizing.py`
+
+**Note**: All tests in `tests/unit/test_adaptive_prompt_sizing.py` and `tests/unit/test_adaptive_prompt_sizing_backward_compatibility.py` are now passing.
 
 17. `test_summary_content_creation` - Update expected keys in summary dict
 18. `test_backward_compatibility_existing_methods` - Remove deprecated method checks
@@ -111,6 +115,162 @@
 
 ---
 
+## Category 8: Integration Pattern Detector - File Mocking (4 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 1-1.5 hours total
+**Location**: `tests/unit/test_integration_pattern_detector.py` - `TestRealWorldScenarios` class
+
+**Issue**: Tests hang because `IntegrationPatternDetector()` tries to load `data/anti_patterns.json` without mocking.
+
+31. `test_cognee_case_study_detection` - Mock file loading for IntegrationPatternDetector
+32. `test_supabase_over_engineering_detection` - Mock file loading for IntegrationPatternDetector
+33. `test_multiple_technologies_scenario` - Mock file loading for IntegrationPatternDetector
+34. `test_legitimate_custom_development` - Mock file loading for IntegrationPatternDetector
+
+**Fix Pattern**:
+```python
+@pytest.fixture
+def mock_anti_patterns_file():
+    """Mock the anti_patterns.json file loading"""
+    sample_data = {
+        "schema_version": "1.1.0",
+        "integration_over_engineering": {
+            "technologies": {
+                "cognee": {
+                    "official_solution": "cognee/cognee:main Docker container",
+                    "red_flags": ["custom REST server", "manual JWT"]
+                }
+            }
+        }
+    }
+    with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+        with patch("pathlib.Path.exists", return_value=True):
+            yield
+
+# Then use the fixture:
+def test_cognee_case_study_detection(mock_anti_patterns_file):
+    # Test now works without hanging
+```
+
+**Reference**: Look at `TestIntegrationPatternDetector` class (lines 84-97) which already has proper mocking examples.
+
+---
+
+## Category 9: Global Instance Singleton Tests (5 tests - EASY)
+**Difficulty**: ⭐⭐ Easy
+**Time**: 30-45 min total
+**Location**: `tests/unit/test_global_analyzer_instance.py` and `tests/unit/test_global_framework_instance.py`
+
+**Issue**: Tests expect singleton to be recreated with new token, but implementation caches instances.
+
+35. `test_get_github_analyzer_with_token` - Fix singleton token behavior
+36. `test_get_github_analyzer_token_override` - Fix singleton override expectations
+37. `test_get_vibe_check_framework_with_token` - Fix framework singleton token behavior
+38. `test_get_vibe_check_framework_token_override` - Fix framework singleton override
+39. `test_get_vibe_check_framework_configuration_isolation` - Fix isolation expectations
+
+**Fix Pattern**: Update test expectations to match actual singleton behavior (caching) OR modify implementation to recreate on token change. Check with team which behavior is desired.
+
+---
+
+## Category 10: Chunked Analysis (5 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 1-1.5 hours total
+**Location**: `tests/unit/test_chunked_analysis.py`
+
+40. `test_large_file_chunking` - Update chunking logic expectations
+41. `test_successful_chunked_analysis` - Fix async mock for analyze_pr_chunked
+42. `test_partial_failure_chunked_analysis` - Update failure handling
+43. `test_overall_assessment_creation` - Fix assessment format expectations
+44. `test_convenience_function` - Update analyze_pr_with_chunking call
+
+**Fix Pattern**: These tests likely need AsyncMock for chunked analyzer and updated result structure expectations.
+
+---
+
+## Category 11: Doom Loop Detector Edge Cases (2 tests - EASY)
+**Difficulty**: ⭐⭐ Easy
+**Time**: 20-30 min total
+**Location**: `tests/unit/test_doom_loop_detector.py`
+
+45. `test_healthy_implementation_focused_content` - Adjust detection threshold (currently detecting false positives)
+46. `test_productive_decision_making` - Adjust threshold to allow productive decision content
+
+**Fix Pattern**: Content is healthy but detector is too sensitive. Adjust threshold or patterns.
+
+---
+
+## Category 12: Adaptive Prompt Sizing Backward Compatibility (4 tests - EASY)
+**Difficulty**: ⭐⭐ Easy
+**Time**: 30-45 min total
+**Location**: `tests/unit/test_adaptive_prompt_sizing_backward_compatibility.py`
+
+47. `test_size_threshold_boundary_behavior` - Update threshold boundary expectations
+48. `test_small_pr_analysis_workflow_unchanged` - Fix workflow assertions
+49. `test_medium_pr_analysis_workflow_unchanged` - Fix workflow assertions
+50. `test_content_quality_preserved` - Update quality metric expectations
+
+**Fix Pattern**: API changes to adaptive sizing - update assertions to match new behavior.
+
+---
+
+## Category 13: GitHub Issue Analyzer (3 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 45 min - 1 hour total
+**Location**: `tests/unit/test_github_issue_analyzer.py`
+
+51. `test_analyze_issue_with_pattern_detection` - Update analysis result structure
+52. `test_analyze_issue_with_fetch_failure` - Fix error handling expectations
+53. `test_issue_data_transformation` - Update transformation assertions
+
+**Fix Pattern**: Analyzer now uses enhanced response format - update expected keys and structure.
+
+---
+
+## Category 14: Async Analysis Queue Mock (1 test - EASY)
+**Difficulty**: ⭐ Very Easy
+**Time**: 5-10 min
+**Location**: `tests/unit/test_async_analysis.py`
+
+54. `test_get_next_job` - Add resource monitor mock (duplicate decorator issue)
+
+**Fix Pattern**: Remove duplicate `@pytest.mark.asyncio` decorator and add missing resource monitor mock.
+```python
+# Remove duplicate decorator on line 182
+# Add resource monitor mock like in test_queue_analysis
+```
+
+---
+
+## Category 15: Claude Integration Issue 240 (3 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 45 min total
+**Location**: `tests/unit/test_claude_integration_issue_240.py`
+
+55. `test_find_claude_cli_logs_environment` - Fix logging assertion expectations
+56. `test_find_claude_cli_not_executable` - Fix permission check mocking
+57. `test_find_claude_cli_not_found_logs_error` - Fix error logging expectations
+
+**Fix Pattern**: Tests check logging behavior - verify log calls with correct arguments.
+
+---
+
+## Category 16: Enhanced Claude Integration Context (6 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 1.5-2 hours total
+**Location**: `tests/unit/test_enhanced_claude_integration.py`
+
+58. `test_get_cached_analysis_context` - Mock context cache properly
+59. `test_get_claude_args_with_context_injection` - Fix context injection mocking
+60. `test_get_claude_args_without_context` - Update expectations for no context
+61. `test_get_system_prompt_with_context_injection` - Fix prompt building with context
+62. `test_load_library_context` - Mock library loading properly
+63. `test_end_to_end_context_injection` - Fix full workflow integration
+
+**Fix Pattern**: Context injection system needs proper mocking of file loading and cache.
+
+---
+
 ## Recommended Approach
 
 ### Phase 1: Quick Wins (30-45 min)
@@ -124,6 +284,21 @@ Categories 4-5-7 (13 tests) - update response structure expectations.
 
 ### Phase 4: GitHub Mocking (1 hour)
 Category 6 (4 tests) - more complex but still straightforward.
+
+### Phase 5: File Mocking for Integration Patterns (1-1.5 hours)
+Category 8 (4 tests) - add file mocking fixtures to prevent file loading hangs.
+
+### Phase 6: Singleton Pattern Issues (30-45 min)
+Category 9 (5 tests) - decide on singleton behavior and update tests or implementation.
+
+### Phase 7: Async & Chunked Analysis (1.5-2 hours)
+Categories 10, 14 (6 tests) - fix AsyncMock usage and result structure expectations.
+
+### Phase 8: Threshold Adjustments (30-45 min)
+Categories 11, 12 (6 tests) - adjust detection thresholds and backward compatibility.
+
+### Phase 9: Integration & Context Mocking (3-4 hours)
+Categories 13, 15, 16 (12 tests) - more complex integration and context injection mocking.
 
 ---
 
@@ -169,26 +344,46 @@ assert result.primary_type == ContextType.UNKNOWN
 # OLD
 assert "analysis" in result
 analysis = result["analysis"]
+## Category 8: Integration Pattern Detector - File Mocking (4 tests - MEDIUM)
+**Difficulty**: ⭐⭐⭐ Medium
+**Time**: 1-1.5 hours total
+**Location**: `tests/unit/test_integration_pattern_detector.py` - `TestRealWorldScenarios` class
 
-# NEW
-assert "analysis_results" in result
-analysis_results = result["analysis_results"]
+
+**Issue**: Tests hang because `IntegrationPatternDetector()` tries to load `data/anti_patterns.json` without mocking.
+
+
+31. `test_cognee_case_study_detection` - Mock file loading for IntegrationPatternDetector
+32. `test_supabase_over_engineering_detection` - Mock file loading for IntegrationPatternDetector
+33. `test_multiple_technologies_scenario` - Mock file loading for IntegrationPatternDetector
+34. `test_legitimate_custom_development` - Mock file loading for IntegrationPatternDetector
+
+
+**Fix Pattern**:
+```python
+@pytest.fixture
+def mock_anti_patterns_file():
+    """Mock the anti_patterns.json file loading"""
+    sample_data = {
+        "schema_version": "1.1.0",
+        "integration_over_engineering": {
+            "technologies": {
+                "cognee": {
+                    "official_solution": "cognee/cognee:main Docker container",
+                    "red_flags": ["custom REST server", "manual JWT"]
+                }
+            }
+        }
+    }
+    with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+        with patch("pathlib.Path.exists", return_value=True):
+            yield
+
+
+# Then use the fixture:
+def test_cognee_case_study_detection(mock_anti_patterns_file):
+    # Test now works without hanging
 ```
 
----
 
-## Success Criteria
-- Each test should pass independently
-- No new warnings introduced
-- All assertions match current API behavior
-- Mock paths resolve to actual code locations
-
----
-
-## Questions/Blockers?
-- Check the codebase with `rg "function_name"` to find current locations
-- Look at passing tests in same file for pattern examples
-- Ask for help if stuck >20 min on one test
-
-**Estimated Total Time**: 4-6 hours
-**Branch**: `fix/test-failures-pre-v0.6.0` (already created)
+**Reference**: Look at `TestIntegrationPatternDetector` class (lines 84-97) which already has proper mocking examples.
