@@ -23,6 +23,20 @@ from .pattern_detector import PatternDetector, DetectionResult
 
 logger = logging.getLogger(__name__)
 
+WARNING_PRIORITY = {"none": 0, "caution": 1, "warning": 2, "critical": 3}
+SEVERITY_WARNING_MAP = {
+    "critical": "critical",
+    "severe": "critical",
+    "high": "critical",
+    "major": "critical",
+    "medium": "warning",
+    "moderate": "warning",
+    "elevated": "warning",
+    "low": "caution",
+    "minor": "caution",
+}
+PRIORITY_TO_WARNING = {value: key for key, value in WARNING_PRIORITY.items()}
+
 
 @dataclass
 class TechnologyDetection:
@@ -244,6 +258,21 @@ class IntegrationPatternDetector:
 
         return detected
 
+    def _attach_severity_metadata(self, result: DetectionResult) -> None:
+        """Ensure detection results include severity metadata for downstream mapping."""
+
+        if result.educational_content and result.educational_content.get("severity"):
+            return
+
+        severity = None
+        pattern_config = self.base_detector.patterns.get(result.pattern_type)
+        if pattern_config:
+            severity = pattern_config.get("severity")
+
+        if severity:
+            result.educational_content = result.educational_content or {}
+            result.educational_content["severity"] = severity
+
     def _detect_integration_patterns(
         self, text: str, detected_technologies: List[TechnologyDetection]
     ) -> List[DetectionResult]:
@@ -274,6 +303,7 @@ class IntegrationPatternDetector:
                                     )
 
             if result.detected:
+                self._attach_severity_metadata(result)
                 patterns.append(result)
 
         # Additional logic for detected technologies with red flags
@@ -303,6 +333,7 @@ class IntegrationPatternDetector:
                             threshold=0.5,
                             pattern_version="1.0.0",
                         )
+                        self._attach_severity_metadata(tech_pattern)
                         patterns.append(tech_pattern)
 
         # Check effort-value mismatch
@@ -310,6 +341,7 @@ class IntegrationPatternDetector:
             pattern_config = self.base_detector.patterns["effort_value_mismatch"]
             result = self.base_detector._detect_single_pattern(text, pattern_config)
             if result.detected:
+                self._attach_severity_metadata(result)
                 patterns.append(result)
 
         return patterns
@@ -401,6 +433,37 @@ class IntegrationPatternDetector:
 
         return recommendations
 
+    def _count_red_flags(
+        self, technologies: List[TechnologyDetection], patterns: List[DetectionResult]
+    ) -> int:
+        """Count how many red flag indicators appear across detection evidence."""
+
+        count = 0
+        for tech in technologies:
+            if not tech.red_flags:
+                continue
+            for pattern in patterns:
+                for evidence in pattern.evidence:
+                    for red_flag in tech.red_flags:
+                        if red_flag.lower() in evidence.lower():
+                            count += 1
+        return count
+
+    def _map_severity_to_warning(self, patterns: List[DetectionResult]) -> str:
+        """Map pattern severities to the appropriate warning level."""
+
+        level = "none"
+        for pattern in patterns:
+            severity = None
+            if pattern.educational_content:
+                severity = pattern.educational_content.get("severity")
+            if not severity:
+                continue
+            mapped = SEVERITY_WARNING_MAP.get(severity.lower())
+            if mapped and WARNING_PRIORITY[mapped] > WARNING_PRIORITY[level]:
+                level = mapped
+        return level
+
     def _calculate_warning_level(
         self, technologies: List[TechnologyDetection], patterns: List[DetectionResult]
     ) -> str:
@@ -410,35 +473,33 @@ class IntegrationPatternDetector:
         high_confidence_patterns = [p for p in patterns if p.confidence >= 0.7]
         medium_confidence_patterns = [p for p in patterns if 0.4 <= p.confidence < 0.7]
 
-        # Check for technologies with known red flags mentioned in text
-        red_flag_count = 0
-        for tech in technologies:
-            if tech.red_flags:
-                # Count red flags mentioned in patterns
-                for pattern in patterns:
-                    for evidence in pattern.evidence:
-                        for red_flag in tech.red_flags:
-                            if red_flag.lower() in evidence.lower():
-                                red_flag_count += 1
+        red_flag_count = self._count_red_flags(technologies, patterns)
 
         # Also check for technologies with official solutions (indicates potential over-engineering)
         tech_with_solutions = len([t for t in technologies if t.official_solution])
 
+        severity_level = self._map_severity_to_warning(patterns)
+
         # Determine warning level
         if len(high_confidence_patterns) >= 2 or red_flag_count >= 3:
-            return "critical"
+            heuristic_level = "critical"
         elif len(high_confidence_patterns) >= 1 or red_flag_count >= 2:
-            return "warning"
+            heuristic_level = "warning"
         elif (
             len(medium_confidence_patterns) >= 1
             or red_flag_count >= 1
             or tech_with_solutions >= 2
         ):
-            return "caution"
+            heuristic_level = "caution"
         elif tech_with_solutions >= 1:
-            return "caution"
+            heuristic_level = "caution"
         else:
-            return "none"
+            heuristic_level = "none"
+
+        final_priority = max(
+            WARNING_PRIORITY[severity_level], WARNING_PRIORITY[heuristic_level]
+        )
+        return PRIORITY_TO_WARNING[final_priority]
 
     def _generate_research_questions(
         self, technologies: List[TechnologyDetection]

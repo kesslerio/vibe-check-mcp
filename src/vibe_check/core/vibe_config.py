@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Dict, Any
 
 
-class VibeLevel(Enum):
+class VibeLevel(str, Enum):
     """
     Vibe intensity levels for consistent messaging tone.
 
