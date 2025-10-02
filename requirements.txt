@@ -57,9 +57,9 @@ factory-boy>=3.3.1  # Test data generation
 faker>=30.8.0  # Fake data generation
 
 # Security testing
-bandit>=2.0.0  # Security linting
+bandit>=1.7.0  # Security linting
 safety>=3.2.7  # Dependency vulnerability scanning
-semgrep>=2.1.0  # Static analysis security testing
+semgrep>=1.0.0  # Static analysis security testing
 
 # Code quality and formatting
 black>=24.0.0
