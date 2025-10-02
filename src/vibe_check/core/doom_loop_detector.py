@@ -267,11 +267,24 @@ class DoomLoopDetector:
         # Calculate severity based on indicators
         total_indicators = paralysis_count + cycling_count + overthinking_count
 
-        if total_indicators >= 4:
+        positive_signals = self._count_positive_progress_signals(full_text)
+
+        # Strong evidence of action orientation should suppress mild signals
+        if positive_signals >= 3 and total_indicators <= 4:
+            return None
+
+        adjusted_indicators = total_indicators
+
+        if positive_signals >= 2:
+            adjusted_indicators = max(0, adjusted_indicators - 1)
+        if positive_signals >= 4:
+            adjusted_indicators = max(0, adjusted_indicators - 1)
+
+        if adjusted_indicators >= 5:
             severity = LoopSeverity.CRITICAL
-        elif total_indicators >= 3:
+        elif adjusted_indicators >= 3:
             severity = LoopSeverity.WARNING
-        elif total_indicators >= 2:
+        elif adjusted_indicators >= 2:
             severity = LoopSeverity.CAUTION
         else:
             return None
@@ -507,6 +520,46 @@ class DoomLoopDetector:
                 return match.group(0)
 
         return None
+
+    def _count_positive_progress_signals(self, full_text: str) -> int:
+        """Count phrases that indicate concrete momentum and execution."""
+        positive_signals = 0
+
+        action_plan_patterns = [
+            r"next steps?:",
+            r"action plan:",
+            r"roadmap:",
+        ]
+
+        if any(re.search(pattern, full_text) for pattern in action_plan_patterns):
+            positive_signals += 1
+
+        if len(re.findall(r"step\s*\d+", full_text)) >= 2 or len(
+            re.findall(r"\b[0-9]+\.\s", full_text)
+        ) >= 2:
+            positive_signals += 1
+
+        if re.search(
+            r"\b(?:i['’]?m|we['’]?re|we are|i am)\s+(?:going with|choosing|picking|locking in)",
+            full_text,
+        ) or re.search(r"\bdecided to\b", full_text):
+            positive_signals += 1
+
+        if re.search(
+            r"\b(today|tomorrow|this week|next week|by (?:end of )?(?:day|week))\b",
+            full_text,
+        ):
+            positive_signals += 1
+
+        if re.search(r"\bimplement(?:ation|ing)?\b", full_text) or re.search(
+            r"\b(ship|deliver|deploy|launch|build)\b", full_text
+        ):
+            positive_signals += 1
+
+        if re.search(r"\bvalidate\b.*\b(real|production|users|data)\b", full_text):
+            positive_signals += 1
+
+        return positive_signals
 
     def _get_top_used_tools(self) -> List[Dict[str, Any]]:
         """Get the most frequently used tools in this session"""

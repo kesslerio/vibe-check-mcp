@@ -370,17 +370,36 @@ class TestRealWorldScenarios:
         After evaluating options, I'm going with PostgreSQL for the initial implementation.
         Reasons: Team expertise, ACID compliance, and good performance for our scale.
         I can always add MongoDB later if we need document storage.
-        
+
         Next steps:
         1. Set up PostgreSQL instance (today)
         2. Design initial schema (tomorrow)
         3. Implement basic CRUD operations (this week)
         4. Add migrations system (next week)
-        
+
         Will validate with real data and iterate based on performance testing.
         """
 
         result = analyze_text_for_doom_loops(productive_decisions)
+
+        assert result["status"] == "healthy_analysis"
+
+    def test_action_plan_overrides_analysis_paralysis_language(self):
+        """Ensure concrete plans prevent false positives when decisions are made"""
+        decisive_plan = """
+        Should we use PostgreSQL or MySQL for the new service?
+        On the other hand, SQLite might be simpler initially.
+        But then again, PostgreSQL gives us ACID guarantees.
+        Decision: I'm going with PostgreSQL for launch.
+
+        Next steps:
+        1. Provision managed PostgreSQL today.
+        2. Migrate the initial schema tomorrow.
+        3. Ship CRUD endpoints this week.
+        4. Validate with real usage data next week.
+        """
+
+        result = analyze_text_for_doom_loops(decisive_plan)
 
         assert result["status"] == "healthy_analysis"
 
