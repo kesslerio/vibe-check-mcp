@@ -1,7 +1,10 @@
 import logging
 from typing import Dict, Any
 from vibe_check.server.core import mcp
-from vibe_check.tools.analyze_text_nollm import analyze_text_demo
+from vibe_check.tools.analyze_text_nollm import (
+    analyze_text_demo as analyze_text_core,
+    demo_analyze_text as legacy_demo_analyze_text,
+)
 from vibe_check.tools.large_prompt_demo import demo_large_prompt_analysis
 
 logger = logging.getLogger(__name__)
@@ -19,6 +22,7 @@ def register_text_analysis_tools(
     """
     # Register production tools unless explicitly skipped
     if not skip_production:
+        mcp_instance.add_tool(demo_analyze_text)
         mcp_instance.add_tool(analyze_text_nollm)
 
     # Only register dev/demo tools when dev_mode=True
@@ -41,9 +45,31 @@ def analyze_text_nollm(
     logger.info(
         f"Fast text analysis requested for {len(text)} characters with context={use_project_context}"
     )
-    return analyze_text_demo(
+    return analyze_text_core(
         text,
         detail_level,
+        use_project_context=use_project_context,
+        project_root=project_root,
+    )
+
+
+@mcp.tool(name="demo_analyze_text")
+def demo_analyze_text(
+    text: str,
+    detail_level: str = "standard",
+    use_project_context: bool = True,
+    project_root: str = ".",
+) -> Dict[str, Any]:
+    """Demo-friendly wrapper that mirrors the legacy response contract."""
+
+    logger.info(
+        "Demo text analysis requested for %d characters (context=%s)",
+        len(text),
+        use_project_context,
+    )
+    return legacy_demo_analyze_text(
+        text=text,
+        detail_level=detail_level,
         use_project_context=use_project_context,
         project_root=project_root,
     )
