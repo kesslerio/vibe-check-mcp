@@ -25,23 +25,124 @@ from vibe_check.tools.integration_pattern_analysis import (
 
 @pytest.fixture
 def mock_anti_patterns_file():
-    """Mock the anti_patterns.json file loading"""
-    sample_data = {
+    """Mock the anti_patterns and case study file loading."""
+
+    anti_patterns_data = {
         "schema_version": "1.1.0",
+        "data_version": "1.0.0",
+        "infrastructure_without_implementation": {
+            "id": "infrastructure_without_implementation",
+            "version": "1.0.0",
+            "name": "Infrastructure Without Implementation",
+            "description": "Building custom solutions instead of using official SDKs",
+            "severity": "high",
+            "category": "architectural",
+            "detection_threshold": 0.5,
+            "indicators": [
+                {
+                    "regex": r"\\bcustom\\s+(?:http|client|server|api|wrapper)",
+                    "description": "mentions building custom infrastructure",
+                    "weight": 0.4,
+                    "text": "custom infrastructure",
+                },
+                {
+                    "regex": r"\\bmanual\\s+(?:jwt|authentication)",
+                    "description": "manual authentication handling",
+                    "weight": 0.3,
+                    "text": "manual auth handling",
+                },
+            ],
+            "negative_indicators": [],
+        },
         "integration_over_engineering": {
+            "id": "integration_over_engineering",
+            "version": "1.0.0",
+            "name": "Integration Over-Engineering",
+            "description": "Building custom integration solutions when official alternatives exist",
+            "severity": "high",
+            "category": "integration",
+            "detection_threshold": 0.5,
             "technologies": {
                 "cognee": {
                     "official_solution": "cognee/cognee:main Docker container",
-                    "red_flags": ["custom REST server", "manual JWT"]
+                    "red_flags": [
+                        "custom REST server",
+                        "manual JWT",
+                        "environment forcing",
+                    ],
                 },
                 "supabase": {
                     "official_solution": "Supabase client libraries",
-                    "red_flags": ["custom auth server", "manual JWT handling"]
-                }
-            }
-        }
+                    "red_flags": [
+                        "custom auth server",
+                        "manual JWT handling",
+                        "custom HTTP client",
+                    ],
+                },
+                "openai": {
+                    "official_solution": "OpenAI Python SDK",
+                    "red_flags": ["custom HTTP client"],
+                },
+                "claude": {
+                    "official_solution": "Anthropic Python SDK",
+                    "red_flags": ["custom HTTP client"],
+                },
+            },
+            "indicators": [
+                {
+                    "regex": r"\\b(?:cognee|supabase|openai|claude)\\b.*\\bcustom",
+                    "description": "custom development for known technology",
+                    "weight": 0.5,
+                    "text": "custom integration for known tech",
+                },
+                {
+                    "regex": r"\\bmanual\\s+(?:jwt|authentication|storage)",
+                    "description": "manual implementation for managed services",
+                    "weight": 0.4,
+                    "text": "manual implementation",
+                },
+            ],
+            "negative_indicators": [],
+        },
     }
-    with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+
+    case_study_data = {
+        "case_study": {
+            "id": "cognee_integration_failure",
+            "title": "Cognee Integration: Learning from Unnecessary Complexity",
+            "pattern_type": "infrastructure_without_implementation",
+            "timeline": "Several days",
+            "outcome": "Eventually found simpler approach",
+            "impact": {
+                "technical_debt": "Custom server maintenance",
+                "opportunity_cost": "Multiple weeks of development",
+                "functionality": "Delayed production deployment",
+            },
+            "root_cause": "Built custom infrastructure instead of using official SDK",
+            "lesson": "Always validate the official approach before custom work",
+            "prevention_checklist": [
+                "Research official SDK documentation first",
+                "Test standard integrations before custom solutions",
+                "Document justification for any custom work",
+            ],
+        },
+        "example_detection_text": "Building custom HTTP server for Cognee integration",
+        "expected_detection": {
+            "should_detect": True,
+            "minimum_confidence": 0.7,
+            "expected_evidence": ["custom infrastructure"],
+        },
+    }
+
+    def mock_open_side_effect(file_path, *args, **kwargs):
+        path_str = str(file_path)
+        if "anti_patterns.json" in path_str:
+            return mock_open(read_data=json.dumps(anti_patterns_data))(*args, **kwargs)
+        if "cognee_case_study.json" in path_str:
+            return mock_open(read_data=json.dumps(case_study_data))(*args, **kwargs)
+        raise FileNotFoundError(path_str)
+
+    with patch("builtins.open", side_effect=mock_open_side_effect):
         with patch("pathlib.Path.exists", return_value=True):
             yield
 
