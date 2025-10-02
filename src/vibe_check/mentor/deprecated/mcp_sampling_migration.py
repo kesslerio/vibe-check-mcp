@@ -171,7 +171,7 @@ Avoid:
             # Validate workspace data if provided
             if workspace_data:
                 validated_workspace = WorkspaceDataInput(**workspace_data)
-                workspace_data = validated_workspace.dict()
+                workspace_data = validated_workspace.model_dump()
 
             # Select template
             template_key = self._map_intent_to_template(intent)
@@ -294,18 +294,20 @@ class SecureMCPSamplingClient(OriginalMCPSamplingClient):
             if workspace_data:
                 # Validate workspace data
                 validated_workspace = WorkspaceDataInput(**workspace_data)
-                workspace_data = validated_workspace.dict()
+                workspace_data = validated_workspace.model_dump()
 
                 # Check file access if file paths provided
                 if "files" in workspace_data:
+                    filtered_files = []
                     for file_path in workspace_data["files"]:
                         allowed, reason = self.file_controller.is_allowed(file_path)
-                        if not allowed:
+                        if allowed:
+                            filtered_files.append(file_path)
+                        else:
                             logger.warning(
                                 f"File access denied: {file_path} - {reason}"
                             )
-                            # Remove restricted file from context
-                            workspace_data["files"].remove(file_path)
+                    workspace_data["files"] = filtered_files
 
                 # Scan and redact secrets from code
                 if "code" in workspace_data:
