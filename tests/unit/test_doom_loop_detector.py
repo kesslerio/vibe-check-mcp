@@ -243,7 +243,8 @@ class TestDoomLoopAnalysisTools:
     def test_session_health_analysis_no_session(self):
         """Test session health analysis with no active session"""
         # Reset any existing session
-        reset_session_tracking()
+        from vibe_check.core import doom_loop_detector
+        doom_loop_detector._doom_loop_detector = None
 
         result = get_session_health_analysis()
 
@@ -256,11 +257,10 @@ class TestDoomLoopAnalysisTools:
 
         result = get_session_health_analysis()
 
-        if result["status"] != "no_active_session":
-            assert "health_score" in result
-            assert "duration_minutes" in result
-            assert result["health_score"] >= 0
-            assert result["health_score"] <= 100
+        assert "health_score" in result
+        assert "duration_minutes" in result
+        assert result["health_score"] >= 0
+        assert result["health_score"] <= 100
 
     def test_force_intervention(self):
         """Test emergency intervention forcing"""
@@ -285,6 +285,10 @@ class TestDoomLoopAnalysisTools:
 
 class TestRealWorldScenarios:
     """Test with real-world doom loop scenarios"""
+
+    def setup_method(self):
+        """Reset session tracking before each test to prevent state contamination"""
+        reset_session_tracking()
 
     def test_architecture_analysis_paralysis(self):
         """Test detection of architecture analysis paralysis"""
@@ -326,14 +330,15 @@ class TestRealWorldScenarios:
     def test_database_decision_paralysis(self):
         """Test detection of database decision paralysis"""
         db_paralysis = """
-        We're stuck on choosing between SQL and NoSQL databases.
+        We need to decide between SQL and NoSQL databases.
         PostgreSQL offers ACID compliance and complex queries.
         MongoDB provides flexibility and horizontal scaling.
         But what if we need both relational and document features?
         Should we consider a polyglot persistence approach?
         What about performance implications and query complexity?
-        We need to handle future scale requirements and data relationships.
+        We need to evaluate future scale requirements and data relationships.
         The choice affects our entire data architecture and team skills.
+        Actually, wait, what about NewSQL databases like CockroachDB?
         """
 
         result = analyze_text_for_doom_loops(db_paralysis)
