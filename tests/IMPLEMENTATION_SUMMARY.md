@@ -10,7 +10,7 @@ This document provides an honest assessment of the comprehensive testing suite f
 - ✅ Test infrastructure completely built and functional
 - ✅ 855 test methods can be collected without import errors (major improvement from 459)
 - ✅ All 7 testing categories properly structured
-- ✅ pytest.ini, conftest.py, and requirements-test.txt working
+- ✅ pytest.ini, conftest.py, and requirements.txt working
 - ✅ Test runner and documentation complete
 
 **What's In Progress:**
@@ -40,7 +40,7 @@ The core accomplishment is transforming a broken test infrastructure (459 tests 
   - Fixed utils import paths in legacy modules
   - Disabled tests for non-existent functions (register_external_claude_tools)
 - **Test Configuration**: Comprehensive pytest.ini and conftest.py created
-- **Dependency Management**: requirements-test.txt with all testing dependencies
+- **Dependency Management**: requirements.txt with all runtime and testing dependencies
 - **Path Management**: Proper src/ path handling across all test modules
 - **Collection Success**: Improved from 459 tests (with 12 import errors) to 855 tests (infrastructure allows proper collection)
 

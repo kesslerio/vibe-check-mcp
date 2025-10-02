@@ -73,10 +73,7 @@ Complete workflow validation:
 
 ### Prerequisites
 ```bash
-# Install test dependencies
-pip install -r requirements-test.txt
-
-# Install development dependencies  
+# Install all dependencies (runtime + testing)
 pip install -r requirements.txt
 ```
 

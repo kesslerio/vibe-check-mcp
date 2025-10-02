@@ -1,4 +1,9 @@
 # Vibe Check MCP Dependencies
+# Install with: pip install -r requirements.txt
+
+# ==============================================================================
+# CORE RUNTIME DEPENDENCIES
+# ==============================================================================
 
 # Core MCP Integration
 fastmcp==2.8.1
@@ -9,7 +14,7 @@ aiohttp>=3.10.0
 # Anthropic SDK for direct API calls
 # anthropic>=0.40.0 (No specific version found, keeping for reference)
 
-# Pattern Detection & Analysis  
+# Pattern Detection & Analysis
 regex>=2023.12.25
 jsonschema>=4.20.0
 PyYAML>=6.0.1
@@ -19,7 +24,7 @@ pydantic>=2.5.0
 Jinja2>=3.1.3
 python-magic>=0.4.27
 
-# GitHub Integration (for future tools)
+# GitHub Integration
 PyGithub==2.6.1
 requests==2.32.4
 
@@ -31,12 +36,49 @@ typer==0.16.0
 scikit-learn>=1.3.0
 numpy>=1.24.0
 
-# Development & Testing
-# The following are for development and are not included in the main list.
-# You can install them with `pip install -r requirements-dev.txt` if needed.
-# pytest>=7.4.3
-# pytest-cov>=4.1.0
-# pytest-asyncio>=0.21.1
-# black>=23.11.0
-# isort>=5.12.0
-# mypy>=1.7.1
+# ==============================================================================
+# TESTING DEPENDENCIES
+# ==============================================================================
+
+# Core testing framework
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0
+pytest-mock>=3.14.0
+pytest-xdist>=3.6.0  # Parallel test execution
+pytest-timeout>=2.4.0  # Test timeout handling
+pytest-benchmark>=5.0.0  # Performance benchmarking
+
+# Test utilities and mocking
+mock>=5.1.0
+responses>=0.25.0  # HTTP request mocking
+httpx>=0.27.0  # Async HTTP client for testing
+factory-boy>=3.3.1  # Test data generation
+faker>=30.8.0  # Fake data generation
+
+# Security testing
+bandit>=2.0.0  # Security linting
+safety>=3.2.7  # Dependency vulnerability scanning
+semgrep>=2.1.0  # Static analysis security testing
+
+# Code quality and formatting
+black>=24.0.0
+isort>=5.13.0
+flake8>=7.1.0
+mypy>=1.13.0
+pre-commit>=4.0.0
+
+# Coverage and reporting
+coverage[toml]>=7.6.0
+pytest-html>=4.1.0  # HTML test reports
+pytest-json-report>=1.5.0  # JSON test reports
+
+# Performance and monitoring
+memory-profiler>=0.61.0
+psutil>=6.0.0  # System resource monitoring
+line-profiler>=4.1.3
+
+# Development utilities
+ipdb>=0.14.0  # Enhanced debugger
+pytest-clarity>=1.0.1  # Clearer test output
+pytest-sugar>=1.0.0  # Better test progress
