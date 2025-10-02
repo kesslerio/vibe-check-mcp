@@ -317,11 +317,18 @@ class DoomLoopDetector:
     def get_session_health_report(self) -> Dict[str, Any]:
         """Get a comprehensive health report for the current session"""
         if not self.current_session:
-            return {"status": "no_active_session"}
+            return {
+                "status": "no_active_session",
+                "doom_loop_detected": False,
+                "health_score": 100,
+                "recommendations": None,
+            }
 
         loop_pattern = self.analyze_current_session()
+        status = "doom_loop_detected" if loop_pattern else "healthy_session"
 
         return {
+            "status": status,
             "session_id": self.current_session.session_id,
             "duration_minutes": self.current_session.session_duration_minutes,
             "total_mcp_calls": len(self.current_session.mcp_calls),

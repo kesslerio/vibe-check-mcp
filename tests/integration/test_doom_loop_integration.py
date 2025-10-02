@@ -96,6 +96,7 @@ class TestDoomLoopMCPIntegration:
 class TestLLMToolIntegration:
     """Test integration with LLM analysis tools"""
 
+    @pytest.mark.asyncio
     @patch("vibe_check.tools.analyze_llm.specialized_analyzers.analyze_text_llm")
     async def test_llm_tool_doom_loop_enhancement(self, mock_analyze_text):
         """Test that LLM tools are enhanced with doom loop detection"""
