@@ -286,7 +286,7 @@ class TestAsyncAnalysisWorker:
 
         # Mock GitHub operations and analysis
         with patch(
-            "src.vibe_check.tools.async_analysis.worker.get_default_github_operations"
+            "vibe_check.tools.shared.github_abstraction.get_default_github_operations"
         ) as mock_github:
             mock_github_ops = Mock()
             mock_github_ops.get_pull_request_files.return_value = Mock(
@@ -296,7 +296,7 @@ class TestAsyncAnalysisWorker:
 
             # Mock chunked analysis
             with patch(
-                "src.vibe_check.tools.async_analysis.worker.ChunkedAnalysisCoordinator"
+                "vibe_check.tools.pr_review.chunked_analyzer.ChunkedAnalyzer"
             ) as mock_coordinator:
                 mock_result = Mock()
                 mock_result.overall_assessment = "Good code"
@@ -328,7 +328,7 @@ class TestAsyncAnalysisWorker:
 
         # Mock GitHub operations to fail
         with patch(
-            "src.vibe_check.tools.async_analysis.worker.get_default_github_operations"
+            "vibe_check.tools.shared.github_abstraction.get_default_github_operations"
         ) as mock_github:
             mock_github_ops = Mock()
             mock_github_ops.get_pull_request_files.return_value = Mock(
@@ -495,14 +495,14 @@ class TestAsyncIntegration:
 
         # Mock the queue operations
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue_instance.queue_analysis.return_value = "job-123"
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_tracker.get_comprehensive_status.return_value = {
                     "job_id": "job-123",
@@ -537,13 +537,13 @@ class TestAsyncIntegration:
         """Test checking analysis status."""
         # Mock the queue and status tracker
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_status = {
                     "job_id": "job-123",
@@ -561,13 +561,13 @@ class TestAsyncIntegration:
     async def test_check_status_not_found(self):
         """Test checking status for non-existent job."""
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_tracker.get_comprehensive_status.return_value = None
 

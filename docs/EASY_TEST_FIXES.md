@@ -5,7 +5,7 @@
 
 ---
 
-## Category 1: Business Context Extractor (4 tests - EASIEST)
+## Category 1: Business Context Extractor (4 tests - EASIEST) - DONE
 **Difficulty**: ⭐ Very Easy
 **Time**: 15-30 min total
 **Location**: `tests/unit/test_business_context_extractor.py`
@@ -19,21 +19,24 @@
 
 ---
 
-## Category 2: Integration Decision Check (1 test - EASIEST)
+## Category 2: Integration Decision Check (1 test - EASIEST) - DONE
 **Difficulty**: ⭐ Very Easy
 **Time**: 5 min
 **Location**: `tests/unit/test_integration_decision_check.py`
 
 5. `test_check_unknown_technology` - Update expected response for unknown tech lookup
+   - Note: Also fixed a related failing test `test_get_technology_info` in the same file.
 
 **Fix Pattern**: Simple assertion update for unknown technology handling.
 
 ---
 
-## Category 3: External Claude CLI Mocking (8 tests - EASY)
+## Category 3: External Claude CLI Mocking (8 tests - EASY) - IN PROGRESS
 **Difficulty**: ⭐⭐ Easy
 **Time**: 1-2 hours total
 **Location**: `tests/unit/test_external_claude_cli.py`
+
+**Note**: This category has more than 8 failures due to a major refactoring of the `ExternalClaudeCli` class into `ClaudeCliExecutor`. The work is in progress.
 
 6. `test_find_claude_cli_success` - Update mock path
 7. `test_find_claude_cli_not_found` - Update mock path

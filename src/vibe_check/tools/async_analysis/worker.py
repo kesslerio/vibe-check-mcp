@@ -237,6 +237,11 @@ class AsyncAnalysisWorker:
 
         # Update progress based on chunked analysis completion
         if chunked_result.total_chunks > 0:
+            # Progress range from analysis_in_progress (30) to merging_results (90)
+            base_progress = self.config.progress_checkpoints["analysis_in_progress"]
+            total_progress_range = (
+                self.config.progress_checkpoints["merging_results"] - base_progress
+            )
             chunk_progress = int(
                 (chunked_result.successful_chunks / chunked_result.total_chunks)
                 * total_progress_range
