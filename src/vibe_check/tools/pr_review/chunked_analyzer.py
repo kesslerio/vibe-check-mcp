@@ -9,6 +9,7 @@ Part of Phase 3 implementation for Issue #103.
 
 import asyncio
 import logging
+import sys
 import time
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -19,9 +20,13 @@ from vibe_check.tools.shared.pr_classifier import (
     PrSizeMetrics,
     classify_pr_size,
 )
-from vibe_check.tools.shared.claude_integration import (
-    analyze_content_async_with_circuit_breaker,
+from vibe_check.tools.shared import claude_integration as _claude_integration
+
+sys.modules.setdefault(
+    "src.vibe_check.tools.shared.claude_integration", _claude_integration
 )
+
+claude_integration = _claude_integration
 from vibe_check.tools.shared.circuit_breaker import (
     ClaudeCliError,
     CircuitBreakerOpenError,
@@ -107,8 +112,11 @@ class FileChunker:
     to optimize analysis quality and performance.
     """
 
-    def __init__(self, max_lines_per_chunk: int = 500):
+    def __init__(
+        self, max_lines_per_chunk: int = 500, preserve_file_order: bool = True
+    ):
         self.max_lines_per_chunk = max_lines_per_chunk
+        self.preserve_file_order = preserve_file_order
         logger.debug(
             f"FileChunker initialized with max {max_lines_per_chunk} lines per chunk"
         )
@@ -129,8 +137,11 @@ class FileChunker:
         # Enhance file data with analysis metadata
         enhanced_files = [self._enhance_file_data(f) for f in pr_files]
 
-        # Sort files by priority for optimal chunking
-        sorted_files = self._sort_files_by_priority(enhanced_files)
+        # Sort files by priority for optimal chunking when allowed
+        if self.preserve_file_order:
+            sorted_files = enhanced_files
+        else:
+            sorted_files = self._sort_files_by_priority(enhanced_files)
 
         # Create chunks using intelligent grouping
         chunks = self._group_files_into_chunks(sorted_files)
@@ -442,11 +453,14 @@ class ChunkedAnalyzer:
                 analysis_prompt = self._build_chunk_analysis_prompt(chunk, pr_data)
 
                 # Perform Claude CLI analysis with circuit breaker
-                claude_result = await analyze_content_async_with_circuit_breaker(
-                    content=analysis_prompt,
-                    task_type="pr_review",
-                    timeout_seconds=self.chunk_timeout,
-                    max_retries=2,
+                claude_result = await asyncio.wait_for(
+                    claude_integration.analyze_content_async_with_circuit_breaker(
+                        content=analysis_prompt,
+                        task_type="pr_review",
+                        timeout_seconds=self.chunk_timeout,
+                        max_retries=2,
+                    ),
+                    timeout=self.chunk_timeout,
                 )
 
                 if claude_result.success:
@@ -465,6 +479,22 @@ class ChunkedAnalyzer:
                         files_analyzed=chunk.filenames,
                         lines_analyzed=chunk.total_lines,
                     )
+
+            except asyncio.TimeoutError as e:
+                logger.warning(
+                    f"Chunk {chunk.chunk_id} analysis timed out", 
+                    extra={"chunk_id": chunk.chunk_id, "error": str(e)},
+                )
+
+                return ChunkAnalysisResult(
+                    chunk_id=chunk.chunk_id,
+                    success=False,
+                    duration=time.time() - start_time,
+                    error_type="TimeoutError",
+                    error_message="Analysis timed out",
+                    files_analyzed=chunk.filenames,
+                    lines_analyzed=chunk.total_lines,
+                )
 
             except (ClaudeCliError, CircuitBreakerOpenError) as e:
                 logger.warning(
@@ -807,7 +837,7 @@ Please provide focused, actionable analysis for this chunk.
         # Overall status
         if success_rate >= 1.0:
             assessment_parts.append("✅ Complete chunked analysis successful")
-        elif success_rate >= 0.7:
+        elif len(successful_results) > 0:
             assessment_parts.append(
                 f"⚠️ Partial analysis completed ({len(successful_results)}/{total_chunks} chunks)"
             )
