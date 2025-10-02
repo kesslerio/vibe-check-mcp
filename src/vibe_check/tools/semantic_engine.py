@@ -17,9 +17,12 @@ import logging
 from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 from pathlib import Path
+
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+from ..data import RESPONSE_BANK_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +383,7 @@ class SemanticResponseMatcher:
 
     def _get_default_response_path(self) -> Path:
         """Get default path for response bank"""
-        return Path(__file__).parent.parent / "data" / "response_bank.json"
+        return RESPONSE_BANK_PATH
 
     def _load_response_bank(self) -> Dict[str, List[Dict[str, Any]]]:
         """Load response bank from JSON file"""
