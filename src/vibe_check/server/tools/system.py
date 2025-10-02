@@ -24,46 +24,16 @@ def server_status() -> Dict[str, Any]:
     # Check if dev mode is enabled
     dev_mode_enabled = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
 
-    # Core tools always available
+    # Core tools always available (minimal demo set)
     core_tools = [
-        "analyze_text_demo - Demo anti-pattern analysis",
-        "analyze_github_issue - GitHub issue analysis (Issue #22 ✅ COMPLETE)",
-        "review_pull_request - Comprehensive PR review (Issue #35 ✅ COMPLETE)",
-        "claude_cli_status - Essential: Check Claude CLI availability and version",
-        "claude_cli_diagnostics - Essential: Diagnose Claude CLI timeout and recursion issues",
-        "validate_mcp_configuration - Comprehensive Claude CLI and MCP configuration validation (Issue #98 ✅ COMPLETE)",
-        "check_claude_cli_integration - Quick Claude CLI integration health check (Issue #98 ✅ COMPLETE)",
-        "analyze_text_llm - Claude CLI content analysis with LLM reasoning",
-        "analyze_pr_llm - Claude CLI PR review with comprehensive analysis",
-        "analyze_code_llm - Claude CLI code analysis for anti-patterns",
-        "analyze_issue_llm - Claude CLI issue analysis with specialized prompts",
-        "analyze_github_issue_llm - GitHub issue vibe check with Claude CLI reasoning",
-        "analyze_github_pr_llm - GitHub PR vibe check with comprehensive Claude CLI analysis",
-        "analyze_llm_status - Status check for Claude CLI integration",
-        "check_integration_alternatives - Official alternative check for integration decisions (Issue #113 ✅ COMPLETE)",
-        "analyze_integration_decision_text - Text analysis for integration anti-patterns (Issue #113 ✅ COMPLETE)",
-        "integration_decision_framework - Structured decision framework with Clear Thought integration (Issue #113 ✅ COMPLETE)",
-        "integration_research_with_websearch - Enhanced integration research with real-time web search (Issue #113 ✅ COMPLETE)",
-        "analyze_integration_patterns - Fast integration pattern detection for vibe coding safety net (Issue #112 ✅ COMPLETE)",
-        "quick_tech_scan - Ultra-fast technology scan for immediate feedback (Issue #112 ✅ COMPLETE)",
-        "analyze_integration_effort - Integration effort-complexity analysis (Issue #112 ✅ COMPLETE)",
-        "analyze_doom_loops - AI doom loop and analysis paralysis detection (Issue #116 ⚡ NEW)",
-        "session_health_check - MCP session health and productivity analysis (Issue #116 ⚡ NEW)",
-        "productivity_intervention - Emergency productivity intervention and loop breaking (Issue #116 ⚡ NEW)",
-        "reset_session_tracking - Reset session tracking for fresh start (Issue #116 ⚡ NEW)",
-        "vibe_check_mentor - Senior engineer collaborative reasoning with multi-persona feedback (Issue #126 🔥 LATEST)",
-        "detect_project_libraries - Detect libraries used in project with performance optimization (Issue #168 🔥 NEW)",
-        "load_project_context - Load complete project context for analysis tools (Issue #168 🔥 NEW)",
-        "create_vibe_check_directory_structure - Create .vibe-check/ directory structure with default configuration (Issue #168 🔥 NEW)",
+        "demo_analyze_text - Demo anti-pattern analysis",
         "server_status - Server status and capabilities",
     ]
 
     # Development tools (environment-based)
     dev_tools = [
-        "test_claude_cli_integration - Dev: Test Claude CLI integration via MCP",
-        "test_claude_cli_with_file_input - Dev: Test Claude CLI with file input",
-        "test_claude_cli_comprehensive - Dev: Comprehensive test suite with multiple scenarios",
-        "test_claude_cli_mcp_permissions - Dev: Test Claude CLI with MCP permissions bypass",
+        "demo_large_prompt_handling - Dev: Large prompt handling showcase",
+        "reset_session_tracking - Dev: Reset mentor session tracking",
     ]
 
     # Build available tools list
@@ -107,6 +77,7 @@ def server_status() -> Dict[str, Any]:
             "analyze_code - Code content analysis (Issue #23)",
             "validate_integration - Integration approach validation (Issue #24)",
             "explain_pattern - Pattern education and guidance (Issue #25)",
+            "project_context_sync - Project context synchronization utilities",
         ],
         "anti_pattern_prevention": "✅ Successfully applied in our own development",
     }
