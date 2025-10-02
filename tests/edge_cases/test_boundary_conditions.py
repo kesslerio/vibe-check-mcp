@@ -388,6 +388,10 @@ class TestBoundaryConditions:
         temp_files = []
         weak_refs = []
 
+        class MyObject:
+            def __init__(self, name):
+                self.name = name
+
         for i in range(10):
             # Create temporary file
             temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -396,7 +400,7 @@ class TestBoundaryConditions:
             temp_files.append(temp_file.name)
 
             # Create weak reference to track cleanup
-            temp_obj = [f"temp_object_{i}"]
+            temp_obj = MyObject(f"temp_object_{i}")
             weak_ref = weakref.ref(temp_obj)
             weak_refs.append(weak_ref)
 

@@ -119,7 +119,7 @@ class TestBusinessContextExtractor:
     def test_ambiguous_context_generates_questions(self):
         """Test that ambiguous contexts generate clarifying questions"""
         # Ambiguous "implement" without clear completion/planning indicators
-        query = "I need to implement Stripe integration for our checkout"
+        query = "I implement Stripe integration for our checkout"
 
         result = self.extractor.extract_context(query)
 

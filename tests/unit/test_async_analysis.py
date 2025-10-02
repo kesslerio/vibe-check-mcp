@@ -132,6 +132,7 @@ class TestAsyncAnalysisQueue:
         )
         self.queue = AsyncAnalysisQueue(self.config)
 
+    @pytest.mark.asyncio
     async def test_queue_initialization(self):
         """Test queue initializes correctly."""
         await self.queue.start()
