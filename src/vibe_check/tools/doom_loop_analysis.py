@@ -281,20 +281,20 @@ def reset_session_tracking() -> Dict[str, Any]:
         ),
     }
 
-    # Start new session
-    new_session_id = detector.start_session()
+    # Clear current session state; next tool call will auto-start a new session
+    detector.current_session = None
 
     _session_tracker = {
-        "active": True,
-        "last_call_time": time.time(),
-        "session_started": time.time(),
+        "active": False,
+        "last_call_time": None,
+        "session_started": None,
     }
 
     return {
         "status": "session_reset_complete",
-        "new_session_id": new_session_id,
+        "new_session_id": None,
         "previous_session": old_session_info,
-        "message": "✅ Fresh start! New session tracking active.",
+        "message": "✅ Fresh start! Session tracking will resume on your next tool call.",
     }
 
 
