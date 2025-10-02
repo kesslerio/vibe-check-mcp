@@ -21,24 +21,23 @@ from pathlib import Path
 import pytest
 
 # Import the class under test
-from vibe_check.tools.analyze_llm_backup import ExternalClaudeCli, ClaudeCliResult
+from vibe_check.tools.shared.claude_integration import ClaudeCliExecutor, ClaudeCliResult
 
 
-class TestExternalClaudeCli:
+class TestClaudeCliExecutor:
     """Test suite for ExternalClaudeCli class."""
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.cli = ExternalClaudeCli(timeout_seconds=30)
+        self.cli = ClaudeCliExecutor(timeout_seconds=30)
 
     def test_init_default_timeout(self):
-        """Test initialization with default timeout."""
-        cli = ExternalClaudeCli()
+        cli = ClaudeCliExecutor()
         assert cli.timeout_seconds == 60
 
     def test_init_custom_timeout(self):
         """Test initialization with custom timeout."""
-        cli = ExternalClaudeCli(timeout_seconds=120)
+        cli = ClaudeCliExecutor(timeout_seconds=120)
         assert cli.timeout_seconds == 120
 
     @patch("subprocess.run")

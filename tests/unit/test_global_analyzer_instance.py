@@ -16,6 +16,15 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.analyze_issue import get_github_analyzer
+import vibe_check.tools.analyze_issue as analyze_issue_module
+
+
+@pytest.fixture(autouse=True)
+def reset_singleton():
+    """Reset singleton cache before each test"""
+    analyze_issue_module._enhanced_github_analyzer = None
+    yield
+    analyze_issue_module._enhanced_github_analyzer = None
 
 
 class TestGlobalAnalyzerInstance:
@@ -24,7 +33,7 @@ class TestGlobalAnalyzerInstance:
     def test_get_github_analyzer_singleton(self):
         """Test that get_github_analyzer returns singleton instance"""
         with patch(
-            "vibe_check.tools.analyze_issue.GitHubIssueAnalyzer"
+            "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer"
         ) as mock_analyzer_class:
             mock_instance = MagicMock()
             mock_analyzer_class.return_value = mock_instance
@@ -42,7 +51,7 @@ class TestGlobalAnalyzerInstance:
     def test_get_github_analyzer_with_token(self):
         """Test get_github_analyzer with specific token"""
         with patch(
-            "vibe_check.tools.analyze_issue.GitHubIssueAnalyzer"
+            "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer"
         ) as mock_analyzer_class:
             mock_instance = MagicMock()
             mock_analyzer_class.return_value = mock_instance
@@ -57,7 +66,7 @@ class TestGlobalAnalyzerInstance:
     def test_get_github_analyzer_token_override(self):
         """Test that providing token creates new instance"""
         with patch(
-            "vibe_check.tools.analyze_issue.GitHubIssueAnalyzer"
+            "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer"
         ) as mock_analyzer_class:
             # Create different mock instances
             mock_instance1 = MagicMock()

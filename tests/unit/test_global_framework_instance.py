@@ -16,6 +16,15 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.legacy.vibe_check_framework import get_vibe_check_framework
+import vibe_check.tools.legacy.vibe_check_framework as framework_module
+
+
+@pytest.fixture(autouse=True)
+def reset_singleton():
+    """Reset singleton cache before each test"""
+    framework_module._vibe_check_framework = None
+    yield
+    framework_module._vibe_check_framework = None
 
 
 class TestGlobalVibeCheckFramework:
@@ -24,7 +33,7 @@ class TestGlobalVibeCheckFramework:
     def test_get_vibe_check_framework_singleton(self):
         """Test that get_vibe_check_framework returns singleton instance"""
         with patch(
-            "vibe_check.tools.vibe_check_framework.VibeCheckFramework"
+            "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
             mock_instance = MagicMock()
             mock_framework_class.return_value = mock_instance
@@ -42,7 +51,7 @@ class TestGlobalVibeCheckFramework:
     def test_get_vibe_check_framework_with_token(self):
         """Test get_vibe_check_framework with specific token"""
         with patch(
-            "vibe_check.tools.vibe_check_framework.VibeCheckFramework"
+            "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
             mock_instance = MagicMock()
             mock_framework_class.return_value = mock_instance
@@ -57,7 +66,7 @@ class TestGlobalVibeCheckFramework:
     def test_get_vibe_check_framework_token_override(self):
         """Test that providing token creates new instance"""
         with patch(
-            "vibe_check.tools.vibe_check_framework.VibeCheckFramework"
+            "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
             # Create different mock instances
             mock_instance1 = MagicMock()
@@ -80,7 +89,7 @@ class TestGlobalVibeCheckFramework:
     def test_get_vibe_check_framework_caching_behavior(self):
         """Test caching behavior of global framework"""
         with patch(
-            "vibe_check.tools.vibe_check_framework.VibeCheckFramework"
+            "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
             mock_instance = MagicMock()
             mock_framework_class.return_value = mock_instance
@@ -98,7 +107,7 @@ class TestGlobalVibeCheckFramework:
     def test_get_vibe_check_framework_configuration_isolation(self):
         """Test that different configurations create separate instances"""
         with patch(
-            "vibe_check.tools.vibe_check_framework.VibeCheckFramework"
+            "vibe_check.tools.legacy.vibe_check_framework.VibeCheckFramework"
         ) as mock_framework_class:
             # Create different mock instances
             instances = [MagicMock() for _ in range(3)]
