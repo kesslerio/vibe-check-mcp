@@ -256,16 +256,38 @@ class IntegrationKnowledgeBase:
         self, custom_features: List[str], technology_info: Dict[str, Any]
     ) -> List[str]:
         """Detect red flags indicating unnecessary custom development."""
-        detected_flags = []
+        detected_flags: List[str] = []
+        seen_flags = set()
+        flagged_features = set()
         red_flags = technology_info.get("red_flags", [])
 
         for feature in custom_features:
             feature_lower = feature.lower()
             for flag in red_flags:
                 if flag.lower() in feature_lower:
-                    detected_flags.append(
+                    message = (
                         f"Custom {feature} (official alternative available)"
                     )
+                    if message not in seen_flags:
+                        detected_flags.append(message)
+                        seen_flags.add(message)
+                        flagged_features.add(feature_lower)
+
+        custom_indicators = technology_info.get("common_custom_indicators", [])
+
+        for feature in custom_features:
+            feature_lower = feature.lower()
+            if feature_lower in flagged_features:
+                continue
+            for indicator in custom_indicators:
+                indicator_words = indicator.lower().split()
+                if all(word in feature_lower for word in indicator_words):
+                    message = (
+                        f"Custom {feature} (matches indicator '{indicator}' for unnecessary custom work)"
+                    )
+                    if message not in seen_flags:
+                        detected_flags.append(message)
+                        seen_flags.add(message)
 
         return detected_flags
 
@@ -315,6 +337,10 @@ def calculate_warning_level(
     if not technology_info:
         return "caution"  # Unknown technology, proceed carefully
 
+    if technology_info.get("web_search_enhanced"):
+        # Web search fallback provides limited confidence. Treat as caution by default.
+        return "caution"
+
     red_flags = len(
         [
             f
@@ -326,13 +352,24 @@ def calculate_warning_level(
         ]
     )
 
+    indicator_matches = 0
+    for feature in custom_features:
+        feature_lower = feature.lower()
+        for indicator in technology_info.get("common_custom_indicators", []):
+            indicator_words = indicator.lower().split()
+            if all(word in feature_lower for word in indicator_words):
+                indicator_matches += 1
+                break
+
+    total_flags = red_flags + indicator_matches
+
     official_features = len(technology_info.get("features", []))
 
-    if red_flags >= 3:
+    if total_flags >= 3:
         return "critical"
-    elif red_flags >= 2:
+    elif total_flags >= 2:
         return "warning"
-    elif red_flags >= 1 or official_features >= 3:
+    elif total_flags >= 1 or official_features >= 3:
         return "caution"
     else:
         return "none"
@@ -434,13 +471,24 @@ def generate_recommendation(
         ]
     )
 
+    indicator_matches = 0
+    for feature in custom_features:
+        feature_lower = feature.lower()
+        for indicator in technology_info.get("common_custom_indicators", []):
+            indicator_words = indicator.lower().split()
+            if all(word in feature_lower for word in indicator_words):
+                indicator_matches += 1
+                break
+
+    total_flags = red_flags + indicator_matches
+
     official_solutions = technology_info.get(
         "official_container"
     ) or technology_info.get("official_sdks", [])
 
-    if red_flags >= 2 and official_solutions:
+    if total_flags >= 2 and official_solutions:
         return f"🚨 STOP: Official {technology} solution likely covers your needs. Test official approach first before custom development."
-    elif red_flags >= 1 and official_solutions:
+    elif total_flags >= 1 and official_solutions:
         return f"⚠️ CAUTION: Official {technology} solution may cover your needs. Research and test official approach before proceeding with custom development."
     elif official_solutions:
         return f"✅ RESEARCH: Official {technology} solutions available. Compare official vs custom approaches before deciding."
