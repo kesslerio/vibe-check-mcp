@@ -35,7 +35,21 @@ def analyze_text_demo(
     Returns:
         Dictionary containing pattern detection results and educational content with contextual recommendations
     """
+    if not isinstance(text, str):
+        return {
+            "status": "error",
+            "error": "Input text must be a string.",
+            "analysis_results": {},
+        }
+
     try:
+        # Validate detail_level
+        from ..core.educational_content import DetailLevel
+        if isinstance(detail_level, str) and detail_level.upper() in DetailLevel.__members__:
+            detail_enum = DetailLevel[detail_level.upper()]
+        else:
+            detail_enum = DetailLevel.STANDARD
+
         # Load project context if requested and not provided
         if use_project_context and context is None:
             try:
@@ -44,6 +58,12 @@ def analyze_text_demo(
                 logger.info(
                     f"Loaded project context with {len(context.library_docs)} libraries"
                 )
+            except FileNotFoundError:
+                logger.warning(f"Project root not found: {project_root}")
+                context = None
+            except PermissionError:
+                logger.warning(f"Permission denied for project root: {project_root}")
+                context = None
             except Exception as e:
                 logger.warning(f"Failed to load project context: {e}")
                 context = None
@@ -93,11 +113,7 @@ def analyze_text_demo(
         if patterns and patterns[0].detected:
             # Get educational content for the first detected pattern as demo
             first_pattern = patterns[0]
-            from ..core.educational_content import DetailLevel
-
-            detail_enum = getattr(
-                DetailLevel, detail_level.upper(), DetailLevel.STANDARD
-            )
+            
             educational_response = educator.generate_educational_response(
                 pattern_type=first_pattern.pattern_type,
                 confidence=first_pattern.confidence,
@@ -120,6 +136,7 @@ def analyze_text_demo(
             }
 
         return {
+            "status": "success",
             "analysis_results": {
                 "text_length": len(text),
                 "patterns_detected": len([p for p in patterns if p.detected]),
@@ -133,9 +150,16 @@ def analyze_text_demo(
             "accuracy_note": "Using validated detection engine (87.5% accuracy, 0% false positives) with project context",
         }
 
+    except (ValueError, TypeError) as e:
+        logger.error(f"Parameter validation failed: {e}")
+        return {"status": "error", "error": f"Invalid parameter: {e}"}
+    except (MemoryError, RecursionError) as e:
+        logger.error(f"Resource exhaustion error: {e}")
+        return {"status": "error", "error": f"Resource limit exceeded: {e}"}
     except Exception as e:
         logger.error(f"Text analysis failed: {e}")
         return {
+            "status": "error",
             "error": f"Analysis failed: {str(e)}",
             "analysis_results": {
                 "patterns_detected": 0,

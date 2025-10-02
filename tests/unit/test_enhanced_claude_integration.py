@@ -163,7 +163,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         self.assertIsNone(context)
 
     @patch(
-        "src.vibe_check.tools.shared.enhanced_claude_integration.get_context_manager"
+        "vibe_check.tools.contextual_documentation.get_context_manager"
     )
     def test_get_cached_analysis_context(self, mock_get_context_manager):
         """Test cached analysis context loading"""
@@ -191,7 +191,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         mock_manager.get_project_context.assert_called_once()
 
     @patch(
-        "src.vibe_check.tools.shared.enhanced_claude_integration.get_context_manager"
+        "vibe_check.tools.contextual_documentation.get_context_manager"
     )
     def test_load_library_context(self, mock_get_context_manager):
         """Test loading library-specific context"""
@@ -219,7 +219,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         self.assertIn("React is a JavaScript library", library_context)
 
     @patch(
-        "src.vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_claude_args"
+        "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_claude_args"
     )
     def test_get_claude_args_with_context_injection(self, mock_parent_get_claude_args):
         """Test that Claude args are enhanced with context injection"""
@@ -245,7 +245,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         self.assertIn("Team Conventions", enhanced_prompt)
 
     @patch(
-        "src.vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_claude_args"
+        "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_claude_args"
     )
     def test_get_claude_args_without_context(self, mock_parent_get_claude_args):
         """Test that prompts work normally when context is unavailable"""
@@ -265,7 +265,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         self.assertEqual(actual_prompt, original_prompt)
 
     @patch(
-        "src.vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_system_prompt"
+        "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor._get_system_prompt"
     )
     def test_get_system_prompt_with_context_injection(
         self, mock_parent_get_system_prompt
@@ -336,7 +336,7 @@ class TestContextInjectionIntegration(unittest.TestCase):
 
     @patch("subprocess.run")
     @patch(
-        "src.vibe_check.tools.shared.enhanced_claude_integration.get_context_manager"
+        "vibe_check.tools.contextual_documentation.get_context_manager"
     )
     def test_end_to_end_context_injection(
         self, mock_get_context_manager, mock_subprocess

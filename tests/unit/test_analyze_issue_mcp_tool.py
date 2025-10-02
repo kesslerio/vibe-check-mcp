@@ -29,110 +29,145 @@ class TestAnalyzeIssueMCPTool:
     """Test the enhanced analyze_issue MCP tool function"""
 
     @pytest.fixture
-    def mock_vibe_check_result(self):
-        """Mock vibe check result for testing"""
-        return VibeCheckResult(
-            vibe_level=VibeLevel.BAD_VIBES,
-            overall_vibe="🚨 Bad Vibes",
-            friendly_summary="This looks like infrastructure without implementation",
-            coaching_recommendations=[
+    def mock_basic_result(self):
+        """Mock basic analysis result for testing"""
+        return {
+            "status": "basic_analysis_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 42,
+                "title": "Test Issue",
+                "author": "testuser",
+                "created_at": "2024-01-01T00:00:00Z",
+                "repository": "test/repo",
+                "url": "https://github.com/test/repo/issues/42",
+                "labels": [],
+            },
+            "patterns_detected": [
+                {
+                    "pattern_type": "infrastructure_without_implementation",
+                    "confidence": 0.85,
+                    "detected": True,
+                    "evidence": ["custom server", "instead of SDK"],
+                    "threshold": 0.7,
+                    "educational_content": {
+                        "pattern_name": "Infrastructure Without Implementation",
+                        "problem": "Building complex infrastructure before validating basic functionality",
+                        "solution": "Start with simplest working solution using official SDKs",
+                    },
+                }
+            ],
+            "confidence_summary": {
+                "total_patterns_detected": 1,
+                "average_confidence": 0.85,
+                "highest_confidence": 0.85,
+                "patterns_by_confidence": [
+                    {
+                        "pattern": "infrastructure_without_implementation",
+                        "confidence": 0.85,
+                        "severity": "HIGH",
+                    }
+                ],
+            },
+            "recommended_actions": [
+                "CRITICAL: Address Infrastructure Without Implementation pattern (confidence: 85%)",
                 "Start with basic API calls",
                 "Use official SDK instead of custom server",
                 "Prove functionality before building architecture",
             ],
-            technical_analysis={
-                "detected_patterns": [
-                    {
-                        "type": "infrastructure_without_implementation",
-                        "confidence": 0.85,
-                        "detected": True,
-                        "evidence": ["custom server", "instead of SDK"],
-                    }
-                ],
-                "integration_analysis": {
-                    "third_party_services": ["api"],
-                    "infrastructure_keywords": ["server"],
-                    "complexity_indicators": [],
-                },
-                "analysis_metadata": {
-                    "claude_analysis_available": False,
-                    "clear_thought_analysis_available": False,
-                    "detail_level": "standard",
-                },
+            "analysis_metadata": {
+                "core_engine_validation": "87.5% accuracy, 0% false positives",
+                "detail_level": "brief",
+                "patterns_analyzed": ["infrastructure_without_implementation"],
+                "detection_method": "Phase 1 validated algorithms",
+                "external_claude_available": False,
             },
-            claude_reasoning=None,
-            clear_thought_analysis=None,
-        )
+        }
 
-    @patch("vibe_check.tools.analyze_issue.get_vibe_check_framework")
-    def test_analyze_issue_quick_mode(self, mock_get_framework, mock_vibe_check_result):
-        """Test analyze_issue MCP tool in quick mode"""
-        # Setup mock framework
-        mock_framework = MagicMock()
-        mock_framework.check_issue_vibes.return_value = mock_vibe_check_result
-        mock_get_framework.return_value = mock_framework
+    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    def test_analyze_issue_quick_mode(self, mock_get_analyzer, mock_basic_result):
+        """Test analyze_issue MCP tool in basic mode"""
+        # Setup mock analyzer
+        mock_analyzer = MagicMock()
+        mock_analyzer.claude_cli_enabled = False
+        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        mock_get_analyzer.return_value = mock_analyzer
 
         result = analyze_issue(
             issue_number=42,
             repository="test/repo",
-            analysis_mode="quick",
+            analysis_mode="basic",
             detail_level="brief",
             post_comment=False,
         )
 
-        # Verify framework call
-        mock_framework.check_issue_vibes.assert_called_once_with(
+        # Verify analyzer call
+        mock_analyzer.analyze_issue_basic.assert_called_once_with(
             issue_number=42,
             repository="test/repo",
-            mode=VibeCheckMode.QUICK,
-            detail_level=DetailLevel.BRIEF,
-            post_comment=False,
+            detail_level="brief",
         )
 
         # Verify response structure
-        assert result["status"] == "vibe_check_complete"
-        assert "analysis_timestamp" in result
-        assert "vibe_check" in result
-        assert "issue_info" in result
-        assert "technical_analysis" in result
-        assert "enhanced_features" in result
-        assert "analysis_metadata" in result
+        assert "analysis_results" in result
+        analysis_results = result["analysis_results"]
+        assert analysis_results["status"] == "basic_analysis_complete"
+        assert "analysis_timestamp" in analysis_results
+        assert "patterns_detected" in analysis_results
+        assert "issue_info" in analysis_results
+        assert "confidence_summary" in analysis_results
+        assert "recommended_actions" in analysis_results
+        assert "analysis_metadata" in analysis_results
+        assert "enhanced_analysis" in result
 
-        # Verify vibe check content
-        vibe_check = result["vibe_check"]
-        assert vibe_check["overall_vibe"] == "🚨 Bad Vibes"
-        assert vibe_check["vibe_level"] == "bad_vibes"
-        assert "infrastructure without implementation" in vibe_check["friendly_summary"]
-        assert len(vibe_check["coaching_recommendations"]) == 3
+        # Verify pattern detection content
+        patterns = analysis_results["patterns_detected"]
+        assert len(patterns) == 1
+        assert patterns[0]["pattern_type"] == "infrastructure_without_implementation"
+        assert patterns[0]["confidence"] == 0.85
 
         # Verify issue info
-        issue_info = result["issue_info"]
+        issue_info = analysis_results["issue_info"]
         assert issue_info["number"] == 42
         assert issue_info["repository"] == "test/repo"
-        assert issue_info["analysis_mode"] == "quick"
-        assert issue_info["detail_level"] == "brief"
-        assert issue_info["comment_posted"] == False
+        assert issue_info["author"] == "testuser"
 
-        # Verify enhanced features
-        features = result["enhanced_features"]
-        assert features["claude_reasoning"] == False
-        assert features["clear_thought_analysis"] == False
-        assert features["comprehensive_validation"] == False
-        assert features["educational_coaching"] == True
-        assert features["friendly_language"] == True
+        # Verify enhanced analysis metadata
+        enhanced = result["enhanced_analysis"]
+        assert enhanced["analysis_mode"] == "basic"
+        assert enhanced["external_claude_available"] is False
+        assert enhanced["claude_cli_enabled"] is False
 
-    @patch("vibe_check.tools.analyze_issue.get_vibe_check_framework")
-    def test_analyze_issue_comprehensive_mode(
-        self, mock_get_framework, mock_vibe_check_result
-    ):
+    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    def test_analyze_issue_comprehensive_mode(self, mock_get_analyzer):
         """Test analyze_issue MCP tool in comprehensive mode"""
-        # Setup mock framework with enhanced features
-        mock_vibe_check_result.claude_reasoning = "Claude analysis available"
-        mock_vibe_check_result.clear_thought_analysis = {"type": "systematic_analysis"}
-
-        mock_framework = MagicMock()
-        mock_framework.check_issue_vibes.return_value = mock_vibe_check_result
-        mock_get_framework.return_value = mock_framework
+        # Setup mock analyzer with comprehensive result
+        mock_analyzer = MagicMock()
+        mock_analyzer.claude_cli_enabled = True
+        mock_analyzer.analyze_issue_comprehensive.return_value = {
+            "status": "comprehensive_analysis_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 123,
+                "title": "Test Issue",
+                "author": "testuser",
+                "created_at": "2024-01-01T00:00:00Z",
+                "repository": "owner/repo",
+                "url": "https://github.com/owner/repo/issues/123",
+                "labels": [],
+            },
+            "comprehensive_analysis": {
+                "success": True,
+                "claude_output": "Comprehensive analysis content",
+                "execution_time_seconds": 2.5,
+                "cost_tracking": {"cost_usd": 0.01},
+            },
+            "enhanced_features": {
+                "claude_cli_integration": True,
+                "sophisticated_reasoning": True,
+            },
+        }
+        mock_get_analyzer.return_value = mock_analyzer
 
         result = analyze_issue(
             issue_number=123,
@@ -142,228 +177,70 @@ class TestAnalyzeIssueMCPTool:
             post_comment=True,
         )
 
-        # Verify framework call
-        mock_framework.check_issue_vibes.assert_called_once_with(
+        # Verify analyzer call
+        mock_analyzer.analyze_issue_comprehensive.assert_called_once_with(
             issue_number=123,
             repository="owner/repo",
-            mode=VibeCheckMode.COMPREHENSIVE,
-            detail_level=DetailLevel.COMPREHENSIVE,
-            post_comment=True,
+            detail_level="comprehensive",
         )
 
-        # Verify comprehensive features
-        features = result["enhanced_features"]
-        assert features["claude_reasoning"] == True
-        assert features["clear_thought_analysis"] == True
-        assert features["comprehensive_validation"] == True
+        # Verify comprehensive response structure
+        assert "analysis_results" in result
+        analysis_results = result["analysis_results"]
+        assert analysis_results["status"] == "comprehensive_analysis_complete"
+        assert "comprehensive_analysis" in analysis_results
+        assert "enhanced_features" in analysis_results
+        assert result["enhanced_analysis"]["analysis_mode"] == "comprehensive"
 
-        # Verify issue info
-        issue_info = result["issue_info"]
-        assert issue_info["analysis_mode"] == "comprehensive"
-        assert issue_info["detail_level"] == "comprehensive"
-        assert issue_info["comment_posted"] == True
-
-    @patch("vibe_check.tools.analyze_issue.get_vibe_check_framework")
-    def test_analyze_issue_default_parameters(
-        self, mock_get_framework, mock_vibe_check_result
-    ):
+    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    def test_analyze_issue_default_parameters(self, mock_get_analyzer, mock_basic_result):
         """Test analyze_issue with default parameters"""
-        mock_framework = MagicMock()
-        mock_framework.check_issue_vibes.return_value = mock_vibe_check_result
-        mock_get_framework.return_value = mock_framework
+        mock_analyzer = MagicMock()
+        mock_analyzer.claude_cli_enabled = False
+        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        mock_get_analyzer.return_value = mock_analyzer
 
         result = analyze_issue(issue_number=42)
 
-        # Verify defaults
-        mock_framework.check_issue_vibes.assert_called_once_with(
+        # Verify defaults - should call hybrid mode which calls basic analysis
+        mock_analyzer.analyze_issue_hybrid.assert_called_once_with(
             issue_number=42,
             repository=None,
-            mode=VibeCheckMode.QUICK,
-            detail_level=DetailLevel.STANDARD,
-            post_comment=False,
+            detail_level="standard",
         )
 
-        # Verify default repository in response
-        assert result["issue_info"]["repository"] == "kesslerio/vibe-check-mcp"
-        assert result["issue_info"]["analysis_mode"] == "quick"
-        assert result["issue_info"]["detail_level"] == "standard"
+        # Verify enhanced analysis metadata
+        assert "analysis_results" in result
+        enhanced = result["enhanced_analysis"]
+        assert enhanced["analysis_mode"] == "hybrid"
 
-    @patch("vibe_check.tools.analyze_issue.get_vibe_check_framework")
-    def test_analyze_issue_invalid_detail_level(
-        self, mock_get_framework, mock_vibe_check_result
-    ):
+    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    def test_analyze_issue_invalid_detail_level(self, mock_get_analyzer, mock_basic_result):
         """Test analyze_issue with invalid detail level"""
-        mock_framework = MagicMock()
-        mock_framework.check_issue_vibes.return_value = mock_vibe_check_result
-        mock_get_framework.return_value = mock_framework
+        mock_analyzer = MagicMock()
+        mock_analyzer.claude_cli_enabled = False
+        mock_analyzer.analyze_issue_basic.return_value = mock_basic_result
+        mock_get_analyzer.return_value = mock_analyzer
 
         result = analyze_issue(issue_number=42, detail_level="invalid_level")
 
         # Should use standard as default
-        mock_framework.check_issue_vibes.assert_called_once()
-        call_args = mock_framework.check_issue_vibes.call_args[1]
-        assert call_args["detail_level"] == DetailLevel.STANDARD
+        mock_analyzer.analyze_issue_hybrid.assert_called_once()
+        call_args = mock_analyzer.analyze_issue_hybrid.call_args[1]
+        assert call_args["detail_level"] == "standard"
+        assert "analysis_results" in result
 
-    @patch("vibe_check.tools.analyze_issue.get_vibe_check_framework")
-    def test_analyze_issue_error_handling(self, mock_get_framework):
+    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    def test_analyze_issue_error_handling(self, mock_get_analyzer):
         """Test analyze_issue error handling"""
-        mock_framework = MagicMock()
-        mock_framework.check_issue_vibes.side_effect = Exception("Framework error")
-        mock_get_framework.return_value = mock_framework
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze_issue_hybrid.side_effect = Exception("Analysis error")
+        mock_get_analyzer.return_value = mock_analyzer
 
         result = analyze_issue(issue_number=42)
 
         # Verify error response
-        assert result["status"] == "vibe_check_error"
-        assert "Framework error" in result["error"]
+        assert result["status"] == "enhanced_analysis_error"
+        assert "Analysis error" in result["error"]
         assert result["issue_number"] == 42
-        assert "friendly_error" in result
-        assert "🚨 Oops!" in result["friendly_error"]
-
-    def test_analyze_issue_parameter_validation_comprehensive_mode(self):
-        """Test parameter combinations for comprehensive mode"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = VibeCheckResult(
-                vibe_level=VibeLevel.GOOD_VIBES,
-                overall_vibe="✅ Good Vibes",
-                friendly_summary="Test",
-                coaching_recommendations=[],
-                technical_analysis={},
-                claude_reasoning="Test reasoning",
-                clear_thought_analysis={"test": "data"},
-            )
-            mock_get_framework.return_value = mock_framework
-
-            # Test comprehensive mode defaults
-            result = analyze_issue(issue_number=42, analysis_mode="comprehensive")
-
-            # Should auto-enable comment posting in comprehensive mode
-            call_args = mock_framework.check_issue_vibes.call_args[1]
-            assert call_args["mode"] == VibeCheckMode.COMPREHENSIVE
-            assert call_args["detail_level"] == DetailLevel.STANDARD
-
-    def test_analyze_issue_response_structure_validation(self):
-        """Test that response structure matches MCP tool requirements"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            mock_result = VibeCheckResult(
-                vibe_level=VibeLevel.RESEARCH_NEEDED,
-                overall_vibe="🤔 Research Needed",
-                friendly_summary="Needs more investigation",
-                coaching_recommendations=["Do research first"],
-                technical_analysis={"test": "data"},
-                claude_reasoning=None,
-                clear_thought_analysis=None,
-            )
-
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = mock_result
-            mock_get_framework.return_value = mock_framework
-
-            result = analyze_issue(issue_number=42)
-
-            # Verify all required fields are present
-            required_fields = [
-                "status",
-                "analysis_timestamp",
-                "vibe_check",
-                "issue_info",
-                "technical_analysis",
-                "enhanced_features",
-                "analysis_metadata",
-            ]
-
-            for field in required_fields:
-                assert field in result, f"Missing required field: {field}"
-
-            # Verify vibe_check structure
-            vibe_check = result["vibe_check"]
-            vibe_check_fields = [
-                "overall_vibe",
-                "vibe_level",
-                "friendly_summary",
-                "coaching_recommendations",
-            ]
-
-            for field in vibe_check_fields:
-                assert field in vibe_check, f"Missing vibe_check field: {field}"
-
-            # Verify issue_info structure
-            issue_info = result["issue_info"]
-            issue_info_fields = [
-                "number",
-                "repository",
-                "analysis_mode",
-                "detail_level",
-                "comment_posted",
-            ]
-
-            for field in issue_info_fields:
-                assert field in issue_info, f"Missing issue_info field: {field}"
-
-    def test_analyze_issue_mode_conversion(self):
-        """Test proper conversion between string and enum modes"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = VibeCheckResult(
-                vibe_level=VibeLevel.GOOD_VIBES,
-                overall_vibe="✅ Good Vibes",
-                friendly_summary="Test",
-                coaching_recommendations=[],
-                technical_analysis={},
-                claude_reasoning=None,
-                clear_thought_analysis=None,
-            )
-            mock_get_framework.return_value = mock_framework
-
-            # Test string to enum conversion
-            test_cases = [
-                ("quick", VibeCheckMode.QUICK),
-                ("comprehensive", VibeCheckMode.COMPREHENSIVE),
-                ("invalid", VibeCheckMode.QUICK),  # Should default to QUICK
-            ]
-
-            for string_mode, expected_enum in test_cases:
-                analyze_issue(issue_number=42, analysis_mode=string_mode)
-                call_args = mock_framework.check_issue_vibes.call_args[1]
-                assert call_args["mode"] == expected_enum
-
-    def test_analyze_issue_detail_level_conversion(self):
-        """Test proper conversion between string and enum detail levels"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = VibeCheckResult(
-                vibe_level=VibeLevel.GOOD_VIBES,
-                overall_vibe="✅ Good Vibes",
-                friendly_summary="Test",
-                coaching_recommendations=[],
-                technical_analysis={},
-                claude_reasoning=None,
-                clear_thought_analysis=None,
-            )
-            mock_get_framework.return_value = mock_framework
-
-            # Test string to enum conversion
-            test_cases = [
-                ("brief", DetailLevel.BRIEF),
-                ("standard", DetailLevel.STANDARD),
-                ("comprehensive", DetailLevel.COMPREHENSIVE),
-                ("invalid", DetailLevel.STANDARD),  # Should default to STANDARD
-            ]
-
-            for string_level, expected_enum in test_cases:
-                analyze_issue(issue_number=42, detail_level=string_level)
-                call_args = mock_framework.check_issue_vibes.call_args[1]
-                assert call_args["detail_level"] == expected_enum
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+        assert "fallback_recommendation" in result

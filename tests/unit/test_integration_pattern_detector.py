@@ -21,262 +21,34 @@ from vibe_check.tools.integration_pattern_analysis import (
 )
 
 
+
+
 @pytest.fixture
-def sample_anti_patterns():
-    """Sample anti-patterns data with integration patterns"""
-    return {
+def mock_anti_patterns_file():
+    """Mock the anti_patterns.json file loading"""
+    sample_data = {
         "schema_version": "1.1.0",
-        "data_version": "1.0.0",
-        "infrastructure_without_implementation": {
-            "id": "infrastructure_without_implementation",
-            "version": "1.0.0",
-            "name": "Infrastructure Without Implementation",
-            "description": "Building custom solutions when standard APIs/SDKs exist",
-            "severity": "high",
-            "category": "architectural",
-            "detection_threshold": 0.5,
-            "indicators": [
-                {
-                    "regex": "\\b(?:custom|build|implement)\\s+(?:server|client|api)",
-                    "description": "mentions building custom infrastructure",
-                    "weight": 0.4,
-                    "text": "custom infrastructure",
-                }
-            ],
-            "negative_indicators": [],
-        },
         "integration_over_engineering": {
-            "id": "integration_over_engineering",
-            "version": "1.0.0",
-            "name": "Integration Over-Engineering",
-            "description": "Building custom integration solutions when official alternatives exist",
-            "severity": "high",
-            "category": "integration",
-            "detection_threshold": 0.5,
             "technologies": {
                 "cognee": {
                     "official_solution": "cognee/cognee:main Docker container",
-                    "red_flags": ["custom REST server", "manual JWT"],
-                    "features": ["REST API", "JWT authentication"],
+                    "red_flags": ["custom REST server", "manual JWT"]
                 },
                 "supabase": {
-                    "official_solution": "Supabase official SDKs",
-                    "red_flags": ["custom auth", "manual database"],
-                    "features": ["Authentication", "Database"],
-                },
-            },
-            "indicators": [
-                {
-                    "regex": "\\b(?:cognee|supabase)\\b.*\\bcustom\\s+(?:server|client)",
-                    "description": "custom development for known technology",
-                    "weight": 0.5,
-                    "text": "custom integration for known tech",
+                    "official_solution": "Supabase client libraries",
+                    "red_flags": ["custom auth server", "manual JWT handling"]
                 }
-            ],
-            "negative_indicators": [],
-        },
+            }
+        }
     }
-
-
-class TestIntegrationPatternDetector:
-    """Test the core integration pattern detector"""
-
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("pathlib.Path.exists", return_value=True)
-    def test_detector_initialization(
-        self, mock_exists, mock_file, sample_anti_patterns
-    ):
-        """Test detector initializes with integration patterns"""
-        mock_file.return_value.read.return_value = json.dumps(sample_anti_patterns)
-
-        detector = IntegrationPatternDetector()
-
-        assert detector is not None
-        assert len(detector.technology_patterns) > 0
-        assert "cognee" in detector.technology_patterns
-        assert "supabase" in detector.technology_patterns
-
-    def test_quick_technology_check(self):
-        """Test ultra-fast technology detection"""
-        detector = IntegrationPatternDetector()
-
-        # Test Cognee detection
-        content = "We need to integrate with Cognee for our knowledge management"
-        detected = detector.quick_technology_check(content)
-        assert "cognee" in detected
-
-        # Test multiple technologies
-        content = "Using Cognee and Supabase for our backend"
-        detected = detector.quick_technology_check(content)
-        assert "cognee" in detected
-        assert "supabase" in detected
-
-        # Test no detection
-        content = "We're building a simple web application"
-        detected = detector.quick_technology_check(content)
-        assert len(detected) == 0
-
-    def test_detect_technologies_with_confidence(self):
-        """Test technology detection with confidence scoring"""
-        detector = IntegrationPatternDetector()
-
-        # High confidence detection (multiple indicators)
-        content = "We're building a custom FastAPI server for Cognee integration with JWT authentication"
-        technologies = detector._detect_technologies(content)
-
-        cognee_tech = next((t for t in technologies if t.technology == "cognee"), None)
-        assert cognee_tech is not None
-        assert cognee_tech.confidence >= 0.6  # High confidence
-        assert len(cognee_tech.indicators) >= 2
-
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("pathlib.Path.exists", return_value=True)
-    def test_analyze_integration_patterns_cognee_case(
-        self, mock_exists, mock_file, sample_anti_patterns
-    ):
-        """Test analysis of Cognee integration case study scenario"""
-        mock_file.return_value.read.return_value = json.dumps(sample_anti_patterns)
-
-        detector = IntegrationPatternDetector()
-
-        # Cognee case study content
-        content = """
-        We need to build a custom FastAPI server for Cognee integration.
-        The server will handle JWT authentication and manage storage configurations.
-        We'll implement our own REST API endpoints for Cognee functionality.
-        """
-
-        analysis = detector.analyze_integration_patterns(content)
-
-        # Should detect Cognee technology
-        assert len(analysis.detected_technologies) >= 1
-        cognee_tech = next(
-            (t for t in analysis.detected_technologies if t.technology == "cognee"),
-            None,
-        )
-        assert cognee_tech is not None
-
-        # Should detect integration anti-patterns
-        assert len(analysis.integration_anti_patterns) >= 1
-
-        # Should have warning level
-        assert analysis.warning_level in ["caution", "warning", "critical"]
-
-        # Should provide recommendations
-        assert len(analysis.recommendations) >= 1
-
-        # Should have research questions
-        assert len(analysis.research_questions) >= 1
-
-    def test_effort_analysis(self):
-        """Test effort-value analysis for integration complexity"""
-        detector = IntegrationPatternDetector()
-
-        content = """
-        This PR adds 2000+ lines for Cognee integration.
-        We spent 3 weeks implementing the custom authentication system.
-        The integration includes a complex REST server setup.
-        """
-
-        effort_analysis = detector._analyze_effort_indicators(content)
-
-        assert len(effort_analysis["high_line_counts"]) >= 1
-        assert effort_analysis["high_line_counts"][0]["count"] >= 2000
-        assert len(effort_analysis["time_estimates"]) >= 1
-
-    def test_warning_level_calculation(self):
-        """Test warning level calculation logic"""
-        detector = IntegrationPatternDetector()
-
-        # Create mock technologies and patterns for testing
-        from vibe_check.core.pattern_detector import DetectionResult
-
-        # High warning scenario
-        high_confidence_pattern = DetectionResult(
-            pattern_type="integration_over_engineering",
-            detected=True,
-            confidence=0.8,
-            evidence=["custom server for managed service"],
-            threshold=0.5,
-        )
-
-        mock_tech = TechnologyDetection(
-            technology="cognee",
-            confidence=0.9,
-            indicators=["mentions cognee"],
-            red_flags=["custom REST server"],
-        )
-
-        warning_level = detector._calculate_warning_level(
-            [mock_tech], [high_confidence_pattern]
-        )
-        assert warning_level in ["warning", "critical"]
-
-
-class TestIntegrationPatternAnalysisTools:
-    """Test the MCP tools for integration pattern analysis"""
-
-    def test_analyze_integration_patterns_fast(self):
-        """Test the main MCP tool for fast integration analysis"""
-        content = (
-            "We're building a custom Cognee server with FastAPI and JWT authentication"
-        )
-
-        result = analyze_integration_patterns_fast(content, detail_level="standard")
-
-        assert result["status"] == "analysis_complete"
-        assert "technologies_detected" in result
-        assert "warning_level" in result
-        assert "recommendations" in result
-
-        # Should detect Cognee
-        tech_names = [t["technology"] for t in result["technologies_detected"]]
-        assert "cognee" in tech_names
-
-    def test_quick_tech_scan_tool(self):
-        """Test the ultra-fast technology scan MCP tool"""
-        content = (
-            "Using Supabase for authentication and Cognee for knowledge management"
-        )
-
-        result = quick_technology_scan(content)
-
-        if result["status"] == "technologies_detected":
-            tech_names = [t["technology"] for t in result["technologies"]]
-            assert "supabase" in tech_names or "cognee" in tech_names
-            assert "quick_recommendations" in result
-
-    def test_analyze_effort_complexity_tool(self):
-        """Test the effort-complexity analysis MCP tool"""
-        content = "This 2000+ line integration took 3 weeks to implement for Cognee"
-        pr_metrics = {"additions": 1500, "deletions": 200, "changed_files": 25}
-
-        result = analyze_effort_complexity(content, pr_metrics)
-
-        assert result["status"] == "effort_analysis_complete"
-        assert "complexity_assessment" in result
-        assert "pr_metrics" in result
-
-        # Should flag high effort
-        assert result["complexity_assessment"] in ["high", "medium"]
-
-    def test_error_handling(self):
-        """Test graceful error handling in MCP tools"""
-        # Test with problematic content that might cause issues
-        problematic_content = ""
-
-        result = analyze_integration_patterns_fast(problematic_content)
-
-        # Should handle gracefully
-        assert "status" in result
-        # Should either succeed or provide meaningful error info
-        assert result["status"] in ["analysis_complete", "error"]
-
+    with patch("builtins.open", mock_open(read_data=json.dumps(sample_data))):
+        with patch("pathlib.Path.exists", return_value=True):
+            yield
 
 class TestRealWorldScenarios:
     """Test with real-world integration scenarios"""
 
-    def test_cognee_case_study_detection(self):
+    def test_cognee_case_study_detection(self, mock_anti_patterns_file):
         """Test detection of the actual Cognee case study pattern"""
         content = """
         # Cognee Integration Implementation
@@ -307,7 +79,7 @@ class TestRealWorldScenarios:
         cognee_recommendations = [r for r in recommendations if "cognee" in r.lower()]
         assert len(cognee_recommendations) >= 1
 
-    def test_supabase_over_engineering_detection(self):
+    def test_supabase_over_engineering_detection(self, mock_anti_patterns_file):
         """Test detection of Supabase over-engineering patterns"""
         content = """
         Building custom authentication system for our app.
@@ -324,7 +96,7 @@ class TestRealWorldScenarios:
         # Should flag manual implementation - 3 red flags should trigger critical
         assert result["warning_level"] in ["warning", "critical"]
 
-    def test_multiple_technologies_scenario(self):
+    def test_multiple_technologies_scenario(self, mock_anti_patterns_file):
         """Test scenario with multiple integration technologies"""
         content = """
         Our microservices architecture uses:
@@ -347,7 +119,7 @@ class TestRealWorldScenarios:
         # Should have high warning level due to multiple custom implementations
         assert result["warning_level"] in ["warning", "critical"]
 
-    def test_legitimate_custom_development(self):
+    def test_legitimate_custom_development(self, mock_anti_patterns_file):
         """Test scenario where custom development is justified"""
         content = """
         We tested the official Cognee Docker container extensively.

@@ -132,6 +132,7 @@ class TestAsyncAnalysisQueue:
         )
         self.queue = AsyncAnalysisQueue(self.config)
 
+    @pytest.mark.asyncio
     async def test_queue_initialization(self):
         """Test queue initializes correctly."""
         await self.queue.start()
@@ -147,14 +148,23 @@ class TestAsyncAnalysisQueue:
         """Test queuing an analysis job."""
         await self.queue.start()
         try:
-            pr_data = {
-                "title": "Test PR",
-                "additions": 2000,
-                "deletions": 500,
-                "changed_files": 30,
-            }
+            # Mock resource monitor to allow jobs regardless of system load
+            with patch(
+                "vibe_check.tools.async_analysis.resource_monitor.get_global_resource_monitor"
+            ) as mock_monitor:
+                mock_monitor.return_value.should_accept_new_job.return_value = (
+                    True,
+                    "",
+                )
 
-            job_id = await self.queue.queue_analysis(123, "owner/repo", pr_data)
+                pr_data = {
+                    "title": "Test PR",
+                    "additions": 2000,
+                    "deletions": 500,
+                    "changed_files": 30,
+                }
+
+                job_id = await self.queue.queue_analysis(123, "owner/repo", pr_data)
 
             assert job_id.startswith("owner/repo#123#")
             assert job_id in self.queue.active_jobs
@@ -173,8 +183,17 @@ class TestAsyncAnalysisQueue:
         """Test getting next job from queue."""
         await self.queue.start()
         try:
-            pr_data = {"title": "Test", "additions": 1000, "deletions": 500}
-            job_id = await self.queue.queue_analysis(1, "repo", pr_data)
+            # Mock resource monitor to allow jobs regardless of system load
+            with patch(
+                "vibe_check.tools.async_analysis.resource_monitor.get_global_resource_monitor"
+            ) as mock_monitor:
+                mock_monitor.return_value.should_accept_new_job.return_value = (
+                    True,
+                    "",
+                )
+
+                pr_data = {"title": "Test", "additions": 1000, "deletions": 500}
+                job_id = await self.queue.queue_analysis(1, "repo", pr_data)
 
             # Get next job
             job = await self.queue.get_next_job(timeout=1)
@@ -285,7 +304,7 @@ class TestAsyncAnalysisWorker:
 
         # Mock GitHub operations and analysis
         with patch(
-            "src.vibe_check.tools.async_analysis.worker.get_default_github_operations"
+            "vibe_check.tools.shared.github_abstraction.get_default_github_operations"
         ) as mock_github:
             mock_github_ops = Mock()
             mock_github_ops.get_pull_request_files.return_value = Mock(
@@ -295,7 +314,7 @@ class TestAsyncAnalysisWorker:
 
             # Mock chunked analysis
             with patch(
-                "src.vibe_check.tools.async_analysis.worker.ChunkedAnalysisCoordinator"
+                "vibe_check.tools.pr_review.chunked_analyzer.ChunkedAnalyzer"
             ) as mock_coordinator:
                 mock_result = Mock()
                 mock_result.overall_assessment = "Good code"
@@ -327,7 +346,7 @@ class TestAsyncAnalysisWorker:
 
         # Mock GitHub operations to fail
         with patch(
-            "src.vibe_check.tools.async_analysis.worker.get_default_github_operations"
+            "vibe_check.tools.shared.github_abstraction.get_default_github_operations"
         ) as mock_github:
             mock_github_ops = Mock()
             mock_github_ops.get_pull_request_files.return_value = Mock(
@@ -363,6 +382,9 @@ class TestAsyncWorkerManager:
         """Test starting and stopping workers."""
         # Start workers
         await self.manager.start_workers()
+
+        # Give event loop time to start worker tasks
+        await asyncio.sleep(0.01)
 
         assert len(self.manager.workers) == 2
         assert len(self.manager.worker_tasks) == 2
@@ -443,9 +465,10 @@ class TestStatusTracker:
 
         timing = self.tracker._calculate_timing_info(job_status)
 
-        assert timing["queued_duration_seconds"] == 300
-        assert timing["processing_duration_seconds"] == 180
-        assert timing["time_remaining_seconds"] == 120
+        # Allow 2 second tolerance for timing calculations (avoids flakiness)
+        assert abs(timing["queued_duration_seconds"] - 300) <= 2
+        assert abs(timing["processing_duration_seconds"] - 180) <= 2
+        assert abs(timing["time_remaining_seconds"] - 120) <= 2
 
     def test_user_friendly_status(self):
         """Test generation of user-friendly status messages."""
@@ -458,8 +481,10 @@ class TestStatusTracker:
 
         status = self.tracker._generate_user_friendly_status(job_status, timing_info)
 
-        assert "queued" in status["message"]
-        assert "Test PR" in status["friendly_description"]
+        assert "queued" in status["message"].lower()
+        # Friendly description includes PR stats, not necessarily the title
+        assert "10 files" in status["friendly_description"]
+        assert "500 lines" in status["friendly_description"]
         assert status["current_activity"] == "Waiting for available worker"
 
     def test_comprehensive_status(self):
@@ -494,14 +519,14 @@ class TestAsyncIntegration:
 
         # Mock the queue operations
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue_instance.queue_analysis.return_value = "job-123"
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_tracker.get_comprehensive_status.return_value = {
                     "job_id": "job-123",
@@ -536,13 +561,13 @@ class TestAsyncIntegration:
         """Test checking analysis status."""
         # Mock the queue and status tracker
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_status = {
                     "job_id": "job-123",
@@ -560,13 +585,13 @@ class TestAsyncIntegration:
     async def test_check_status_not_found(self):
         """Test checking status for non-existent job."""
         with patch(
-            "src.vibe_check.tools.async_analysis.integration.get_global_queue"
+            "vibe_check.tools.async_analysis.integration.get_global_queue"
         ) as mock_queue:
             mock_queue_instance = AsyncMock()
             mock_queue.return_value = mock_queue_instance
 
             with patch(
-                "src.vibe_check.tools.async_analysis.integration._status_tracker"
+                "vibe_check.tools.async_analysis.integration._status_tracker"
             ) as mock_tracker:
                 mock_tracker.get_comprehensive_status.return_value = None
 

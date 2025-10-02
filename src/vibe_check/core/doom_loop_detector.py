@@ -224,9 +224,9 @@ class DoomLoopDetector:
 
         # Check for analysis paralysis language
         paralysis_indicators = [
-            r"we need to (?:decide|choose|figure out|analyze)",
-            r"should we (?:use|implement|go with|consider)",
-            r"(?:comparing|evaluating|analyzing) (?:options|approaches|alternatives)",
+            r"we need to (?:decide|choose|figure out|analyze|evaluate)",
+            r"should we (?:also )?(?:use|implement|go with|consider)",
+            r"\b(?:comparing|evaluating|analyzing)\b",
             r"on the other hand",
             r"but then again",
             r"however, we could also",

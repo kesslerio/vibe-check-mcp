@@ -104,10 +104,15 @@ class BusinessContextExtractor:
             r"\bfollow(?:ed|ing)\s+(?:the\s+)?(?:plan|design|requirements|specification|issue)",
             0.6,
         ),
+        (r"\bcompleted\b", 0.7),
         (
             r"\b(?:just\s+)?finished\s+implementing",
             0.8,
         ),  # Added for "Just finished implementing"
+        (
+            r"\b(successfully\s+shipped)",
+            0.8,
+        ),
     ]
 
     # Review request indicators
@@ -414,6 +419,16 @@ class BusinessContextExtractor:
                     "Are you planning to implement this, or have you already completed the implementation?"
                 )
 
+        # Technology-specific clarification - only for planning contexts
+        if context_type in ["planning_discussion", "unknown"]:
+            if re.search(r"\b(?:api|sdk|integration|service)", text, re.IGNORECASE):
+                if not re.search(
+                    r"\b(?:official|standard|existing|already)", text, re.IGNORECASE
+                ):
+                    questions.append(
+                        "Have you already researched the official SDK/API documentation for this integration?"
+                    )
+
         # Check for review ambiguity
         if context_type == "review_request":
             questions.append(
@@ -426,16 +441,6 @@ class BusinessContextExtractor:
                 "Could you clarify - is this something you've already built, or are you planning the implementation?"
             )
             questions.append("What specific feedback or guidance are you looking for?")
-
-        # Technology-specific clarification - only for planning contexts
-        if context_type in ["planning_discussion", "unknown"]:
-            if re.search(r"\b(?:api|sdk|integration|service)", text, re.IGNORECASE):
-                if not re.search(
-                    r"\b(?:official|standard|existing|already)", text, re.IGNORECASE
-                ):
-                    questions.append(
-                        "Have you already researched the official SDK/API documentation for this integration?"
-                    )
 
         return questions[:2]  # Limit to 2 most relevant questions
 
