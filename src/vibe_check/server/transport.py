@@ -14,14 +14,26 @@ def detect_transport_mode() -> str:
         )
         return transport_override
 
+    # Detect Claude desktop/code clients which expect stdio transport even in containers
+    claude_client_env_vars = [
+        "MCP_CLAUDE_DESKTOP",
+        "MCP_CLAUDE_CODE",
+        "CLAUDE_CODE_MODE",
+    ]
+    if any(os.environ.get(var) for var in claude_client_env_vars):
+        logger.info("Claude client environment detected. Defaulting to 'stdio'.")
+        return "stdio"
+
     # Check if running in Docker, which strongly implies an HTTP server is needed.
     if os.path.exists("/.dockerenv") or os.environ.get("RUNNING_IN_DOCKER"):
         logger.info("Docker environment detected. Defaulting to 'streamable-http'.")
         return "streamable-http"
 
-    # For all other cases, default to 'stdio'. This is the standard for local clients
-    # like Claude Code and Cursor, which launch the MCP server as a subprocess and
-    # communicate over stdin/stdout. This avoids issues where the client environment
-    # is minimal and doesn't set TERM or other variables.
-    logger.info("Defaulting to 'stdio' transport for local client integration.")
-    return "stdio"
+    # Terminal presence indicates an interactive local client environment
+    if os.environ.get("TERM"):
+        logger.info("Terminal detected. Using 'stdio' transport.")
+        return "stdio"
+
+    # Fall back to HTTP transport when no terminal context is available
+    logger.info("No terminal detected. Defaulting to 'streamable-http'.")
+    return "streamable-http"

@@ -27,7 +27,7 @@ class TestMCPProtocolIntegration:
     """Test MCP protocol integration and compliance"""
 
     @pytest.fixture
-    async def mock_mcp_server(self):
+    def mock_mcp_server(self):
         """Create mock MCP server for testing"""
         mock_server = MagicMock()
         mock_server.list_tools = AsyncMock()
@@ -38,7 +38,7 @@ class TestMCPProtocolIntegration:
     @pytest.mark.asyncio
     async def test_server_initialization_with_fastmcp(self):
         """Test server initialization with FastMCP"""
-        with patch("vibe_check.server.FastMCP") as mock_fastmcp:
+        with patch("vibe_check.server.core.FastMCP") as mock_fastmcp:
             mock_app = MagicMock()
             mock_fastmcp.return_value = mock_app
 
@@ -53,7 +53,9 @@ class TestMCPProtocolIntegration:
     @pytest.mark.asyncio
     async def test_tool_registration_compliance(self, mock_mcp_server):
         """Test that tools are registered with proper MCP compliance"""
-        with patch("vibe_check.server.FastMCP", return_value=mock_mcp_server):
+        with patch(
+            "vibe_check.server.core.FastMCP", return_value=mock_mcp_server
+        ):
             from vibe_check import server
 
             # Should have registered tools
@@ -248,7 +250,8 @@ class TestMCPProtocolIntegration:
         assert "status" in result
         # Response should be complete, not partial
         if result["status"] == "success":
-            assert "analysis" in result
+            assert "analysis_results" in result
+            assert isinstance(result["analysis_results"], dict)
 
     def test_mcp_resource_usage_limits(self):
         """Test that MCP tools respect resource usage limits"""
