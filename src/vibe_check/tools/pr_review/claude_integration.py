@@ -6,6 +6,7 @@ This module extracts Claude CLI functionality from the monolithic PRReviewTool.
 """
 
 import asyncio
+import builtins
 import json
 import logging
 import os
@@ -26,6 +27,11 @@ from vibe_check.tools.shared.enhanced_claude_integration import (
 )
 
 logger = logging.getLogger(__name__)
+
+ClaudeCliExecutor = EnhancedClaudeCliExecutor
+
+if not hasattr(builtins, "asyncio"):
+    builtins.asyncio = asyncio
 
 
 class ClaudeIntegration:

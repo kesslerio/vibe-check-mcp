@@ -19,21 +19,16 @@ from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..models.severity import SeverityLevel, normalize_severity
 from .pattern_detector import PatternDetector, DetectionResult
 
 logger = logging.getLogger(__name__)
 
-WARNING_PRIORITY = {"none": 0, "caution": 1, "warning": 2, "critical": 3}
-SEVERITY_WARNING_MAP = {
-    "critical": "critical",
-    "severe": "critical",
-    "high": "critical",
-    "major": "critical",
-    "medium": "warning",
-    "moderate": "warning",
-    "elevated": "warning",
-    "low": "caution",
-    "minor": "caution",
+WARNING_PRIORITY = {
+    "none": 0,
+    SeverityLevel.CAUTION.value: 1,
+    SeverityLevel.WARNING.value: 2,
+    SeverityLevel.CRITICAL.value: 3,
 }
 PRIORITY_TO_WARNING = {value: key for key, value in WARNING_PRIORITY.items()}
 
@@ -459,8 +454,8 @@ class IntegrationPatternDetector:
                 severity = pattern.educational_content.get("severity")
             if not severity:
                 continue
-            mapped = SEVERITY_WARNING_MAP.get(severity.lower())
-            if mapped and WARNING_PRIORITY[mapped] > WARNING_PRIORITY[level]:
+            mapped = normalize_severity(severity)
+            if WARNING_PRIORITY[mapped] > WARNING_PRIORITY[level]:
                 level = mapped
         return level
 

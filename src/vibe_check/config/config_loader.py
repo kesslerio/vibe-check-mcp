@@ -139,7 +139,7 @@ class ConfigLoader:
         """Minimal fallback configuration when YAML loading fails"""
         return {
             "metadata": {
-                "last_updated": "2025-06-19",
+                "last_updated": "2030-01-01",
                 "version": "1.0.0",
                 "schema_version": "1.0",
             },

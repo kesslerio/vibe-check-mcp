@@ -236,11 +236,13 @@ class FileTypeAnalyzer:
 
         for file_data in files:
             filename = file_data.get("filename", "")
-            file_type = self._detect_file_type(filename)
+            primary_type = self._detect_file_type(filename)
+            detected_types = {primary_type} | set(
+                self._detect_additional_types(filename, primary_type)
+            )
 
-            if file_type not in file_groups:
-                file_groups[file_type] = []
-            file_groups[file_type].append(file_data)
+            for file_type in detected_types:
+                file_groups.setdefault(file_type, []).append(file_data)
 
         return file_groups
 
@@ -248,9 +250,28 @@ class FileTypeAnalyzer:
         """Detect file type based on filename patterns."""
         path = Path(filename)
         filename_lower = filename.lower()
+        name_lower = path.name.lower()
+
+        for pattern in self.FILE_TYPE_PATTERNS.get("test", []):
+            if "/" in pattern:
+                if pattern in filename_lower:
+                    return "test"
+            else:
+                if pattern in name_lower:
+                    return "test"
+
+        for pattern in self.FILE_TYPE_PATTERNS.get("api", []):
+            if "/" in pattern:
+                if pattern in filename_lower:
+                    return "api"
+            else:
+                if pattern in name_lower:
+                    return "api"
 
         # Check each file type pattern
         for file_type, patterns in self.FILE_TYPE_PATTERNS.items():
+            if file_type in {"test", "api"}:
+                continue
             for pattern in patterns:
                 if pattern.startswith("."):
                     # Extension match
@@ -267,6 +288,29 @@ class FileTypeAnalyzer:
 
         # No match found in patterns, return 'other'
         return "other"
+
+    def _detect_additional_types(
+        self, filename: str, primary_type: str
+    ) -> List[str]:
+        """Detect secondary file type categories (e.g., React components)."""
+
+        extras: List[str] = []
+        name_lower = filename.lower()
+
+        if primary_type in {"typescript", "javascript"} and (
+            name_lower.endswith(".tsx") or name_lower.endswith(".jsx")
+        ):
+            if "component" in name_lower or "/components/" in name_lower:
+                extras.append("react")
+
+        if any(keyword in name_lower for keyword in ["/api/", "routes.py", "api.py", "controller.py", "endpoints.py", "views.py"]):
+            extras.append("api")
+
+        test_indicators = ["test_", "_test.", ".test.", ".spec.", "/tests/", "test/"]
+        if any(indicator in name_lower for indicator in test_indicators):
+            extras.append("test")
+
+        return extras
 
     def generate_file_type_prompt(self, file_type_analysis: Dict[str, Any]) -> str:
         """Generate file type-specific review prompt section."""

@@ -79,6 +79,7 @@ class LLMComparisonStrategy(ResponseStrategy):
             "better",
             "choose",
             "pick",
+            " or ",
         ]
         has_comparison = any(
             indicator in query_lower for indicator in comparison_indicators
@@ -86,6 +87,9 @@ class LLMComparisonStrategy(ResponseStrategy):
 
         # Check if query contains LLM terms
         has_llm_terms = any(term in query_lower for term in llm_terms)
+        tech_terms = " ".join(tech_context.technologies).lower()
+        if not has_llm_terms and tech_terms:
+            has_llm_terms = any(term in tech_terms for term in llm_terms)
 
         # Only handle if it's actually comparing LLMs, not just mentioning them
         if has_llm_terms and has_comparison:

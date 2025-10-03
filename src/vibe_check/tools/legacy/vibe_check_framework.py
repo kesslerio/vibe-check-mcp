@@ -49,6 +49,7 @@ class VibeLevel(Enum):
 
     GOOD_VIBES = "good_vibes"  # ✅ Ready to go
     NEEDS_RESEARCH = "needs_research"  # 🔍 Do some homework first
+    RESEARCH_NEEDED = "research_needed"  # Alias for new enum compatibility
     NEEDS_POC = "needs_poc"  # 🧪 Show basic functionality
     COMPLEX_VIBES = "complex_vibes"  # ⚖️ Justify the complexity
     BAD_VIBES = "bad_vibes"  # 🚨 Infrastructure without implementation
