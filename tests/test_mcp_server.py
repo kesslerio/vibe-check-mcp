@@ -54,6 +54,8 @@ class TestMCPServerIntegration:
 
     def test_server_status_tool(self):
         """Test server status tool returns correct information"""
+        import os
+
         status = server_status()
 
         # Verify status structure
@@ -63,8 +65,10 @@ class TestMCPServerIntegration:
         assert status["core_engine_status"]["detection_accuracy"] == "87.5%"
         assert status["core_engine_status"]["false_positive_rate"] == "0%"
 
-        # Verify tool information
-        assert len(status["available_tools"]) == 2
+        # Verify tool information - account for dev mode
+        dev_mode = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
+        expected_tool_count = 4 if dev_mode else 2
+        assert len(status["available_tools"]) == expected_tool_count
         assert len(status["upcoming_tools"]) == 4
 
     def test_error_handling(self):

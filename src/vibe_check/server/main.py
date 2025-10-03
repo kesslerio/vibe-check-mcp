@@ -25,7 +25,7 @@ elif _original_log_level and _original_log_level.lower() in [
 
 from .core import mcp
 from .transport import detect_transport_mode
-from .registry import register_all_tools
+from .registry import ensure_tools_registered
 from vibe_check.tools.config_validation import (
     validate_configuration,
     format_validation_results,
@@ -121,7 +121,7 @@ def run_server(
         logger.info("📊 Core detection engine: 87.5% accuracy, 0% false positives")
         logger.info("🔧 Server ready for MCP protocol connections")
 
-        register_all_tools(mcp)
+        ensure_tools_registered(mcp)
 
         transport_mode = transport or detect_transport_mode()
 

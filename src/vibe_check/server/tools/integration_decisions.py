@@ -19,16 +19,27 @@ logger = logging.getLogger(__name__)
 
 def register_integration_decision_tools(mcp_instance):
     """Registers integration decision tools with the MCP server."""
-    mcp_instance.add_tool(check_integration_alternatives)
-    mcp_instance.add_tool(analyze_integration_decision_text)
-    mcp_instance.add_tool(integration_decision_framework)
-    mcp_instance.add_tool(integration_research_with_websearch)
-    mcp_instance.add_tool(analyze_integration_patterns)
-    mcp_instance.add_tool(quick_tech_scan)
-    mcp_instance.add_tool(analyze_integration_effort)
+    _register_tool(mcp_instance, check_integration_alternatives)
+    _register_tool(mcp_instance, analyze_integration_decision_text)
+    _register_tool(mcp_instance, integration_decision_framework)
+    _register_tool(mcp_instance, integration_research_with_websearch)
+    _register_tool(mcp_instance, analyze_integration_patterns)
+    _register_tool(mcp_instance, quick_tech_scan)
+    _register_tool(mcp_instance, analyze_integration_effort)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="check_integration_alternatives")
 def check_integration_alternatives(
     technology: str, custom_features: str, description: str = ""
 ) -> Dict[str, Any]:
@@ -80,7 +91,7 @@ def check_integration_alternatives(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="analyze_integration_decision_text")
 def analyze_integration_decision_text(
     text: str, detail_level: str = "standard"
 ) -> Dict[str, Any]:
@@ -140,7 +151,7 @@ def analyze_integration_decision_text(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="integration_decision_framework")
 def integration_decision_framework(
     technology: str,
     custom_features: str,
@@ -269,7 +280,7 @@ def integration_decision_framework(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="integration_research_with_websearch")
 def integration_research_with_websearch(
     technology: str, custom_features: str, search_depth: str = "basic"
 ) -> Dict[str, Any]:
@@ -378,7 +389,7 @@ def integration_research_with_websearch(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="analyze_integration_patterns")
 def analyze_integration_patterns(
     content: str, context: str = "", detail_level: str = "standard"
 ) -> Dict[str, Any]:
@@ -393,7 +404,7 @@ def analyze_integration_patterns(
     )
 
 
-@mcp.tool()
+@mcp.tool(name="quick_tech_scan")
 def quick_tech_scan(content: str) -> Dict[str, Any]:
     """
     Ultra-fast technology scan for immediate feedback.
@@ -404,7 +415,7 @@ def quick_tech_scan(content: str) -> Dict[str, Any]:
     return quick_technology_scan(content)
 
 
-@mcp.tool()
+@mcp.tool(name="analyze_integration_effort")
 def analyze_integration_effort(
     content: str, lines_added: int = 0, lines_deleted: int = 0, files_changed: int = 0
 ) -> Dict[str, Any]:

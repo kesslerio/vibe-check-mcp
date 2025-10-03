@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Dict, Any
+from typing import Any, Dict, List
 from vibe_check.server.core import mcp
 from vibe_check.mentor.telemetry import get_telemetry_collector
 
@@ -9,11 +9,25 @@ logger = logging.getLogger(__name__)
 
 def register_system_tools(mcp_instance):
     """Registers system tools with the MCP server."""
-    mcp_instance.add_tool(server_status)
-    mcp_instance.add_tool(get_telemetry_summary)
+    _register_tool(mcp_instance, server_status)
+    _register_tool(mcp_instance, get_telemetry_summary)
+    _register_tool(mcp_instance, list_registered_tools)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    """Register tool only if it has not been registered yet."""
+
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="server_status")
 def server_status() -> Dict[str, Any]:
     """
     Get Vibe Check MCP server status and capabilities.
@@ -25,9 +39,13 @@ def server_status() -> Dict[str, Any]:
     dev_mode_enabled = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
 
     # Core tools always available (minimal demo set)
-    core_tools = [
+    core_tools: List[str] = [
         "demo_analyze_text - Demo anti-pattern analysis",
         "server_status - Server status and capabilities",
+    ]
+
+    introspection_tools: List[str] = [
+        "list_tools - Enumerate registered MCP tools",
     ]
 
     # Development tools (environment-based)
@@ -68,6 +86,7 @@ def server_status() -> Dict[str, Any]:
             "phase_1_complete": True,
         },
         "available_tools": available_tools,
+        "introspection_tools": introspection_tools,
         "dev_mode_instructions": {
             "enable_dev_tools": "export VIBE_CHECK_DEV_MODE=true",
             "dev_tools_location": "tests/integration/claude_cli_tests.py",
@@ -83,7 +102,7 @@ def server_status() -> Dict[str, Any]:
     }
 
 
-@mcp.tool()
+@mcp.tool(name="get_telemetry_summary")
 def get_telemetry_summary() -> Dict[str, Any]:
     """
     📊 Get telemetry metrics from MCP sampling integration.
@@ -130,3 +149,65 @@ def get_telemetry_summary() -> Dict[str, Any]:
             "error": str(e),
             "message": "Telemetry collection failed - check server logs",
         }
+
+
+@mcp.tool(
+    name="list_tools",
+    description="List registered MCP tools and their metadata",
+)
+async def list_registered_tools(include_schemas: bool = False) -> Dict[str, Any]:
+    """Return metadata for every tool currently registered with the server."""
+
+    try:
+        tool_definitions = await mcp.list_tools()
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.error(f"Failed to list registered tools: {exc}")
+        return {
+            "status": "error",
+            "message": "Unable to list registered tools",
+            "error": str(exc),
+        }
+
+    tools: List[Dict[str, Any]] = []
+
+    for tool in tool_definitions:
+        tool_info: Dict[str, Any] = {
+            "name": getattr(tool, "name", None),
+            "description": getattr(tool, "description", ""),
+        }
+
+        if include_schemas:
+            input_schema = getattr(tool, "input_schema", None)
+            output_schema = getattr(tool, "output_schema", None)
+
+            if input_schema is not None:
+                tool_info["input_schema"] = _serialize_schema(input_schema)
+
+            if output_schema is not None:
+                tool_info["output_schema"] = _serialize_schema(output_schema)
+
+        tools.append(tool_info)
+
+    return {
+        "status": "success",
+        "tool_count": len(tools),
+        "tools": tools,
+    }
+
+
+def _serialize_schema(schema: Any) -> Any:
+    """Serialize MCP schema objects to JSON-compatible structures."""
+
+    if schema is None:
+        return None
+
+    if hasattr(schema, "model_dump"):
+        try:
+            return schema.model_dump()
+        except TypeError:
+            return schema.model_dump(mode="json")
+
+    if hasattr(schema, "dict"):
+        return schema.dict()
+
+    return schema

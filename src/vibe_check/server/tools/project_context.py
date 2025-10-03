@@ -10,13 +10,24 @@ logger = logging.getLogger(__name__)
 
 def register_project_context_tools(mcp_instance):
     """Registers project context tools with the MCP server."""
-    mcp_instance.add_tool(detect_project_libraries)
-    mcp_instance.add_tool(load_project_context)
-    mcp_instance.add_tool(create_vibe_check_directory_structure)
-    mcp_instance.add_tool(register_project_for_vibe_check)
+    _register_tool(mcp_instance, detect_project_libraries)
+    _register_tool(mcp_instance, load_project_context)
+    _register_tool(mcp_instance, create_vibe_check_directory_structure)
+    _register_tool(mcp_instance, register_project_for_vibe_check)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="detect_project_libraries")
 def detect_project_libraries(
     project_root: str = ".",
     max_files: int = 1000,
@@ -95,7 +106,7 @@ def detect_project_libraries(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="load_project_context")
 def load_project_context(
     project_root: str = ".",
     include_docs: bool = True,
@@ -172,7 +183,7 @@ def load_project_context(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="create_vibe_check_directory_structure")
 def create_vibe_check_directory_structure(
     project_root: str = ".", include_examples: bool = True
 ) -> Dict[str, Any]:
@@ -243,7 +254,7 @@ def create_vibe_check_directory_structure(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="register_project_for_vibe_check")
 def register_project_for_vibe_check(
     project_name: str, project_path: str
 ) -> Dict[str, Any]:
