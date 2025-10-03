@@ -533,7 +533,7 @@ class PRReviewTool:
         review_count = review_context["review_count"]
         linked_issues = pr_data.get("linked_issues", [])
 
-        prompt = f"""You are an expert code reviewer with focus on systematic prevention of third-party integration failures. Apply project conventions from CLAUDE.md, .cursor/rules/*, or .windsurfrules (if available).
+        prompt = f"""You are an expert code reviewer with focus on systematic anti-pattern detection and prevention of third-party integration failures. Apply project conventions from CLAUDE.md, .cursor/rules/*, or .windsurfrules (if available).
 
 {self._format_re_review_context(is_re_review, review_count)}
 
@@ -1187,7 +1187,7 @@ can process the request successfully.
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to save debug output: {e}")
 
-                if output_size < 50:
+                if output_size < 30:
                     logger.warning(
                         f"⚠️ Generated review content seems too short ({output_size} chars)"
                     )

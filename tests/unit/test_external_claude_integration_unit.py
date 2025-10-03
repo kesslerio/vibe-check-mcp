@@ -27,8 +27,7 @@ from vibe_check.tools.analyze_llm.llm_models import (
     CodeAnalysisRequest,
 )
 
-# Note: register_external_claude_tools function does not exist in the codebase
-
+from vibe_check.tools.analyze_llm_backup import register_external_claude_tools
 
 class TestExternalClaudeModels:
     """Test suite for Pydantic models."""
@@ -148,11 +147,7 @@ class TestMCPToolIntegration:
         self.tool_decorator_mock.return_value = lambda func: func
         self.mock_mcp.tool = self.tool_decorator_mock
 
-        # DISABLED: Function does not exist in codebase
-        # def test_register_external_claude_tools(self):
-        #     """Test that external Claude tools are registered correctly."""
-        #     # This will register the tools with our mock MCP instance
-        #     register_external_claude_tools(self.mock_mcp)
+        register_external_claude_tools(self.mock_mcp)
 
         # Verify that tool decorator was called for each tool
         assert self.tool_decorator_mock.call_count == 5  # 5 tools expected
