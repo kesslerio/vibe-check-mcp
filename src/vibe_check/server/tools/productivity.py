@@ -23,17 +23,28 @@ def register_productivity_tools(
     """
     # Register production tools unless explicitly skipped
     if not skip_production:
-        mcp_instance.add_tool(analyze_doom_loops)
-        mcp_instance.add_tool(session_health_check)
-        mcp_instance.add_tool(productivity_intervention)
+        _register_tool(mcp_instance, analyze_doom_loops)
+        _register_tool(mcp_instance, session_health_check)
+        _register_tool(mcp_instance, productivity_intervention)
 
     # Only register dev tools when dev_mode=True
     if dev_mode:
         logger.info("Registering reset_session_tracking (dev mode)")
-        mcp_instance.add_tool(reset_session_tracking)
+        _register_tool(mcp_instance, reset_session_tracking)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="analyze_doom_loops")
 def analyze_doom_loops(
     content: str, context: str = "", analysis_type: str = "comprehensive"
 ) -> Dict[str, Any]:
@@ -131,7 +142,7 @@ def analyze_doom_loops(
         }
 
 
-@mcp.tool()
+@mcp.tool(name="session_health_check")
 def session_health_check() -> Dict[str, Any]:
     """
     🏥 MCP Session Health and Productivity Analysis.
@@ -200,7 +211,7 @@ def session_health_check() -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
+@mcp.tool(name="productivity_intervention")
 def productivity_intervention() -> Dict[str, Any]:
     """
     🆘 Emergency Productivity Intervention and Loop Breaking.
@@ -258,7 +269,7 @@ def productivity_intervention() -> Dict[str, Any]:
         }
 
 
-@mcp.tool()
+@mcp.tool(name="reset_session_tracking")
 def reset_session_tracking() -> Dict[str, Any]:
     """
     [DEV] 🔄 Reset Session Tracking for Fresh Start.

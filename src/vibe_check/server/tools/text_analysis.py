@@ -22,16 +22,27 @@ def register_text_analysis_tools(
     """
     # Register production tools unless explicitly skipped
     if not skip_production:
-        mcp_instance.add_tool(demo_analyze_text)
-        mcp_instance.add_tool(analyze_text_nollm)
+        _register_tool(mcp_instance, demo_analyze_text)
+        _register_tool(mcp_instance, analyze_text_nollm)
 
     # Only register dev/demo tools when dev_mode=True
     if dev_mode:
         logger.info("Registering demo_large_prompt_handling (dev mode)")
-        mcp_instance.add_tool(demo_large_prompt_handling)
+        _register_tool(mcp_instance, demo_large_prompt_handling)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="analyze_text_nollm")
 def analyze_text_nollm(
     text: str,
     detail_level: str = "standard",
@@ -75,7 +86,7 @@ def demo_analyze_text(
     )
 
 
-@mcp.tool()
+@mcp.tool(name="demo_large_prompt_handling")
 def demo_large_prompt_handling(
     content: str, files: list = None, detail_level: str = "standard"
 ) -> Dict[str, Any]:

@@ -10,10 +10,21 @@ logger = logging.getLogger(__name__)
 
 def register_mentor_tools(mcp_instance):
     """Registers mentor tools with the MCP server."""
-    mcp_instance.add_tool(vibe_check_mentor)
+    _register_tool(mcp_instance, vibe_check_mentor)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="vibe_check_mentor")
 async def vibe_check_mentor(
     ctx,  # FastMCP Context for MCP sampling
     query: str,

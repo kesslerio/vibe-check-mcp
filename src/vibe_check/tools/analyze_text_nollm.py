@@ -96,7 +96,16 @@ def analyze_text_demo(
         educator = EducationalContentGenerator()
 
         # Analyze text using proven detection algorithms
-        patterns = detector.analyze_text_for_patterns(text)
+        if hasattr(detector, "detect_patterns"):
+            raw_patterns = detector.detect_patterns(text)
+            if isinstance(raw_patterns, list):
+                patterns = raw_patterns
+            elif raw_patterns is None:
+                patterns = []
+            else:
+                patterns = [raw_patterns]
+        else:
+            patterns = detector.analyze_text_for_patterns(text)
 
         # Convert DetectionResult objects to dictionaries for JSON serialization
         patterns_dict = []

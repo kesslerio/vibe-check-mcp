@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import logging
 import os
 from mcp.server.fastmcp import FastMCP
@@ -19,11 +21,23 @@ from vibe_check.tools.config_validation import register_config_validation_tools
 logger = logging.getLogger(__name__)
 
 
+_TOOLS_INITIALIZED = False
+
+
 def _count_registered_tools(mcp: FastMCP) -> int:
     """Count registered tools for validation."""
     try:
         if hasattr(mcp, "list_tools"):
             tools = mcp.list_tools()
+            if inspect.isawaitable(tools):
+                try:
+                    tools = asyncio.run(tools)
+                except RuntimeError:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        logger.debug("Active event loop detected - deferring tool count")
+                        return 0
+                    tools = loop.run_until_complete(tools)
             return len(tools)
         elif hasattr(mcp, "_tool_manager") and hasattr(mcp._tool_manager, "tools"):
             return len(mcp._tool_manager.tools)
@@ -31,6 +45,27 @@ def _count_registered_tools(mcp: FastMCP) -> int:
             return 0
     except Exception:
         return 0
+
+
+def get_registered_tool_count(mcp: FastMCP) -> int:
+    """Public helper for retrieving the registered tool count."""
+
+    return _count_registered_tools(mcp)
+
+
+def ensure_tools_registered(mcp: FastMCP) -> int:
+    """Ensure tools are registered once and return the resulting count."""
+
+    global _TOOLS_INITIALIZED
+
+    registered = _count_registered_tools(mcp)
+    if not _TOOLS_INITIALIZED or registered == 0:
+        logger.debug("Tool registry not initialized - registering tools now")
+        register_all_tools(mcp)
+        _TOOLS_INITIALIZED = True
+        registered = _count_registered_tools(mcp)
+
+    return registered
 
 
 def register_all_tools(mcp: FastMCP):
@@ -149,3 +184,6 @@ def register_all_tools(mcp: FastMCP):
     if dev_mode or dev_mode_override:
         logger.info(f"🔧 Development: {dev_count}")
     logger.info("=" * 60)
+
+    global _TOOLS_INITIALIZED
+    _TOOLS_INITIALIZED = True

@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Any
+import logging
+from typing import Any, Dict
 from vibe_check.server.core import mcp
 from vibe_check.tools.analyze_issue_nollm import (
     analyze_issue as analyze_github_issue_tool,
@@ -14,12 +15,23 @@ logger = logging.getLogger(__name__)
 
 def register_github_tools(mcp_instance):
     """Registers GitHub tools with the MCP server."""
-    mcp_instance.add_tool(analyze_issue_nollm)
-    mcp_instance.add_tool(analyze_pr_nollm)
-    mcp_instance.add_tool(review_pr_comprehensive)
+    _register_tool(mcp_instance, analyze_issue_nollm)
+    _register_tool(mcp_instance, analyze_pr_nollm)
+    _register_tool(mcp_instance, review_pr_comprehensive)
 
 
-@mcp.tool()
+def _register_tool(mcp_instance, tool) -> None:
+    manager = getattr(mcp_instance, "_tool_manager", None)
+    tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
+
+    if manager and hasattr(manager, "_tools"):
+        if tool_name in manager._tools:
+            return
+
+    mcp_instance.add_tool(tool)
+
+
+@mcp.tool(name="analyze_issue_nollm")
 def analyze_issue_nollm(
     issue_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
@@ -68,7 +80,7 @@ def analyze_issue_nollm(
     )
 
 
-@mcp.tool()
+@mcp.tool(name="analyze_pr_nollm")
 def analyze_pr_nollm(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
@@ -111,7 +123,7 @@ def analyze_pr_nollm(
     )
 
 
-@mcp.tool()
+@mcp.tool(name="review_pr_comprehensive")
 async def review_pr_comprehensive(
     pr_number: int,
     repository: str = "kesslerio/vibe-check-mcp",
