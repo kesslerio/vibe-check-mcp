@@ -764,6 +764,25 @@ result = analyze_issue_nollm(42, repository="owner/repo")
 result = analyze_issue_llm(42, repository="owner/repo", post_comment=True)
 ```
 
+### Async Issue MCP Tool
+
+The enhanced MCP tool `analyze_issue` is asynchronous. Use Python's asyncio helpers when
+calling it directly:
+
+```python
+import asyncio
+from vibe_check.tools.analyze_issue import analyze_issue
+
+async def run_analysis():
+    result = await analyze_issue(42, analysis_mode="quick", detail_level="brief")
+    print(result["status"])
+
+asyncio.run(run_analysis())
+```
+
+Legacy mode names such as `"quick"` and `"comprehensive"` are automatically mapped to the
+new `"basic"`, `"comprehensive"`, and `"hybrid"` execution modes.
+
 ### Pull Request Analysis
 
 ```python

@@ -132,7 +132,7 @@ class TestModelValidation:
     def test_analyze_content_sync_model_parameter(self):
         """Test that analyze_content_sync accepts and validates model parameter."""
         with patch(
-            "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor"
+            "vibe_check.tools.shared.enhanced_claude_integration.EnhancedClaudeCliExecutor"
         ) as mock_executor_class:
             mock_executor = MagicMock()
             mock_executor_class.return_value = mock_executor

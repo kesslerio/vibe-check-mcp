@@ -8,7 +8,7 @@ Tests the complete workflow from issue analysis to result delivery:
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 import sys
 import os
 
@@ -16,175 +16,114 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from vibe_check.tools.analyze_issue import analyze_issue
-from vibe_check.tools.legacy.vibe_check_framework import (
-    VibeCheckMode,
-    VibeLevel,
-    VibeCheckResult,
-)
 from vibe_check.core.educational_content import DetailLevel
-from vibe_check.core.pattern_detector import DetectionResult
 
 
 class TestEndToEndWorkflow:
     """Integration tests for complete end-to-end workflow"""
 
     @pytest.mark.integration
-    def test_complete_vibe_check_workflow_quick_mode(self):
-        """Test complete workflow in quick mode"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            # Setup comprehensive mock result
-            vibe_result = VibeCheckResult(
-                vibe_level=VibeLevel.GOOD_VIBES,
-                overall_vibe="✅ Good Vibes",
-                friendly_summary="This looks great! No anti-patterns detected.",
-                coaching_recommendations=[
-                    "Keep up the excellent work!",
-                    "Consider adding tests for robustness",
-                ],
-                technical_analysis={
-                    "detected_patterns": [],
-                    "integration_analysis": {
-                        "third_party_services": [],
-                        "infrastructure_keywords": [],
-                        "complexity_indicators": [],
-                    },
-                    "analysis_metadata": {
-                        "claude_analysis_available": False,
-                        "clear_thought_analysis_available": False,
-                        "detail_level": "brief",
-                    },
-                },
-                claude_reasoning=None,
-                clear_thought_analysis=None,
-            )
+    @pytest.mark.asyncio
+    async def test_complete_workflow_basic_mode(self):
+        """Test complete workflow in basic (quick) mode"""
 
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = vibe_result
-            mock_get_framework.return_value = mock_framework
+        mock_basic_result = {
+            "status": "basic_analysis_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 42,
+                "title": "Test Issue",
+                "author": "tester",
+                "created_at": "2024-01-01T00:00:00Z",
+                "repository": "test/good-repo",
+                "url": "https://example.com/issues/42",
+                "labels": [],
+            },
+            "patterns_detected": [],
+            "confidence_summary": {
+                "total_patterns_detected": 0,
+                "average_confidence": 0.0,
+                "highest_confidence": 0.0,
+                "patterns_by_confidence": [],
+            },
+            "recommended_actions": [
+                "Keep up the excellent work!",
+                "Consider adding tests for robustness",
+            ],
+            "analysis_metadata": {
+                "detail_level": "brief",
+                "external_claude_available": False,
+            },
+        }
 
-            # Execute workflow
-            result = analyze_issue(
+        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+            mock_analyzer = MagicMock()
+            mock_analyzer.claude_cli_enabled = False
+            mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
+            mock_get_analyzer.return_value = mock_analyzer
+
+            result = await analyze_issue(
                 issue_number=42,
                 repository="test/good-repo",
                 analysis_mode="quick",
-                detail_level="brief",
-                post_comment=False,
-            )
-
-            # Verify workflow execution
-            mock_framework.check_issue_vibes.assert_called_once_with(
-                issue_number=42,
-                repository="test/good-repo",
-                mode=VibeCheckMode.QUICK,
                 detail_level=DetailLevel.BRIEF,
                 post_comment=False,
             )
 
-            # Verify complete response structure
-            assert result["status"] == "vibe_check_complete"
-            assert "analysis_timestamp" in result
-
-            # Verify vibe check results
-            vibe_check = result["vibe_check"]
-            assert vibe_check["overall_vibe"] == "✅ Good Vibes"
-            assert vibe_check["vibe_level"] == "good_vibes"
-            assert "No anti-patterns detected" in vibe_check["friendly_summary"]
-            assert len(vibe_check["coaching_recommendations"]) == 2
-
-            # Verify technical analysis
-            tech_analysis = result["technical_analysis"]
-            assert len(tech_analysis["detected_patterns"]) == 0
-            assert tech_analysis["analysis_metadata"]["detail_level"] == "brief"
-
-            # Verify enhanced features
-            features = result["enhanced_features"]
-            assert features["claude_reasoning"] == False
-            assert features["clear_thought_analysis"] == False
-            assert features["educational_coaching"] == True
-            assert features["friendly_language"] == True
-
-    @pytest.mark.integration
-    def test_complete_vibe_check_workflow_comprehensive_mode(self):
-        """Test complete workflow in comprehensive mode"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            # Setup comprehensive mock result with advanced features
-            vibe_result = VibeCheckResult(
-                vibe_level=VibeLevel.BAD_VIBES,
-                overall_vibe="🚨 Bad Vibes",
-                friendly_summary="We found some concerning patterns that could lead to project delays and technical debt.",
-                coaching_recommendations=[
-                    "Start with official API documentation research",
-                    "Build a minimal proof-of-concept first",
-                    "Validate assumptions with real data",
-                    "Consider using existing SDK instead of custom implementation",
-                ],
-                technical_analysis={
-                    "detected_patterns": [
-                        {
-                            "type": "infrastructure_without_implementation",
-                            "confidence": 0.9,
-                            "detected": True,
-                            "evidence": [
-                                "custom server",
-                                "instead of SDK",
-                                "API integration",
-                            ],
-                        },
-                        {
-                            "type": "complexity_escalation",
-                            "confidence": 0.7,
-                            "detected": True,
-                            "evidence": [
-                                "sophisticated architecture",
-                                "multiple services",
-                            ],
-                        },
-                    ],
-                    "integration_analysis": {
-                        "third_party_services": ["api", "server", "integration"],
-                        "infrastructure_keywords": [
-                            "custom",
-                            "architecture",
-                            "implementation",
-                        ],
-                        "complexity_indicators": [
-                            "sophisticated",
-                            "multiple",
-                            "complex",
-                        ],
-                    },
-                    "analysis_metadata": {
-                        "claude_analysis_available": True,
-                        "clear_thought_analysis_available": True,
-                        "detail_level": "comprehensive",
-                    },
-                },
-                claude_reasoning="Based on the issue description, this appears to be a classic case of 'infrastructure without implementation'. The team is proposing to build custom infrastructure before validating that existing solutions won't work. This approach often leads to technical debt and project delays.",
-                clear_thought_analysis={
-                    "recommended_tools": [
-                        {
-                            "tool": "mcp__clear-thought-server__mentalmodel",
-                            "reasoning": "First principles analysis needed to validate infrastructure requirements",
-                        },
-                        {
-                            "tool": "mcp__clear-thought-server__decisionframework",
-                            "reasoning": "Decision framework to evaluate build vs buy options",
-                        },
-                    ],
-                    "systematic_analysis": "The proposed solution jumps to custom implementation without exploring existing options.",
-                },
+            mock_get_analyzer.assert_called_once()
+            mock_analyzer.analyze_issue_basic.assert_awaited_once_with(
+                issue_number=42,
+                repository="test/good-repo",
+                detail_level="brief",
             )
 
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = vibe_result
-            mock_get_framework.return_value = mock_framework
+            assert result["status"] == "basic_analysis_complete"
+            assert result["issue_info"]["repository"] == "test/good-repo"
+            assert result["recommended_actions"] == mock_basic_result["recommended_actions"]
+            assert result["analysis_metadata"]["detail_level"] == "brief"
 
-            # Execute comprehensive workflow
-            result = analyze_issue(
+            enhanced = result["enhanced_analysis"]
+            assert enhanced["analysis_mode"] == "basic"
+            assert enhanced["claude_cli_enabled"] is False
+            assert enhanced["backward_compatible"] is True
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_complete_workflow_comprehensive_mode(self):
+        """Test complete workflow in comprehensive mode"""
+
+        mock_comprehensive_result = {
+            "status": "comprehensive_analysis_complete",
+            "analysis_timestamp": "2024-01-02T00:00:00Z",
+            "issue_info": {
+                "number": 123,
+                "title": "Complex Issue",
+                "author": "architect",
+                "created_at": "2024-01-02T00:00:00Z",
+                "repository": "test/complex-project",
+                "url": "https://example.com/issues/123",
+                "labels": ["integration"],
+            },
+            "comprehensive_analysis": {
+                "success": True,
+                "claude_output": "Comprehensive reasoning",
+                "execution_time_seconds": 2.5,
+            },
+            "enhanced_features": {
+                "claude_cli_integration": True,
+                "sophisticated_reasoning": True,
+            },
+        }
+
+        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+            mock_analyzer = MagicMock()
+            mock_analyzer.claude_cli_enabled = True
+            mock_analyzer.analyze_issue_comprehensive = AsyncMock(
+                return_value=mock_comprehensive_result
+            )
+            mock_get_analyzer.return_value = mock_analyzer
+
+            result = await analyze_issue(
                 issue_number=123,
                 repository="test/complex-project",
                 analysis_mode="comprehensive",
@@ -192,165 +131,125 @@ class TestEndToEndWorkflow:
                 post_comment=True,
             )
 
-            # Verify comprehensive workflow execution
-            mock_framework.check_issue_vibes.assert_called_once_with(
+            mock_analyzer.analyze_issue_comprehensive.assert_awaited_once_with(
                 issue_number=123,
                 repository="test/complex-project",
-                mode=VibeCheckMode.COMPREHENSIVE,
-                detail_level=DetailLevel.COMPREHENSIVE,
-                post_comment=True,
+                detail_level="comprehensive",
             )
 
-            # Verify complete response structure
-            assert result["status"] == "vibe_check_complete"
+            assert result["status"] == "comprehensive_analysis_complete"
+            assert result["issue_info"]["number"] == 123
+            assert result["enhanced_analysis"]["analysis_mode"] == "comprehensive"
+            assert result["enhanced_analysis"]["claude_cli_enabled"] is True
 
-            # Verify vibe check results
-            vibe_check = result["vibe_check"]
-            assert vibe_check["overall_vibe"] == "🚨 Bad Vibes"
-            assert vibe_check["vibe_level"] == "bad_vibes"
-            assert "concerning patterns" in vibe_check["friendly_summary"]
-            assert len(vibe_check["coaching_recommendations"]) == 4
-
-            # Verify technical analysis with multiple patterns
-            tech_analysis = result["technical_analysis"]
-            assert len(tech_analysis["detected_patterns"]) == 2
-
-            patterns = tech_analysis["detected_patterns"]
-            infrastructure_pattern = next(
-                p
-                for p in patterns
-                if p["type"] == "infrastructure_without_implementation"
-            )
-            assert infrastructure_pattern["confidence"] == 0.9
-            assert "custom server" in infrastructure_pattern["evidence"]
-
-            complexity_pattern = next(
-                p for p in patterns if p["type"] == "complexity_escalation"
-            )
-            assert complexity_pattern["confidence"] == 0.7
-
-            # Verify integration analysis
-            integration_analysis = tech_analysis["integration_analysis"]
-            assert "api" in integration_analysis["third_party_services"]
-            assert "custom" in integration_analysis["infrastructure_keywords"]
-            assert "sophisticated" in integration_analysis["complexity_indicators"]
-
-            # Verify enhanced features with Claude and Clear-Thought
-            features = result["enhanced_features"]
-            assert features["claude_reasoning"] == True
-            assert features["clear_thought_analysis"] == True
-            assert features["comprehensive_validation"] == True
-
-            # Verify Claude reasoning content
-            assert (
-                "infrastructure without implementation"
-                in result["vibe_check"]["claude_reasoning"]
-            )
-            assert "technical debt" in result["vibe_check"]["claude_reasoning"]
-
-            # Verify Clear-Thought analysis
-            clear_thought = result["vibe_check"]["clear_thought_analysis"]
-            assert "recommended_tools" in clear_thought
-            assert len(clear_thought["recommended_tools"]) == 2
-            assert "mcp__clear-thought-server__mentalmodel" in str(clear_thought)
-
-            # Verify issue info
-            issue_info = result["issue_info"]
-            assert issue_info["number"] == 123
-            assert issue_info["repository"] == "test/complex-project"
-            assert issue_info["analysis_mode"] == "comprehensive"
-            assert issue_info["detail_level"] == "comprehensive"
-            assert issue_info["comment_posted"] == True
+            comment_posting = result.get("comment_posting")
+            assert comment_posting is not None
+            assert comment_posting["requested"] is True
+            assert comment_posting["status"] == "not_implemented"
 
     @pytest.mark.integration
-    def test_workflow_error_handling_and_recovery(self):
+    @pytest.mark.asyncio
+    async def test_workflow_error_handling_and_recovery(self):
         """Test workflow error handling and graceful degradation"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            # Test framework initialization failure
-            mock_get_framework.side_effect = Exception(
-                "Framework initialization failed"
+
+        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+            mock_analyzer = MagicMock()
+            mock_analyzer.claude_cli_enabled = True
+            mock_analyzer.analyze_issue_hybrid = AsyncMock(
+                side_effect=Exception("Hybrid analysis failed")
             )
+            mock_get_analyzer.return_value = mock_analyzer
 
-            result = analyze_issue(issue_number=42)
+            result = await analyze_issue(issue_number=42)
 
-            # Should handle error gracefully
-            assert result["status"] == "vibe_check_error"
-            assert "Framework initialization failed" in result["error"]
-            assert "friendly_error" in result
-            assert "🚨 Oops!" in result["friendly_error"]
-            assert result["issue_number"] == 42
+            assert result["status"] == "enhanced_analysis_error"
+            assert "Hybrid analysis failed" in result["error"]
+            assert result["analysis_mode"] == "hybrid"
 
     @pytest.mark.integration
-    def test_workflow_with_mixed_confidence_patterns(self):
+    @pytest.mark.asyncio
+    async def test_workflow_with_mixed_confidence_patterns(self):
         """Test workflow with patterns of varying confidence levels"""
-        with patch(
-            "vibe_check.tools.analyze_issue.get_vibe_check_framework"
-        ) as mock_get_framework:
-            # Setup result with mixed confidence patterns
-            vibe_result = VibeCheckResult(
-                vibe_level=VibeLevel.RESEARCH_NEEDED,
-                overall_vibe="🤔 Research Needed",
-                friendly_summary="Some patterns detected, but we need more information to be sure.",
-                coaching_recommendations=[
-                    "Do more research on existing solutions",
-                    "Create a small proof of concept",
-                    "Document findings and assumptions",
-                ],
-                technical_analysis={
-                    "detected_patterns": [
-                        {
-                            "type": "infrastructure_without_implementation",
-                            "confidence": 0.6,  # Medium confidence
-                            "detected": True,
-                            "evidence": ["custom implementation", "API"],
-                        },
-                        {
-                            "type": "documentation_neglect",
-                            "confidence": 0.3,  # Low confidence
-                            "detected": False,
-                            "evidence": ["missing details"],
-                        },
-                    ],
-                    "integration_analysis": {
-                        "third_party_services": ["api"],
-                        "infrastructure_keywords": ["custom"],
-                        "complexity_indicators": [],
-                    },
+
+        mock_basic_result = {
+            "status": "basic_analysis_complete",
+            "analysis_timestamp": "2024-03-01T00:00:00Z",
+            "issue_info": {
+                "number": 42,
+                "title": "Pattern Mix",
+                "author": "tester",
+                "created_at": "2024-03-01T00:00:00Z",
+                "repository": "test/repo",
+                "url": "https://example.com/issues/42",
+                "labels": [],
+            },
+            "patterns_detected": [
+                {
+                    "pattern_type": "infrastructure_without_implementation",
+                    "confidence": 0.6,
+                    "detected": True,
+                    "evidence": ["custom implementation", "API"],
+                    "threshold": 0.7,
+                    "educational_content": {},
                 },
-            )
+                {
+                    "pattern_type": "documentation_neglect",
+                    "confidence": 0.3,
+                    "detected": False,
+                    "evidence": ["missing details"],
+                    "threshold": 0.7,
+                    "educational_content": {},
+                },
+            ],
+            "confidence_summary": {
+                "total_patterns_detected": 2,
+                "average_confidence": 0.45,
+                "highest_confidence": 0.6,
+                "patterns_by_confidence": [],
+            },
+            "recommended_actions": [
+                "Do more research on existing solutions",
+                "Create a small proof of concept",
+                "Document findings and assumptions",
+            ],
+            "analysis_metadata": {
+                "detail_level": "standard",
+                "external_claude_available": False,
+            },
+        }
 
-            mock_framework = MagicMock()
-            mock_framework.check_issue_vibes.return_value = vibe_result
-            mock_get_framework.return_value = mock_framework
+        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+            mock_analyzer = MagicMock()
+            mock_analyzer.claude_cli_enabled = False
+            mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
+            mock_get_analyzer.return_value = mock_analyzer
 
-            result = analyze_issue(issue_number=42, analysis_mode="quick")
+            result = await analyze_issue(issue_number=42, analysis_mode="quick")
 
-            # Verify mixed confidence handling
-            assert result["status"] == "vibe_check_complete"
-            assert result["vibe_check"]["vibe_level"] == "research_needed"
-            assert "more information" in result["vibe_check"]["friendly_summary"]
+            mock_analyzer.analyze_issue_basic.assert_awaited_once()
+            assert result["status"] == "basic_analysis_complete"
 
-            # Verify pattern handling
-            patterns = result["technical_analysis"]["detected_patterns"]
+            patterns = result["patterns_detected"]
             assert len(patterns) == 2
 
-            # High confidence pattern should be detected
             infra_pattern = next(
                 p
                 for p in patterns
-                if p["type"] == "infrastructure_without_implementation"
+                if p["pattern_type"] == "infrastructure_without_implementation"
             )
-            assert infra_pattern["detected"] == True
+            assert infra_pattern["detected"] is True
             assert infra_pattern["confidence"] == 0.6
 
-            # Low confidence pattern should not be detected
             doc_pattern = next(
-                p for p in patterns if p["type"] == "documentation_neglect"
+                p
+                for p in patterns
+                if p["pattern_type"] == "documentation_neglect"
             )
-            assert doc_pattern["detected"] == False
+            assert doc_pattern["detected"] is False
             assert doc_pattern["confidence"] == 0.3
+
+            summary = result["confidence_summary"]
+            assert summary["total_patterns_detected"] == 2
 
 
 if __name__ == "__main__":

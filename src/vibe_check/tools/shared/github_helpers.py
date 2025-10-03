@@ -159,18 +159,48 @@ def check_github_authentication() -> dict:
         }
 
 
+def is_safe_url(url: str) -> bool:
+    """
+    Check if a URL uses a safe scheme.
+
+    Args:
+        url: URL to check
+
+    Returns:
+        True if URL scheme is safe, False otherwise
+    """
+    if not url or not isinstance(url, str):
+        return True
+
+    # Dangerous schemes that should be blocked
+    dangerous_schemes = [
+        "javascript:",
+        "data:",
+        "vbscript:",
+        "file://",
+    ]
+
+    url_lower = url.lower().strip()
+    return not any(url_lower.startswith(scheme) for scheme in dangerous_schemes)
+
+
 def convert_api_url_to_frontend(url: str) -> str:
     """
-    Convert GitHub API URLs to user-facing frontend URLs.
+    Convert GitHub API URLs to user-facing frontend URLs and filter dangerous schemes.
 
     Args:
         url: GitHub URL (API or frontend)
 
     Returns:
-        Frontend GitHub URL
+        Frontend GitHub URL or empty string if dangerous scheme detected
     """
     if not url:
         return url
+
+    # Filter dangerous URL schemes
+    if not is_safe_url(url):
+        logger.warning(f"Blocked dangerous URL scheme: {url}")
+        return ""
 
     # Convert API URLs to frontend URLs
     if "api.github.com" in url:
@@ -197,23 +227,23 @@ def convert_api_url_to_frontend(url: str) -> str:
 
 def sanitize_github_urls_in_response(data: Any) -> Any:
     """
-    Recursively convert any GitHub API URLs to frontend URLs in response data.
+    Recursively convert any GitHub API URLs to frontend URLs and filter dangerous schemes.
 
     Args:
         data: Response data (dict, list, or primitive)
 
     Returns:
-        Data with API URLs converted to frontend URLs
+        Data with API URLs converted to frontend URLs and dangerous schemes filtered
     """
     if isinstance(data, dict):
         result = {}
         for key, value in data.items():
-            # Convert URL fields
-            if key.endswith("_url") or key == "url":
+            # Process URL-like fields (url, *_url, link, *_link, urls)
+            if key.endswith("_url") or key == "url" or key.endswith("_link") or key == "link" or key == "urls":
                 if isinstance(value, str):
                     result[key] = convert_api_url_to_frontend(value)
                 else:
-                    result[key] = value
+                    result[key] = sanitize_github_urls_in_response(value)
             else:
                 result[key] = sanitize_github_urls_in_response(value)
         return result

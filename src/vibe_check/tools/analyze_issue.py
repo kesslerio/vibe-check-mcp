@@ -889,11 +889,28 @@ async def analyze_issue(
         # Get enhanced analyzer
         analyzer = get_enhanced_github_analyzer()
 
-        # Parse analysis mode
-        mode = analysis_mode.lower()
+        # Normalize analysis mode to support legacy aliases
+        requested_mode = analysis_mode.lower() if analysis_mode else "hybrid"
+        mode_aliases = {
+            "quick": "basic",
+            "fast": "basic",
+            "legacy": "basic",
+            "detailed": "comprehensive",
+        }
+        mode = mode_aliases.get(requested_mode, requested_mode)
         if mode not in ["basic", "comprehensive", "hybrid"]:
-            logger.warning(f"Invalid analysis mode '{analysis_mode}', using 'hybrid'")
+            logger.warning(
+                f"Invalid analysis mode '{analysis_mode}', using 'hybrid'"
+            )
             mode = "hybrid"
+
+        # Normalize detail level so downstream code always receives a string
+        if isinstance(detail_level, DetailLevel):
+            normalized_detail_level: Optional[str] = detail_level.value
+        elif detail_level is None:
+            normalized_detail_level = None
+        else:
+            normalized_detail_level = str(detail_level)
 
         # Execute analysis based on mode
         if mode == "basic":
@@ -903,7 +920,7 @@ async def analyze_issue(
             result = await analyzer.analyze_issue_basic(
                 issue_number=issue_number,
                 repository=repository,
-                detail_level=detail_level,
+                detail_level=normalized_detail_level or "standard",
             )
         elif mode == "comprehensive":
             logger.info(
@@ -912,14 +929,14 @@ async def analyze_issue(
             result = await analyzer.analyze_issue_comprehensive(
                 issue_number=issue_number,
                 repository=repository,
-                detail_level=detail_level,
+                detail_level=normalized_detail_level or "standard",
             )
         else:  # hybrid
             logger.info(f"Running hybrid analysis for issue #{issue_number}")
             result = await analyzer.analyze_issue_hybrid(
                 issue_number=issue_number,
                 repository=repository,
-                detail_level=detail_level,
+                detail_level=normalized_detail_level or "standard",
             )
 
         # Add enhancement metadata
