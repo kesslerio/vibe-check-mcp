@@ -7,6 +7,12 @@ imports like ``vibe_check.mentor.deprecated.mcp_sampling_secure`` remain
 available to security regression tests and downstream extensions.
 """
 
+from . import mcp_sampling_migration
+from . import mcp_sampling_optimized
+from . import mcp_sampling_patch
+from . import mcp_sampling_secure
+from . import mcp_sampling_ultrafast
+
 __all__ = [
     "mcp_sampling_migration",
     "mcp_sampling_optimized",
