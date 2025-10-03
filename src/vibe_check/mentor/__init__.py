@@ -18,3 +18,14 @@ __all__ = [
     "ConfidenceScores",
     "ExperienceStrings",
 ]
+
+# Backwards compatibility: inject deprecated modules into sys.modules
+# so imports like "from vibe_check.mentor.mcp_sampling_patch import X" work
+import sys
+from . import deprecated
+
+sys.modules["vibe_check.mentor.mcp_sampling_patch"] = deprecated.mcp_sampling_patch
+sys.modules["vibe_check.mentor.mcp_sampling_secure"] = deprecated.mcp_sampling_secure
+sys.modules["vibe_check.mentor.mcp_sampling_optimized"] = deprecated.mcp_sampling_optimized
+sys.modules["vibe_check.mentor.mcp_sampling_ultrafast"] = deprecated.mcp_sampling_ultrafast
+sys.modules["vibe_check.mentor.mcp_sampling_migration"] = deprecated.mcp_sampling_migration
