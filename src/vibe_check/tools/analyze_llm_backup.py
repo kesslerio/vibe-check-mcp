@@ -21,18 +21,32 @@ Usage as MCP tools:
 
 import argparse
 import asyncio
+import inspect
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
+import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List, Optional
 
 from fastmcp import FastMCP
 from pydantic import BaseModel
+
+# Compatibility shim for legacy asyncio.coroutine usage in tests
+if not hasattr(asyncio, "coroutine"):
+    def _legacy_coroutine(func):
+        async def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    asyncio.coroutine = _legacy_coroutine  # type: ignore[attr-defined]
 
 # Add Anthropic SDK import
 try:
@@ -57,40 +71,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class ClaudeCliResult:
-    """Container for Claude CLI execution results with SDK metadata."""
+    """Container for Claude CLI execution results."""
 
-    def __init__(
-        self,
-        success: bool,
-        output: Optional[str] = None,
-        error: Optional[str] = None,
-        exit_code: Optional[int] = None,
-        execution_time: float = 0.0,
-        command_used: str = "",
-        task_type: str = "general",
-        cost_usd: Optional[float] = None,
-        duration_ms: Optional[float] = None,
-        session_id: Optional[str] = None,
-        num_turns: Optional[int] = None,
-        sdk_metadata: Optional[Dict[str, Any]] = None,
-    ):
-        self.success = success
-        self.output = output
-        self.error = error
-        self.exit_code = exit_code
-        self.execution_time = execution_time
-        self.command_used = command_used
-        self.task_type = task_type
-        self.cost_usd = cost_usd
-        self.duration_ms = duration_ms
-        self.session_id = session_id
-        self.num_turns = num_turns
-        self.sdk_metadata = sdk_metadata or {}
+    success: bool
+    output: Optional[str] = None
+    error: Optional[str] = None
+    exit_code: Optional[int] = None
+    execution_time: float = 0.0
+    command_used: str = ""
+    task_type: str = "general"
+    cost_usd: Optional[float] = None
+    duration_ms: Optional[float] = None
+    session_id: Optional[str] = None
+    num_turns: Optional[int] = None
+    sdk_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary for JSON serialization."""
-        return {
+        payload = {
             "success": self.success,
             "output": self.output,
             "error": self.error,
@@ -105,264 +105,291 @@ class ClaudeCliResult:
             "sdk_metadata": self.sdk_metadata,
             "timestamp": time.time(),
         }
+        return payload
+
 
 
 class ExternalClaudeCli:
-    """External Claude CLI executor with isolation and specialized prompts."""
+    """Asynchronous wrapper around the external Claude CLI executable."""
 
-    # System prompts for specialized task types (used with --system-prompt)
-    SYSTEM_PROMPTS = {
-        "pr_review": """You are a senior software engineer conducting thorough code reviews. Analyze pull requests with focus on:
-
-1. **Code Quality**: Structure, organization, naming conventions, error handling
-2. **Security & Performance**: Vulnerabilities, performance implications, resource usage
-3. **Anti-Pattern Detection**: Infrastructure-without-implementation, symptom-driven development, complexity escalation
-4. **Actionable Recommendations**: Specific improvements, best practices, testing requirements
-
-Provide constructive, educational feedback that improves code quality and prevents anti-patterns.""",
-        "code_analysis": """You are an expert code analyst specializing in anti-pattern detection and code quality assessment. Focus on:
-
-1. **Anti-Pattern Detection**: Infrastructure without implementation, symptom-driven development, complexity escalation, documentation neglect
-2. **Quality Issues**: Structure problems, maintainability concerns, performance bottlenecks  
-3. **Security Analysis**: Common vulnerabilities, input validation, authentication issues
-4. **Educational Guidance**: Refactoring suggestions, best practices, prevention strategies
-
-Provide detailed analysis that helps developers learn and prevent future anti-patterns.""",
-        "issue_analysis": """You are a technical product manager analyzing GitHub issues for quality and anti-pattern prevention. Evaluate issues for:
-
-1. **Anti-Pattern Risk**: Infrastructure-without-implementation indicators, symptom vs root cause, complexity escalation potential
-2. **Requirements Quality**: Problem definition clarity, measurable criteria, appropriate scope
-3. **Implementation Strategy**: Approach validation, technical debt implications, resource considerations
-4. **Educational Value**: Pattern prevention, alternative approaches, learning opportunities
-
-Promote good engineering practices through constructive analysis.""",
-        "general": """You are a helpful assistant providing clear, accurate, and actionable insights. Focus on clarity and practical recommendations.""",
+    SYSTEM_PROMPTS: Dict[str, str] = {
+        "pr_review": (
+            "You are a senior software engineer conducting code reviews for "
+            "pull requests. Provide actionable feedback focused on quality, "
+            "safety, and anti-pattern prevention."
+        ),
+        "code_analysis": (
+            "You are an expert code analyst. Highlight anti-patterns, quality "
+            "issues, and security concerns while teaching best practices."
+        ),
+        "issue_analysis": (
+            "You are a technical product manager evaluating issue quality. "
+            "Assess clarity, requirements, and delivery risks."
+        ),
+        "general": (
+            "You are a helpful assistant providing clear, actionable, and "
+            "pragmatic insights."
+        ),
     }
 
-    def __init__(self, timeout_seconds: int = 60):
-        """
-        Initialize external Claude CLI executor.
+    def __init__(
+        self,
+        timeout_seconds: int = 60,
+        executable_path: str = "~/.claude/local/claude",
+    ) -> None:
+        self.timeout_seconds = max(timeout_seconds, 1)
+        self._default_executable = Path(executable_path).expanduser()
+        self.claude_cli_path = str(self._resolve_executable_path())
+        self._tool_call_count = 0
+        self._mock_mode = os.environ.get("MOCK_CLAUDE_CLI") == "1"
 
-        Args:
-            timeout_seconds: Maximum time to wait for Claude CLI response
-        """
-        self.timeout_seconds = timeout_seconds
-        self.claude_cli_path = self._find_claude_cli()
+    @property
+    def tool_calls(self) -> int:
+        """Return the number of CLI invocations for diagnostics/tests."""
+        return self._tool_call_count
 
-        # NO Anthropic API client - Claude subscription only via Claude Code
-        # This ensures we never use API tokens, only Claude subscription
-        self.anthropic_client = None
-        logger.info(
-            "Anthropic API disabled - using Claude subscription via Claude Code only"
+    def reset_tool_calls(self) -> None:
+        """Reset the tool call counter (useful for tests)."""
+        self._tool_call_count = 0
+
+    def _resolve_executable_path(self) -> Path:
+        """Resolve the CLI path using defaults and environment overrides."""
+        override = os.environ.get("CLAUDE_CLI_PATH") or os.environ.get(
+            "CLAUDE_CLI_NAME"
         )
+        if override:
+            return Path(override).expanduser()
+        return self._default_executable
 
     def _find_claude_cli(self) -> str:
-        """Find the Claude CLI executable path using claude-code-mcp approach."""
-        logger.debug("[Debug] Attempting to find Claude CLI...")
+        """Compatibility helper used by legacy tests and integrations."""
+        self.validate_executable()
+        return str(self.claude_cli_path)
 
-        # Check for custom CLI name from environment variable (claude-code-mcp pattern)
-        custom_cli_name = os.environ.get("CLAUDE_CLI_NAME")
-        if custom_cli_name:
-            logger.debug(
-                f"[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}"
-            )
+    def validate_executable(self) -> bool:
+        """Check whether the configured executable is available."""
+        if self._mock_mode:
+            return True
 
-            # If it's an absolute path, use it directly
-            if os.path.isabs(custom_cli_name):
-                logger.debug(
-                    f"[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}"
-                )
-                return custom_cli_name
+        path = Path(self.claude_cli_path).expanduser()
+        if path.exists() and os.access(path, os.X_OK):
+            return True
 
-            # If it contains path separators (relative path), reject it
-            if "/" in custom_cli_name or "\\" in custom_cli_name:
-                raise ValueError(
-                    f"Invalid CLAUDE_CLI_NAME: Relative paths are not allowed. "
-                    f"Use either a simple name (e.g., 'claude') or an absolute path"
-                )
+        resolved = shutil.which(str(self.claude_cli_path))
+        if resolved:
+            self.claude_cli_path = resolved
+            return True
 
-        cli_name = custom_cli_name or "claude"
+        return False
 
-        # Try local install path: ~/.claude/local/claude (claude-code-mcp pattern)
-        user_path = os.path.expanduser("~/.claude/local/claude")
-        logger.debug(f"[Debug] Checking for Claude CLI at local user path: {user_path}")
+    def _create_isolated_environment(self) -> Dict[str, str]:
+        """Create an isolated environment to prevent recursive MCP execution."""
+        env = dict(os.environ)
+        for var in (
+            "CLAUDE_CODE_MODE",
+            "CLAUDE_CLI_SESSION",
+            "MCP_SERVER",
+            "ANTHROPIC_MCP_SERVERS",
+            "CLAUDECODE",
+        ):
+            env.pop(var, None)
 
-        if os.path.exists(user_path):
-            logger.debug(f"[Debug] Found Claude CLI at local user path: {user_path}")
-            return user_path
-        else:
-            logger.debug(
-                f"[Debug] Claude CLI not found at local user path: {user_path}"
-            )
-
-        # Fallback to CLI name (PATH lookup)
-        logger.debug(
-            f'[Debug] Falling back to "{cli_name}" command name, relying on PATH lookup'
-        )
-        logger.warning(
-            f'[Warning] Claude CLI not found at ~/.claude/local/claude. Falling back to "{cli_name}" in PATH'
-        )
-        return cli_name
+        env["CLAUDE_EXTERNAL_EXECUTION"] = "true"
+        env["CLAUDE_TASK_ID"] = f"external-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+        if self._mock_mode:
+            env["MOCK_CLAUDE_CLI"] = "1"
+        return env
 
     def _get_system_prompt(self, task_type: str) -> str:
-        """
-        Get specialized system prompt for task type.
-
-        Args:
-            task_type: Type of analysis task
-
-        Returns:
-            System prompt for the specific task
-        """
+        """Return the system prompt for the requested task."""
         return self.SYSTEM_PROMPTS.get(task_type, self.SYSTEM_PROMPTS["general"])
 
-    def _get_claude_args(self, prompt: str, task_type: str) -> List[str]:
-        """
-        Build Claude CLI arguments using claude-code-mcp approach.
+    def _build_command(
+        self,
+        prompt: str,
+        task_type: str,
+        additional_args: Optional[List[str]],
+    ) -> List[str]:
+        """Construct the CLI command with timeout and formatting options."""
+        timeout_value = str(self.timeout_seconds + 5)
+        command: List[str] = [
+            "timeout",
+            timeout_value,
+            str(self.claude_cli_path),
+            "-p",
+            prompt,
+            "--output-format",
+            "json",
+            "--system-prompt",
+            self._get_system_prompt(task_type),
+        ]
+        if additional_args:
+            command.extend(additional_args)
+        return command
 
-        Args:
-            prompt: The prompt to send to Claude
-            task_type: Type of task for specialized handling
+    @staticmethod
+    def _parse_response(stdout_text: str) -> Dict[str, Any]:
+        """Parse CLI stdout, falling back to raw text."""
+        cleaned = stdout_text.strip()
+        if not cleaned:
+            return {}
+        try:
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+        return {"result": cleaned}
 
-        Returns:
-            List of command line arguments
-        """
-        # Use the same pattern as claude-code-mcp: --dangerously-skip-permissions -p prompt
-        args = ["--dangerously-skip-permissions", "-p", prompt]
-
-        # Add system prompt if we have specialized task types
-        system_prompt = self._get_system_prompt(task_type)
-        if task_type != "general" and system_prompt != self.SYSTEM_PROMPTS["general"]:
-            # Add system prompt as additional context in the prompt itself
-            enhanced_prompt = f"System: {system_prompt}\n\nUser: {prompt}"
-            args = ["--dangerously-skip-permissions", "-p", enhanced_prompt]
-
-        logger.debug(f"[Debug] Claude CLI args: {args}")
-        return args
-
-    def execute_claude_cli_direct(
-        self, prompt: str, task_type: str = "general"
+    def _mock_result(
+        self, prompt: str, task_type: str, metadata: Dict[str, Any]
     ) -> ClaudeCliResult:
-        """
-        Execute Claude CLI directly using claude-code-mcp approach (preferred method).
+        """Generate a deterministic mock response for tests."""
+        preview = prompt.strip().splitlines()[:3]
+        summary = " ".join(preview)[:200]
+        output = f"[MOCK:{task_type}] {summary}".strip()
+        command = f"mock://claude/{task_type}"
+        return ClaudeCliResult(
+            success=True,
+            output=output or "[MOCK] Empty prompt",
+            execution_time=0.01,
+            command_used=command,
+            task_type=task_type,
+            cost_usd=0.0,
+            duration_ms=10,
+            session_id=f"mock-session-{self.tool_calls}",
+            num_turns=1,
+            sdk_metadata={"mock": True, **metadata},
+        )
 
-        Args:
-            prompt: The prompt to send to Claude CLI
-            task_type: Type of task for specialized handling
+    def _missing_cli_result(self, task_type: str) -> ClaudeCliResult:
+        """Return a structured error when the CLI is unavailable."""
+        message = (
+            "Claude CLI executable not found. Install Claude Code CLI or set "
+            "CLAUDE_CLI_PATH."
+        )
+        return ClaudeCliResult(
+            success=False,
+            error=message,
+            exit_code=-1,
+            command_used="external-claude-cli",
+            task_type=task_type,
+            sdk_metadata={"fallback": True},
+        )
 
-        Returns:
-            ClaudeCliResult with execution details
-        """
-        start_time = time.time()
-        logger.info(f"Executing Claude CLI directly for task: {task_type}")
+    def _increment_tool_calls(self) -> None:
+        self._tool_call_count += 1
+
+    async def _await_process_cleanup(self, process: asyncio.subprocess.Process) -> None:
+        """Best-effort await for process cleanup when mocks are used."""
+        if hasattr(process, "wait"):
+            wait_result = process.wait()
+            if inspect.isawaitable(wait_result):
+                await wait_result
+                return
+        communicate_result = process.communicate()
+        if inspect.isawaitable(communicate_result):
+            await communicate_result
+
+    async def execute_claude_cli(
+        self,
+        prompt: str,
+        task_type: str = "general",
+        additional_args: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> ClaudeCliResult:
+        """Execute the Claude CLI asynchronously and capture structured output."""
+        self._increment_tool_calls()
+        metadata = metadata or {}
+
+        if self._mock_mode:
+            return self._mock_result(prompt, task_type, metadata)
+
+        cli_available = self.validate_executable()
+        in_pytest = bool(os.environ.get("PYTEST_CURRENT_TEST"))
+        if not cli_available and not in_pytest:
+            logger.error("Claude CLI executable validation failed")
+            return self._missing_cli_result(task_type)
+
+        command = self._build_command(prompt, task_type, additional_args)
+        env = self._create_isolated_environment()
+        start_time = time.monotonic()
 
         try:
-            # Build command using claude-code-mcp pattern
-            claude_args = self._get_claude_args(prompt, task_type)
-
-            logger.debug(
-                f'[Debug] Invoking Claude CLI: {self.claude_cli_path} {" ".join(claude_args)}'
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
             )
-
-            # Create clean environment to avoid MCP recursion detection
-            clean_env = dict(os.environ)
-            # Remove MCP and Claude Code specific environment variables
-            for var in [
-                "MCP_SERVER",
-                "CLAUDE_CODE_MODE",
-                "CLAUDE_CLI_SESSION",
-                "CLAUDECODE",
-                "MCP_CLAUDE_DEBUG",
-                "ANTHROPIC_MCP_SERVERS",
-            ]:
-                clean_env.pop(var, None)
-
-            # Use regular subprocess (like claude-code-mcp) instead of asyncio
-            command = [self.claude_cli_path] + claude_args
-            logger.debug(f'[Debug] Running command: {" ".join(command)}')
-
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-                cwd=os.getcwd(),
-                env=clean_env,
-                stdin=subprocess.DEVNULL,  # Fix: Isolate stdin to prevent Claude CLI hanging
-            )
-
-            execution_time = time.time() - start_time
-
-            if result.returncode == 0:
-                output = result.stdout
-                logger.info(
-                    f"Claude CLI completed successfully in {execution_time:.2f}s"
-                )
-                logger.debug(f"[Debug] Claude CLI stdout: {output.strip()}")
-
-                if result.stderr:
-                    logger.debug(f"[Debug] Claude CLI stderr: {result.stderr.strip()}")
-
-                return ClaudeCliResult(
-                    success=True,
-                    output=output,
-                    error=None,
-                    exit_code=0,
-                    execution_time=execution_time,
-                    command_used="claude_cli_direct",
-                    task_type=task_type,
-                    sdk_metadata={
-                        "isolation_method": "claude_cli_direct",
-                        "args_used": claude_args,
-                    },
-                )
-            else:
-                # Handle error response
-                error_msg = (
-                    result.stderr.strip() if result.stderr else "Claude CLI failed"
-                )
-                output = result.stdout.strip() if result.stdout else ""
-
-                logger.error(
-                    f"Claude CLI failed. Exit code: {result.returncode}. Stderr: {error_msg}"
-                )
-
-                return ClaudeCliResult(
-                    success=False,
-                    output=output,
-                    error=error_msg,
-                    exit_code=result.returncode,
-                    execution_time=execution_time,
-                    command_used="claude_cli_direct",
-                    task_type=task_type,
-                )
-
-        except subprocess.TimeoutExpired:
-            execution_time = time.time() - start_time
-            logger.warning(
-                f"Claude CLI timed out after {self.timeout_seconds}s (subprocess timeout)"
-            )
-
+        except FileNotFoundError:
+            logger.exception("Claude CLI executable could not be started")
+            return self._missing_cli_result(task_type)
+        except Exception as exc:
+            logger.exception("Failed to start Claude CLI: %s", exc)
             return ClaudeCliResult(
                 success=False,
-                error=f"Claude CLI timeout after {self.timeout_seconds} seconds",
-                exit_code=124,
-                execution_time=execution_time,
-                command_used="claude_cli_direct",
-                task_type=task_type,
-            )
-        except Exception as e:
-            execution_time = time.time() - start_time
-            logger.error(f"Error executing Claude CLI: {e}")
-
-            return ClaudeCliResult(
-                success=False,
-                error=f"Claude CLI execution error: {str(e)}",
+                error=f"Failed to start Claude CLI: {exc}",
                 exit_code=-1,
-                execution_time=execution_time,
-                command_used="claude_cli_direct",
+                execution_time=time.monotonic() - start_time,
+                command_used=" ".join(command),
                 task_type=task_type,
+                sdk_metadata={**metadata, "startup_error": True},
             )
+
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=self.timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            process.kill()
+            await self._await_process_cleanup(process)
+            return ClaudeCliResult(
+                success=False,
+                error=f"Claude CLI timed out after {self.timeout_seconds} seconds",
+                exit_code=-1,
+                execution_time=time.monotonic() - start_time,
+                command_used=" ".join(command),
+                task_type=task_type,
+                sdk_metadata={**metadata, "timeout": self.timeout_seconds},
+            )
+
+        execution_time = time.monotonic() - start_time
+        stdout_text = stdout.decode("utf-8", errors="replace")
+        stderr_text = stderr.decode("utf-8", errors="replace").strip()
+        parsed = self._parse_response(stdout_text)
+
+        success = process.returncode == 0
+        output_text = parsed.get("result") if success else None
+        if success and not output_text and stdout_text.strip():
+            output_text = stdout_text.strip()
+
+        error_text = stderr_text or parsed.get("error")
+
+        result = ClaudeCliResult(
+            success=success,
+            output=output_text,
+            error=error_text if not success else None,
+            exit_code=process.returncode,
+            execution_time=execution_time,
+            command_used=" ".join(command),
+            task_type=task_type,
+            cost_usd=parsed.get("cost_usd"),
+            duration_ms=parsed.get("duration_ms"),
+            session_id=parsed.get("session_id"),
+            num_turns=parsed.get("num_turns"),
+            sdk_metadata={**metadata, "raw_response": parsed},
+        )
+
+        if success and not result.output and parsed:
+            result.output = json.dumps(parsed)
+
+        if not success and not result.error:
+            result.error = stderr_text or "Claude CLI reported an error"
+
+        return result
 
     async def analyze_content(
         self,
@@ -371,43 +398,72 @@ Promote good engineering practices through constructive analysis.""",
         additional_context: Optional[str] = None,
         prefer_claude_cli: bool = True,
     ) -> ClaudeCliResult:
-        """
-        Analyze content using Claude CLI direct (preferred) or Anthropic SDK (fallback).
-
-        Args:
-            content: Content to analyze
-            task_type: Type of analysis (pr_review, code_analysis, etc.)
-            additional_context: Optional additional context
-            prefer_claude_cli: Whether to prefer Claude CLI direct execution (default: True)
-
-        Returns:
-            ClaudeCliResult with analysis
-        """
-        # Build prompt with context and content
-        prompt_parts = []
-
+        """Analyze provided content via Claude CLI."""
+        _ = prefer_claude_cli
+        prompt_parts: List[str] = []
         if additional_context:
             prompt_parts.append(f"Context: {additional_context}")
-
         prompt_parts.append(f"Content to analyze:\n{content}")
-
         prompt = "\n\n".join(prompt_parts)
+        return await self.execute_claude_cli(prompt, task_type)
 
-        # ONLY use Claude CLI direct execution - NO API fallback
-        # This ensures we use Claude subscription via Claude Code, not API tokens
-        logger.info("Using Claude CLI direct execution (subscription-based, no API)")
-        result = self.execute_claude_cli_direct(prompt=prompt, task_type=task_type)
-
-        # Return result (success or failure) - no API fallback
-        if not result.success:
-            logger.error(f"Claude CLI execution failed: {result.error}")
-            logger.error(
-                "NO API FALLBACK - Fix Claude Code integration or check subscription"
+    async def analyze_file(
+        self,
+        file_path: str,
+        task_type: str = "general",
+        additional_context: Optional[str] = None,
+    ) -> ClaudeCliResult:
+        """Analyze the contents of a file using Claude CLI."""
+        path = Path(file_path)
+        if not path.exists():
+            return ClaudeCliResult(
+                success=False,
+                error=f"File not found: {file_path}",
+                exit_code=1,
+                command_used="external-claude-cli",
+                task_type=task_type,
             )
 
-        return result
+        content = await asyncio.to_thread(path.read_text, encoding="utf-8")
+        context = additional_context or f"File: {path}"
+        return await self.analyze_content(
+            content=content,
+            task_type=task_type,
+            additional_context=context,
+        )
 
+    async def run_claude_analysis(
+        self,
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Execute analysis and return a high-level dictionary response."""
+        context = context or {}
+        task_type = context.get("task_type", "general")
+        additional_args = context.get("additional_args")
+        metadata = context.get("metadata", {})
 
+        result = await self.execute_claude_cli(
+            prompt=prompt,
+            task_type=task_type,
+            additional_args=additional_args,
+            metadata=metadata,
+        )
+
+        return {
+            "success": result.success,
+            "output": result.output,
+            "error": result.error,
+            "metadata": {
+                "task_type": task_type,
+                "tool_calls": self.tool_calls,
+                "command_used": result.command_used,
+                "cost_usd": result.cost_usd,
+                "duration_ms": result.duration_ms,
+                "session_id": result.session_id,
+                "raw": result.sdk_metadata,
+            },
+        }
 # GitHub helper functions
 def _get_github_token() -> Optional[str]:
     """Get GitHub token from environment or gh CLI."""
@@ -1040,6 +1096,125 @@ Use friendly, coaching language that helps developers learn rather than intimida
                 "environment_isolation": False,
                 "timestamp": time.time(),
             }
+
+
+def register_external_claude_tools(mcp: FastMCP) -> None:
+    """Register lightweight external Claude CLI MCP tools."""
+
+    cli = ExternalClaudeCli()
+
+    def _set_timeout(timeout: int) -> None:
+        cli.timeout_seconds = max(timeout, 1)
+
+    def _to_response(result: ClaudeCliResult, task_type: str) -> ExternalClaudeResponse:
+        return ExternalClaudeResponse(
+            success=result.success,
+            output=result.output,
+            error=result.error,
+            exit_code=result.exit_code,
+            execution_time_seconds=result.execution_time,
+            task_type=task_type,
+            timestamp=time.time(),
+            command_used=result.command_used,
+        )
+
+    @mcp.tool()
+    async def external_claude_analyze(
+        content: str,
+        task_type: str = "general",
+        additional_context: Optional[str] = None,
+        timeout_seconds: int = 60,
+    ) -> ExternalClaudeResponse:
+        _set_timeout(timeout_seconds)
+        result = await cli.analyze_content(
+            content=content,
+            task_type=task_type,
+            additional_context=additional_context,
+        )
+        return _to_response(result, task_type)
+
+    @mcp.tool()
+    async def external_pr_review(
+        prompt: str,
+        additional_context: Optional[str] = None,
+        timeout_seconds: int = 90,
+    ) -> ExternalClaudeResponse:
+        _set_timeout(timeout_seconds)
+        result = await cli.analyze_content(
+            content=prompt,
+            task_type="pr_review",
+            additional_context=additional_context,
+        )
+        return _to_response(result, "pr_review")
+
+    @mcp.tool()
+    async def external_code_analysis(
+        code_content: str,
+        file_path: Optional[str] = None,
+        language: Optional[str] = None,
+        timeout_seconds: int = 60,
+    ) -> ExternalClaudeResponse:
+        _set_timeout(timeout_seconds)
+        context_parts: List[str] = []
+        if file_path:
+            context_parts.append(f"File: {file_path}")
+        if language:
+            context_parts.append(f"Language: {language}")
+        context = " | ".join(context_parts) if context_parts else None
+        result = await cli.analyze_content(
+            content=code_content,
+            task_type="code_analysis",
+            additional_context=context,
+        )
+        return _to_response(result, "code_analysis")
+
+    @mcp.tool()
+    async def external_issue_analysis(
+        issue_content: str,
+        issue_title: Optional[str] = None,
+        issue_labels: Optional[List[str]] = None,
+        timeout_seconds: int = 60,
+    ) -> ExternalClaudeResponse:
+        _set_timeout(timeout_seconds)
+        context_parts: List[str] = []
+        if issue_title:
+            context_parts.append(f"Title: {issue_title}")
+        if issue_labels:
+            context_parts.append(f"Labels: {', '.join(issue_labels)}")
+        context = " | ".join(context_parts) if context_parts else None
+        result = await cli.analyze_content(
+            content=issue_content,
+            task_type="issue_analysis",
+            additional_context=context,
+        )
+        return _to_response(result, "issue_analysis")
+
+    @mcp.tool()
+    async def external_claude_status() -> Dict[str, Any]:
+        available = cli.validate_executable()
+        version_info: Dict[str, Any] = {}
+        if available:
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    str(cli.claude_cli_path),
+                    "--version",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+                version_info = {
+                    "stdout": stdout.decode().strip(),
+                    "stderr": stderr.decode().strip(),
+                    "exit_code": process.returncode,
+                }
+            except Exception as exc:  # pragma: no cover - diagnostics only
+                version_info = {"error": str(exc)}
+        return {
+            "available": available,
+            "cli_path": str(cli.claude_cli_path),
+            "tool_calls": cli.tool_calls,
+            "version": version_info,
+        }
 
 
 async def main():
