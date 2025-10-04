@@ -2,7 +2,6 @@
 
 import asyncio
 import copy
-import functools
 import logging
 from datetime import UTC, datetime
 from typing import Dict, Any, Optional
@@ -293,53 +292,39 @@ def analyze_issue(
     analysis_mode: str = "hybrid",
     detail_level: str = "standard",
     post_comment: bool = False,
-) -> Dict[str, Any] | "asyncio.Task[Dict[str, Any]]":
-    """Run issue analysis synchronously or return awaitable in async contexts."""
+) -> Dict[str, Any]:
+    """
+    Run issue analysis synchronously.
+
+    For async usage, call analyze_issue_async() directly.
+
+    Note:
+        Nested event loops are not supported (Python limitation).
+        If you need async, use analyze_issue_async() instead.
+    """
     requested_mode = (analysis_mode or "hybrid").lower()
+
+    # Vibe check modes use synchronous execution
     if requested_mode in {"quick", "comprehensive", "hybrid"}:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return _run_vibe_check_sync(
-                issue_number=issue_number,
-                repository=repository,
-                detail_level=detail_level,
-                mode=requested_mode,
-                post_comment=post_comment,
-            )
-
-        vibe_call = functools.partial(
-            _run_vibe_check_sync,
-            issue_number,
-            repository,
-            detail_level,
-            requested_mode,
-            post_comment,
+        return _run_vibe_check_sync(
+            issue_number=issue_number,
+            repository=repository,
+            detail_level=detail_level,
+            mode=requested_mode,
+            post_comment=post_comment,
         )
-        return loop.run_in_executor(None, vibe_call)
 
+    # Basic/enhanced modes use async execution
     normalized_mode = _normalize_async_mode(analysis_mode)
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        coroutine = _analyze_issue_async(
+    return asyncio.run(
+        _analyze_issue_async(
             issue_number=issue_number,
             repository=repository,
             analysis_mode=normalized_mode,
             detail_level=detail_level,
             post_comment=post_comment,
         )
-        return asyncio.run(coroutine)
-
-    coroutine = _analyze_issue_async(
-        issue_number=issue_number,
-        repository=repository,
-        analysis_mode=normalized_mode,
-        detail_level=detail_level,
-        post_comment=post_comment,
     )
-    return loop.create_task(coroutine)
 
 
 def analyze_issue_legacy(

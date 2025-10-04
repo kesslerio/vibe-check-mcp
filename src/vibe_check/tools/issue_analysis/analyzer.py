@@ -1,7 +1,6 @@
 """Core analyzer class for GitHub issue analysis."""
 
 import asyncio
-import concurrent.futures
 import logging
 from typing import Dict, Any, Optional, List
 
@@ -468,7 +467,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
         detail_level: str = "standard",
     ) -> Dict[str, Any]:
         """
-        Backward compatibility method - delegates to analyze_issue_basic.
+        Backward compatibility method - synchronous wrapper for analyze_issue_basic.
 
         Args:
             issue_number: GitHub issue number to analyze
@@ -478,42 +477,19 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
 
         Returns:
             Pattern detection analysis (original format)
+
+        Note:
+            This is a simple synchronous wrapper using asyncio.run().
+            Nested event loops are not supported (Python limitation).
         """
-        # Handle async call for backward compatibility
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If we're already in an async context, create a new thread
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        self.analyze_issue_basic(
-                            issue_number=issue_number,
-                            repository=repository,
-                            focus_patterns=focus_patterns,
-                            detail_level=detail_level,
-                        ),
-                    )
-                    return future.result()
-            else:
-                return loop.run_until_complete(
-                    self.analyze_issue_basic(
-                        issue_number=issue_number,
-                        repository=repository,
-                        focus_patterns=focus_patterns,
-                        detail_level=detail_level,
-                    )
-                )
-        except Exception:
-            # Fallback: run in new event loop
-            return asyncio.run(
-                self.analyze_issue_basic(
-                    issue_number=issue_number,
-                    repository=repository,
-                    focus_patterns=focus_patterns,
-                    detail_level=detail_level,
-                )
+        return asyncio.run(
+            self.analyze_issue_basic(
+                issue_number=issue_number,
+                repository=repository,
+                focus_patterns=focus_patterns,
+                detail_level=detail_level,
             )
+        )
 
 
 # Backward compatibility alias for existing tests

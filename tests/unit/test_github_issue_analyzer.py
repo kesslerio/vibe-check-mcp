@@ -92,9 +92,13 @@ class TestGitHubIssueAnalyzer:
         mock_issue.user.login = sample_issue_data["author"]
         mock_issue.created_at.isoformat.return_value = sample_issue_data["created_at"]
         mock_issue.state = sample_issue_data["state"]
-        mock_issue.labels = [
-            MagicMock(name=label) for label in sample_issue_data["labels"]
-        ]
+        # Create proper label mocks with .name attribute
+        mock_labels = []
+        for label in sample_issue_data["labels"]:
+            mock_label = MagicMock()
+            mock_label.name = label
+            mock_labels.append(mock_label)
+        mock_issue.labels = mock_labels
         mock_issue.html_url = sample_issue_data["url"]
 
         analyzer.github_client.github_client.get_repo.return_value = mock_repo
@@ -218,7 +222,12 @@ class TestGitHubIssueAnalyzer:
         mock_issue.user.login = "testuser"
         mock_issue.created_at.isoformat.return_value = "2025-01-01T00:00:00Z"
         mock_issue.state = "open"
-        mock_issue.labels = [MagicMock(name="bug"), MagicMock(name="P1")]
+        # Create proper label mocks with .name attribute
+        mock_bug_label = MagicMock()
+        mock_bug_label.name = "bug"
+        mock_p1_label = MagicMock()
+        mock_p1_label.name = "P1"
+        mock_issue.labels = [mock_bug_label, mock_p1_label]
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
 
         # Test transformation logic would be tested here
