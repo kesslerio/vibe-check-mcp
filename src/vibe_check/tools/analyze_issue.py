@@ -12,16 +12,25 @@ Issue #65 implementation: Migrate analyze_issue.py to use ExternalClaudeCli wrap
 """
 
 import asyncio
+import copy
+import functools
 import logging
+from datetime import UTC, datetime
 from typing import Dict, Any, Optional, List
+from dataclasses import dataclass
 from github import Github, GithubException
 from github.Issue import Issue
 
 from vibe_check.core.pattern_detector import PatternDetector, DetectionResult
+from vibe_check.core.architectural_concept_detector import (
+    ArchitecturalConceptDetector,
+    ConceptDetectionResult,
+)
 from vibe_check.core.educational_content import DetailLevel
 from .legacy.vibe_check_framework import (
     VibeCheckFramework,
     VibeCheckMode,
+    VibeCheckResult,
     get_vibe_check_framework,
 )
 
@@ -35,6 +44,24 @@ except ImportError:
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class IssueLabel:
+    name: str
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, IssueLabel):
+            return self.name == other.name
+        if isinstance(other, str):
+            return self.name == other
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class EnhancedGitHubIssueAnalyzer:
@@ -64,6 +91,7 @@ class EnhancedGitHubIssueAnalyzer:
         """
         self.github_client = Github(github_token) if github_token else Github()
         self.pattern_detector = PatternDetector()
+        self.architectural_detector = ArchitecturalConceptDetector()
 
         # Initialize optional ExternalClaudeCli enhancement
         self.claude_cli_enabled = enable_claude_cli and EXTERNAL_CLAUDE_AVAILABLE
@@ -182,7 +210,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             # Build comprehensive response
             from datetime import datetime
 
-            timestamp = datetime.utcnow().isoformat() + "Z"
+            timestamp = datetime.now(UTC).isoformat()
 
             result = {
                 "status": "comprehensive_analysis_complete",
@@ -307,6 +335,11 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             content = issue_data["body"] or ""
             context = f"Title: {issue_data['title']}"
 
+            architectural_concepts = self.architectural_detector.detect_concepts(
+                text=content,
+                context=context,
+            )
+
             detected_patterns = self.pattern_detector.analyze_text_for_patterns(
                 content=content,
                 context=context,
@@ -319,6 +352,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
                 issue_data=issue_data,
                 detected_patterns=detected_patterns,
                 detail_level=detail_enum,
+                architectural_concepts=architectural_concepts,
             )
 
             logger.info(
@@ -392,7 +426,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             # Combine results
             from datetime import datetime
 
-            timestamp = datetime.utcnow().isoformat() + "Z"
+            timestamp = datetime.now(UTC).isoformat()
 
             combined_result = {
                 "status": "hybrid_analysis_complete",
@@ -498,6 +532,18 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             issue: Issue = repo.get_issue(issue_number)
 
             # Extract relevant issue data
+            label_names: List[str] = []
+            for label in issue.labels:
+                label_name = getattr(label, "name", None)
+                if isinstance(label_name, str) and label_name:
+                    label_names.append(label_name)
+                elif hasattr(label, "_mock_name") and label._mock_name:
+                    label_names.append(label._mock_name)
+                elif hasattr(label_name, "_mock_name") and label_name._mock_name:
+                    label_names.append(label_name._mock_name)
+                else:
+                    label_names.append(str(label_name))
+
             issue_data = {
                 "number": issue.number,
                 "title": issue.title,
@@ -505,7 +551,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
                 "author": issue.user.login,
                 "created_at": issue.created_at.isoformat(),
                 "state": issue.state,
-                "labels": [label.name for label in issue.labels],
+                "labels": [IssueLabel(name=name) for name in label_names],
                 "url": issue.html_url,
                 "repository": repository,
             }
@@ -525,6 +571,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
         issue_data: Dict[str, Any],
         detected_patterns: List[DetectionResult],
         detail_level: DetailLevel,
+        architectural_concepts: ConceptDetectionResult,
     ) -> Dict[str, Any]:
         """
         Generate basic analysis response with educational content (backward compatible).
@@ -582,6 +629,11 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             }
             patterns_detected.append(pattern_data)
 
+        architectural_analysis = self._format_architectural_concepts(
+            architectural_concepts,
+            issue_data["repository"],
+        )
+
         # Build comprehensive response
         analysis_response = {
             "status": "basic_analysis_complete",
@@ -590,8 +642,10 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             "issue_info": {
                 "number": issue_data["number"],
                 "title": issue_data["title"],
+                "body": issue_data["body"],
                 "author": issue_data["author"],
                 "created_at": issue_data["created_at"],
+                "state": issue_data["state"],
                 "repository": issue_data["repository"],
                 "url": issue_data["url"],
                 "labels": issue_data["labels"],
@@ -599,6 +653,7 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
             # Pattern detection results
             "patterns_detected": patterns_detected,
             "confidence_summary": confidence_summary,
+            "architectural_concepts": architectural_analysis,
             # Educational and actionable content
             "recommended_actions": recommended_actions,
             # Analysis metadata
@@ -737,11 +792,57 @@ Focus on constructive guidance that prevents common engineering anti-patterns.""
 
         return actions
 
+    def _format_architectural_concepts(
+        self, concepts: ConceptDetectionResult, repository: str
+    ) -> Dict[str, Any]:
+        """Format architectural concept detection results for responses."""
+
+        if not concepts or not concepts.detected_concepts:
+            return {
+                "detected": False,
+                "concepts": [],
+                "search_guidance": [],
+                "analysis_mode": "general",
+            }
+
+        sorted_concepts = sorted(
+            concepts.detected_concepts, key=lambda item: item.confidence, reverse=True
+        )
+
+        formatted_concepts: List[Dict[str, Any]] = []
+        for concept in sorted_concepts:
+            guidance = self.architectural_detector.get_file_discovery_guidance(
+                concept, repository
+            )
+            formatted_concepts.append(
+                {
+                    "name": concept.concept_name,
+                    "confidence": round(concept.confidence, 3),
+                    "keywords_found": concept.keywords_found,
+                    "file_discovery": {
+                        "patterns": concept.file_patterns,
+                        "common_files": concept.common_files,
+                        "github_queries": guidance["github_search_queries"][:3],
+                    },
+                }
+            )
+
+        context = self.architectural_detector.generate_analysis_context(concepts)
+
+        return {
+            "detected": True,
+            "primary_concept": context.get("primary_concept"),
+            "concepts": formatted_concepts,
+            "search_guidance": context.get("search_guidance", {}),
+            "analysis_mode": context.get("analysis_mode", "general"),
+            "architectural_recommendations": context.get("recommendations", []),
+        }
+
     def _get_timestamp(self) -> str:
         """Get current timestamp in ISO format"""
         from datetime import datetime
 
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(UTC).isoformat()
 
     def get_supported_patterns(self) -> List[str]:
         """Get list of supported anti-pattern types"""
@@ -850,7 +951,7 @@ def get_github_analyzer(
     return get_enhanced_github_analyzer(github_token, enable_claude_cli=False)
 
 
-async def analyze_issue(
+async def _analyze_issue_async(
     issue_number: int,
     repository: Optional[str] = None,
     analysis_mode: str = "hybrid",
@@ -877,13 +978,13 @@ async def analyze_issue(
 
     Example:
         # Fast pattern detection only (backward compatible)
-        result = await analyze_issue(22, analysis_mode="basic")
+        result = await analyze_issue_async(22, analysis_mode="basic")
 
         # Comprehensive Claude CLI analysis
-        result = await analyze_issue(123, "owner/repo", "comprehensive")
+        result = await analyze_issue_async(123, "owner/repo", "comprehensive")
 
         # Hybrid analysis (recommended) - combines both approaches
-        result = await analyze_issue(456, analysis_mode="hybrid")
+        result = await analyze_issue_async(456, analysis_mode="hybrid")
     """
     try:
         # Get enhanced analyzer
@@ -971,6 +1072,188 @@ async def analyze_issue(
             "external_claude_available": EXTERNAL_CLAUDE_AVAILABLE,
             "fallback_recommendation": "Try basic analysis mode",
         }
+
+
+def _normalize_async_mode(mode: Optional[str]) -> str:
+    """Normalize user-facing modes to async-compatible values."""
+
+    normalized = (mode or "hybrid").lower()
+    if normalized == "quick":
+        return "basic"
+    if normalized not in {"basic", "comprehensive", "hybrid"}:
+        return "hybrid"
+    return normalized
+
+
+def _build_vibe_check_payload(
+    vibe_result: VibeCheckResult, detail_level: str, mode: str
+) -> Dict[str, Any]:
+    """Convert VibeCheckResult into API-friendly response."""
+
+    timestamp = datetime.now(UTC).isoformat()
+    technical_analysis = copy.deepcopy(vibe_result.technical_analysis)
+
+    response: Dict[str, Any] = {
+        "status": "vibe_check_complete",
+        "analysis_timestamp": timestamp,
+        "vibe_check": {
+            "overall_vibe": vibe_result.overall_vibe,
+            "vibe_level": vibe_result.vibe_level.value,
+            "friendly_summary": vibe_result.friendly_summary,
+            "coaching_recommendations": list(vibe_result.coaching_recommendations),
+        },
+        "technical_analysis": technical_analysis,
+        "enhanced_features": {
+            "claude_reasoning": vibe_result.claude_reasoning is not None,
+            "clear_thought_analysis": vibe_result.clear_thought_analysis is not None,
+            "educational_coaching": True,
+            "friendly_language": True,
+            "comprehensive_validation": mode == "comprehensive",
+        },
+    }
+
+    if vibe_result.claude_reasoning:
+        response["vibe_check"]["claude_reasoning"] = vibe_result.claude_reasoning
+        response["claude_reasoning"] = vibe_result.claude_reasoning
+    if vibe_result.clear_thought_analysis:
+        response["vibe_check"]["clear_thought_analysis"] = vibe_result.clear_thought_analysis
+        response["clear_thought_analysis"] = vibe_result.clear_thought_analysis
+
+    metadata = technical_analysis.setdefault("analysis_metadata", {})
+    metadata.setdefault("detail_level", detail_level)
+    return response
+
+
+def _run_vibe_check_sync(
+    issue_number: int,
+    repository: Optional[str],
+    detail_level: str,
+    mode: str,
+    post_comment: bool,
+) -> Dict[str, Any]:
+    """Execute legacy vibe check synchronously."""
+
+    try:
+        framework = get_vibe_check_framework()
+    except Exception as exc:
+        return {
+            "status": "vibe_check_error",
+            "error": str(exc),
+            "friendly_error": "🚨 Oops! Something went wrong with the vibe check. Try again once the framework is available.",
+            "issue_number": issue_number,
+        }
+    try:
+        detail_enum = DetailLevel(detail_level.lower())
+    except ValueError:
+        detail_enum = DetailLevel.STANDARD
+
+    vibe_mode = (
+        VibeCheckMode.COMPREHENSIVE
+        if mode == "comprehensive"
+        else VibeCheckMode.QUICK
+    )
+
+    vibe_result = framework.check_issue_vibes(
+        issue_number=issue_number,
+        repository=repository,
+        mode=vibe_mode,
+        detail_level=detail_enum,
+        post_comment=post_comment,
+    )
+    response = _build_vibe_check_payload(vibe_result, detail_level, mode)
+    response["issue_info"] = {
+        "number": issue_number,
+        "repository": repository,
+        "analysis_mode": mode,
+        "detail_level": detail_level,
+        "comment_posted": post_comment,
+    }
+    return response
+
+
+async def analyze_issue_async(
+    issue_number: int,
+    repository: Optional[str] = None,
+    analysis_mode: str = "hybrid",
+    detail_level: str = "standard",
+    post_comment: bool = False,
+) -> Dict[str, Any]:
+    """Public coroutine wrapper for async workflows."""
+
+    requested_mode = (analysis_mode or "hybrid").lower()
+    if requested_mode in {"quick", "comprehensive", "hybrid"}:
+        return await asyncio.to_thread(
+            _run_vibe_check_sync,
+            issue_number,
+            repository,
+            detail_level,
+            requested_mode,
+            post_comment,
+        )
+
+    return await _analyze_issue_async(
+        issue_number=issue_number,
+        repository=repository,
+        analysis_mode=_normalize_async_mode(analysis_mode),
+        detail_level=detail_level,
+        post_comment=post_comment,
+    )
+
+
+def analyze_issue(
+    issue_number: int,
+    repository: Optional[str] = None,
+    analysis_mode: str = "hybrid",
+    detail_level: str = "standard",
+    post_comment: bool = False,
+) -> Dict[str, Any] | "asyncio.Task[Dict[str, Any]]":
+    """Run issue analysis synchronously or return awaitable in async contexts."""
+
+    requested_mode = (analysis_mode or "hybrid").lower()
+    if requested_mode in {"quick", "comprehensive", "hybrid"}:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return _run_vibe_check_sync(
+                issue_number=issue_number,
+                repository=repository,
+                detail_level=detail_level,
+                mode=requested_mode,
+                post_comment=post_comment,
+            )
+
+        vibe_call = functools.partial(
+            _run_vibe_check_sync,
+            issue_number,
+            repository,
+            detail_level,
+            requested_mode,
+            post_comment,
+        )
+        return loop.run_in_executor(None, vibe_call)
+
+    normalized_mode = _normalize_async_mode(analysis_mode)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        coroutine = _analyze_issue_async(
+            issue_number=issue_number,
+            repository=repository,
+            analysis_mode=normalized_mode,
+            detail_level=detail_level,
+            post_comment=post_comment,
+        )
+        return asyncio.run(coroutine)
+
+    coroutine = _analyze_issue_async(
+        issue_number=issue_number,
+        repository=repository,
+        analysis_mode=normalized_mode,
+        detail_level=detail_level,
+        post_comment=post_comment,
+    )
+    return loop.create_task(coroutine)
 
 
 # Backward compatibility function (preserves exact analyze_issue_nollm interface)

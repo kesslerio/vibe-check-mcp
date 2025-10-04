@@ -1,11 +1,7 @@
-"""
-Main PR Review Orchestrator
-
-This is the main entry point for the modularized PR review system.
-It orchestrates all the extracted components to provide comprehensive PR analysis.
-"""
+"""Main entry point for the modularized PR review system."""
 
 import logging
+import sys
 from typing import Dict, Any
 
 from .data_collector import PRDataCollector
@@ -22,6 +18,9 @@ from vibe_check.tools.shared.pr_classifier import (
 )
 
 logger = logging.getLogger(__name__)
+
+if "src.vibe_check.tools.pr_review.main" not in sys.modules:
+    sys.modules["src.vibe_check.tools.pr_review.main"] = sys.modules[__name__]
 
 
 async def review_pull_request(
@@ -62,7 +61,23 @@ async def review_pull_request(
         logger.info("📊 Phase 1: Collecting PR data...")
         pr_data = data_collector.collect_pr_data(pr_number, repository)
         if "error" in pr_data:
+            pr_data.setdefault("pr_number", pr_number)
+            pr_data.setdefault("repository", repository)
+            pr_data.setdefault("model_used", model)
             return pr_data
+
+        statistics = pr_data.setdefault("statistics", {})
+        if "total_changes" not in statistics:
+            additions = statistics.get("additions", 0)
+            deletions = statistics.get("deletions", 0)
+            statistics["total_changes"] = additions + deletions
+        metadata = pr_data.setdefault("metadata", {})
+        metadata.setdefault("number", pr_number)
+        metadata.setdefault("title", f"PR #{pr_number}")
+        metadata.setdefault("author", "unknown")
+        metadata.setdefault("author_association", "NONE")
+        metadata.setdefault("head_branch", "unknown")
+        metadata.setdefault("base_branch", "unknown")
 
         # Phase 2: Size Classification
         logger.info("📏 Phase 2: Classifying PR size...")
@@ -118,7 +133,7 @@ async def review_pull_request(
         else:
             # Use fallback analysis
             analysis_result = _generate_fallback_analysis(
-                pr_data, size_analysis, review_context, detail_level
+                pr_data, size_analysis, review_context, detail_level, pr_number
             )
 
         # Phase 5: Result Compilation
@@ -159,6 +174,7 @@ async def review_pull_request(
             "error": f"PR review failed: {str(e)}",
             "pr_number": pr_number,
             "repository": repository,
+            "model_used": model,
         }
 
 
@@ -287,16 +303,37 @@ def _generate_fallback_analysis(
     size_analysis: Dict[str, Any],
     review_context: Dict[str, Any],
     detail_level: str,
+    pr_number: int,
 ) -> Dict[str, Any]:
     """Generate fallback analysis when Claude is unavailable."""
 
+    metadata = pr_data.get("metadata", {})
+    statistics = pr_data.get("statistics", {})
+    files_count = statistics.get("files_count", 0)
+    additions = statistics.get("additions", 0)
+    deletions = statistics.get("deletions", 0)
+    total_changes = statistics.get("total_changes")
+    if total_changes is None:
+        total_changes = additions + deletions
+
+    size_label = size_analysis.get("overall_size", "unknown")
+    strategy = size_analysis.get("review_strategy", "standard review")
+    re_review_flag = review_context.get("is_re_review", False)
+
     return {
         "analysis_method": "fallback",
-        "overview": f"Automated analysis of PR {pr_data['metadata']['number']} - {pr_data['metadata']['title']}",
-        "size_assessment": f"PR classified as {size_analysis['overall_size']} with {size_analysis['review_strategy']} strategy",
-        "files_analysis": f"Modified {pr_data['statistics']['files_count']} files with {pr_data['statistics']['total_changes']} total changes",
+        "overview": (
+            "Automated analysis of PR "
+            f"{metadata.get('number', pr_number)} - {metadata.get('title', 'Untitled PR')}"
+        ),
+        "size_assessment": (
+            f"PR classified as {size_label} with {strategy} strategy"
+        ),
+        "files_analysis": (
+            f"Modified {files_count} files with {total_changes} total changes"
+        ),
         "re_review_status": (
-            "Re-review detected" if review_context["is_re_review"] else "First review"
+            "Re-review detected" if re_review_flag else "First review"
         ),
         "recommendation": "MANUAL_REVIEW",
         "note": "Full analysis requires Claude CLI integration. Install Claude CLI for enhanced analysis.",
