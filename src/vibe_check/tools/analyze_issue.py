@@ -22,8 +22,9 @@ from .issue_analysis import (
     IssueLabel,
 )
 
-# Re-export ExternalClaudeCli and ClaudeCliResult from analyze_llm_backup
-# These were previously imported in analyze_issue.py for Claude CLI integration
+# Re-export ExternalClaudeCli availability flag and classes
+# This maintains backward compatibility for code checking Claude CLI availability
+from .issue_analysis.analyzer import EXTERNAL_CLAUDE_AVAILABLE
 from .analyze_llm_backup import ExternalClaudeCli, ClaudeCliResult
 
 __all__ = [
@@ -35,6 +36,7 @@ __all__ = [
     "EnhancedGitHubIssueAnalyzer",
     "GitHubIssueAnalyzer",
     "IssueLabel",
+    "EXTERNAL_CLAUDE_AVAILABLE",
     "ExternalClaudeCli",
     "ClaudeCliResult",
 ]
