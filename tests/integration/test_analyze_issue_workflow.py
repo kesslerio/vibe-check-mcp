@@ -33,7 +33,7 @@ class TestAnalyzeIssueIntegrationWorkflow:
     @pytest.mark.asyncio
     async def test_legacy_analyzer_to_enhanced_tool_transition(self):
         """Test transition from legacy analyzer to enhanced MCP tool"""
-        with patch("vibe_check.tools.analyze_issue.Github") as mock_github:
+        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
             # Test that legacy analyzer still works
             analyzer = GitHubIssueAnalyzer("test_token")
 
@@ -50,7 +50,7 @@ class TestAnalyzeIssueIntegrationWorkflow:
 
             mock_repo = MagicMock()
             mock_repo.get_issue.return_value = mock_issue
-            analyzer.github_client.get_repo.return_value = mock_repo
+            analyzer.github_client.github_client.get_repo.return_value = mock_repo
 
             # Mock pattern detection
             with patch.object(
@@ -69,7 +69,7 @@ class TestAnalyzeIssueIntegrationWorkflow:
 
                 # Test enhanced MCP tool
                 with patch(
-                    "vibe_check.tools.analyze_issue.get_vibe_check_framework"
+                    "vibe_check.tools.issue_analysis.api.get_vibe_check_framework"
                 ) as mock_get_framework:
                     mock_framework = MagicMock()
                     mock_framework.check_issue_vibes.return_value = VibeCheckResult(
