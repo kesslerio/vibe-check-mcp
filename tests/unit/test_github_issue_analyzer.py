@@ -56,14 +56,14 @@ class TestGitHubIssueAnalyzer:
     @pytest.fixture
     def analyzer(self, mock_github_token):
         """Create analyzer instance for testing"""
-        with patch("vibe_check.tools.analyze_issue.Github") as mock_github:
+        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
             analyzer = GitHubIssueAnalyzer(mock_github_token)
-            analyzer.github_client = mock_github.return_value
+            analyzer.github_client.github_client = mock_github.return_value
             return analyzer
 
     def test_analyzer_initialization(self, mock_github_token):
         """Test proper analyzer initialization"""
-        with patch("vibe_check.tools.analyze_issue.Github") as mock_github:
+        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
             analyzer = GitHubIssueAnalyzer(mock_github_token)
 
             # Verify GitHub client initialization
@@ -73,7 +73,7 @@ class TestGitHubIssueAnalyzer:
 
     def test_analyzer_initialization_without_token(self):
         """Test analyzer initialization without GitHub token"""
-        with patch("vibe_check.tools.analyze_issue.Github") as mock_github:
+        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
             analyzer = GitHubIssueAnalyzer()
 
             # Should use default GitHub() constructor
@@ -92,16 +92,20 @@ class TestGitHubIssueAnalyzer:
         mock_issue.user.login = sample_issue_data["author"]
         mock_issue.created_at.isoformat.return_value = sample_issue_data["created_at"]
         mock_issue.state = sample_issue_data["state"]
-        mock_issue.labels = [
-            MagicMock(name=label) for label in sample_issue_data["labels"]
-        ]
+        # Create proper label mocks with .name attribute
+        mock_labels = []
+        for label in sample_issue_data["labels"]:
+            mock_label = MagicMock()
+            mock_label.name = label
+            mock_labels.append(mock_label)
+        mock_issue.labels = mock_labels
         mock_issue.html_url = sample_issue_data["url"]
 
-        analyzer.github_client.get_repo.return_value = mock_repo
+        analyzer.github_client.github_client.get_repo.return_value = mock_repo
         mock_repo.get_issue.return_value = mock_issue
 
         # Test fetching issue data
-        result = analyzer._fetch_issue_data(42, "test/repo")
+        result = analyzer.github_client.fetch_issue_data(42, "test/repo")
 
         # Verify result structure
         assert result is not None
@@ -114,28 +118,28 @@ class TestGitHubIssueAnalyzer:
         assert result["url"] == sample_issue_data["url"]
 
         # Verify GitHub API calls
-        analyzer.github_client.get_repo.assert_called_once_with("test/repo")
+        analyzer.github_client.github_client.get_repo.assert_called_once_with("test/repo")
         mock_repo.get_issue.assert_called_once_with(42)
 
     def test_fetch_issue_data_github_exception(self, analyzer):
         """Test issue data fetching with GitHub exception"""
         # Configure mock to raise exception
-        analyzer.github_client.get_repo.side_effect = GithubException(404, "Not Found")
+        analyzer.github_client.github_client.get_repo.side_effect = GithubException(404, "Not Found")
 
         # Test exception handling - should raise exception
         with pytest.raises(GithubException):
-            analyzer._fetch_issue_data(999, "nonexistent/repo")
+            analyzer.github_client.fetch_issue_data(999, "nonexistent/repo")
 
     def test_fetch_issue_data_invalid_repo(self, analyzer):
         """Test issue data fetching with invalid repository format"""
         # Test with invalid repository format - should raise ValueError
         with pytest.raises(ValueError, match="Repository must be in format 'owner/repo'"):
-            analyzer._fetch_issue_data(42, "invalid-repo-format")
+            analyzer.github_client.fetch_issue_data(42, "invalid-repo-format")
 
     def test_analyze_issue_with_pattern_detection(self, analyzer, sample_issue_data):
         """Test issue analysis with pattern detection"""
         # Mock issue fetching
-        analyzer._fetch_issue_data = MagicMock(return_value=sample_issue_data)
+        analyzer.github_client.fetch_issue_data = MagicMock(return_value=sample_issue_data)
 
         # Mock pattern detection
         mock_detection_result = DetectionResult(
@@ -148,8 +152,6 @@ class TestGitHubIssueAnalyzer:
         analyzer.pattern_detector.analyze_text_for_patterns = MagicMock(
             return_value=[mock_detection_result]
         )
-
-
 
         # Test analysis
         result = analyzer.analyze_issue(42, "test/repo")
@@ -175,20 +177,20 @@ class TestGitHubIssueAnalyzer:
         assert patterns[0]["confidence"] == 0.85
 
         # Verify method calls
-        analyzer._fetch_issue_data.assert_called_once_with(42, "test/repo")
+        analyzer.github_client.fetch_issue_data.assert_called_once_with(42, "test/repo")
         analyzer.pattern_detector.analyze_text_for_patterns.assert_called_once()
 
     def test_analyze_issue_with_fetch_failure(self, analyzer):
         """Test issue analysis when issue fetching fails"""
         # Mock failed issue fetching
-        analyzer._fetch_issue_data = MagicMock(return_value=None)
+        analyzer.github_client.fetch_issue_data = MagicMock(side_effect=Exception("Fetch failed"))
 
         # Test analysis with fetch failure
         result = analyzer.analyze_issue(999, "test/repo")
 
         # Should return error response when fetching fails
         assert result["status"] == "basic_analysis_error"
-        analyzer._fetch_issue_data.assert_called_once_with(999, "test/repo")
+        analyzer.github_client.fetch_issue_data.assert_called_once_with(999, "test/repo")
 
     def test_pattern_detection_integration(self, analyzer, sample_issue_data):
         """Test integration with pattern detection system"""
@@ -220,7 +222,12 @@ class TestGitHubIssueAnalyzer:
         mock_issue.user.login = "testuser"
         mock_issue.created_at.isoformat.return_value = "2025-01-01T00:00:00Z"
         mock_issue.state = "open"
-        mock_issue.labels = [MagicMock(name="bug"), MagicMock(name="P1")]
+        # Create proper label mocks with .name attribute
+        mock_bug_label = MagicMock()
+        mock_bug_label.name = "bug"
+        mock_p1_label = MagicMock()
+        mock_p1_label.name = "P1"
+        mock_issue.labels = [mock_bug_label, mock_p1_label]
         mock_issue.html_url = "https://github.com/test/repo/issues/123"
 
         # Test transformation logic would be tested here
@@ -230,9 +237,9 @@ class TestGitHubIssueAnalyzer:
         # Mock the repository and issue retrieval
         mock_repo = MagicMock()
         mock_repo.get_issue.return_value = mock_issue
-        analyzer.github_client.get_repo.return_value = mock_repo
+        analyzer.github_client.github_client.get_repo.return_value = mock_repo
 
-        result = analyzer._fetch_issue_data(123, "test/repo")
+        result = analyzer.github_client.fetch_issue_data(123, "test/repo")
 
         # Verify transformation
         assert result["number"] == 123
