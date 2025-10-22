@@ -665,7 +665,7 @@ pytest tests/unit/test_response_relevance_validator.py -v
 **Node E2E Tests:**
 ```bash
 # Run individual E2E tests
-node tests/e2e/mcp/check_mentor_temp.mjs          # Basic mentor functionality
+node tests/e2e/mcp/mentor_basic.mjs               # Basic mentor functionality
 node tests/e2e/mcp/mentor_interrupt_mode.mjs      # Interrupt mode validation
 node tests/e2e/mcp/mentor_relevance.mjs           # Response relevance guard
 
