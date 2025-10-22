@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2025-10-01
+## [0.6.0] - 2025-10-22
 
 ### Added
 - **Tool Architecture Optimization** (#237): Environment-based tool gating for cleaner UX

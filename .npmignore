@@ -1,0 +1,67 @@
+# Development files
+.git/
+.github/
+.gitignore
+.vscode/
+.idea/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.env
+.venv/
+venv/
+ENV/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+.coveragerc
+pytest.ini
+tox.ini
+
+# Documentation build
+docs/_build/
+*.md.backup
+
+# Scripts and tools
+scripts/
+.python-version
+.editorconfig
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml
+azure-pipelines.yml
+Jenkinsfile
+
+# Local development
+*.local
+.DS_Store
+Thumbs.db
+.cache/
+tmp/
+temp/
+
+# Keep these (they're in package.json "files" array)
+!bin/
+!src/
+!data/
+!requirements.txt
+!README.md
+!LICENSE
+!VERSION
+!CHANGELOG.md

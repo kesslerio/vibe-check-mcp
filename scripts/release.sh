@@ -99,6 +99,19 @@ echo "🔄 Updating version to: $NEW_VERSION"
 # Update version in VERSION file
 echo "$NEW_VERSION" > VERSION
 
+# Update version in package.json
+if [ -f "package.json" ]; then
+    echo "📦 Updating package.json version..."
+    # Use sed to update version in package.json
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        sed -i '' "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" package.json
+    else
+        # Linux
+        sed -i "s/\"version\": \".*\"/\"version\": \"$NEW_VERSION\"/" package.json
+    fi
+fi
+
 # Update changelog
 echo ""
 echo "📝 Please update CHANGELOG.md with the new version details"
@@ -133,7 +146,7 @@ read -p "Press enter when CHANGELOG.md is updated..."
 
 # Commit version bump and changelog
 echo "📝 Committing version bump..."
-git add VERSION CHANGELOG.md
+git add VERSION CHANGELOG.md package.json .npmignore
 git commit -m "Bump version to $NEW_VERSION"
 
 # Create git tag
@@ -157,15 +170,53 @@ else
     echo "   https://github.com/kesslerio/vibe-check-mcp/releases/new?tag=v$NEW_VERSION"
 fi
 
+# Publish to npm
+echo ""
+echo "📦 Publishing to npm..."
+if command -v npm &> /dev/null; then
+    # Check if logged in to npm
+    if npm whoami &> /dev/null; then
+        echo "✅ npm authentication verified"
+
+        # Dry run first to check what will be published
+        echo "🔍 Running npm pack (dry run)..."
+        npm pack --dry-run
+
+        echo ""
+        read -p "📦 Ready to publish to npm. Continue? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            npm publish
+            echo "✅ Published to npm successfully!"
+            echo "🔗 View at: https://www.npmjs.com/package/vibe-check-mcp"
+        else
+            echo "⚠️  npm publish skipped"
+        fi
+    else
+        echo "⚠️  Not logged in to npm. Please run 'npm login' first"
+        echo "   You can publish manually later with: npm publish"
+    fi
+else
+    echo "⚠️  npm not found. Skipping npm publish"
+    echo "   Install npm and run 'npm publish' to publish the package"
+fi
+
 echo ""
 echo "✅ Release v$NEW_VERSION completed successfully!"
 echo ""
 echo "📋 Post-release checklist:"
+echo "[ ] Verify npm package: npm view vibe-check-mcp"
+echo "[ ] Test npm installation: npm install -g vibe-check-mcp"
 echo "[ ] Test the MCP server with the new version"
 echo "[ ] Update any documentation if needed"
 echo "[ ] Announce the release if significant"
 echo ""
-echo "🔗 Installation command for users:"
+echo "🔗 Installation commands for users:"
+echo ""
+echo "Via npm (recommended):"
+echo "   npm install -g vibe-check-mcp"
+echo ""
+echo "Via git:"
 echo "   git clone https://github.com/kesslerio/vibe-check-mcp.git"
 echo "   cd vibe-check-mcp"
 echo "   pip install -r requirements.txt"
