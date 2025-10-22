@@ -58,9 +58,21 @@ ASCII-normalised text.
 4. Documentation updates (this file) plus README blurb showing how to run the new check locally.
 5. CI task hook once the test stabilises (future follow-up if runtime is acceptable).
 
+## How to Run Locally
+
+```bash
+npm install            # ensures mcp-test-client is available
+timeout -k5s 90s node tests/e2e/mcp/mentor_relevance.mjs
+```
+
+or via pytest (includes exit-code assertions):
+
+```bash
+PYTHONPATH=src pytest tests/e2e/test_mentor_relevance_e2e.py -k mentor_relevance_e2e
+```
+
 ## Open Questions
 
 - Should we extend assertions to inspect `route_metrics` telemetry once exposed?
 - Do we need additional negative tests (e.g., `Stripe` keyword alone should still be allowed when the query is actually about Stripe MVP advice)?
 - How will we seed workspace context (if at all) to keep the scenario deterministic?
-

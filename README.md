@@ -632,6 +632,62 @@ Install **Vibe Check MCP v0.5.1** and get your context-aware senior engineer men
 
 **Stop building the wrong thing. Start building the right thing faster.**
 
+## 🧪 Testing
+
+Vibe Check MCP includes comprehensive test coverage including E2E tests for MCP integration.
+
+### Prerequisites
+
+**Python Tests:**
+```bash
+pip install -r requirements.txt
+```
+
+**Node E2E Tests:**
+```bash
+npm install  # Installs mcp-test-client and dependencies
+```
+
+### Running Tests
+
+**Python Unit Tests:**
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test file
+pytest tests/unit/test_response_relevance_validator.py -v
+```
+
+**Node E2E Tests:**
+```bash
+# Run individual E2E tests
+node tests/e2e/mcp/check_mentor_temp.mjs          # Basic mentor functionality
+node tests/e2e/mcp/mentor_interrupt_mode.mjs      # Interrupt mode validation
+node tests/e2e/mcp/mentor_relevance.mjs           # Response relevance guard
+
+# Run via pytest wrapper (skips if mcp-test-client not installed)
+pytest tests/e2e/test_mentor_relevance_e2e.py -v
+```
+
+### E2E Test Features
+
+- **Automatic PYTHONPATH propagation** - No `pip install -e .` required
+- **Proper server cleanup** - SIGTERM/SIGKILL fallback prevents orphaned processes
+- **Response relevance validation** - Guards against canned/irrelevant responses
+- **Graceful skip when Node packages missing** - Won't block development workflow
+
+### Test Coverage
+
+| Test Type | Location | Purpose |
+|-----------|----------|---------|
+| Unit Tests | `tests/unit/` | Core logic validation |
+| E2E Tests | `tests/e2e/mcp/*.mjs` | MCP integration verification |
+| Pytest Wrappers | `tests/e2e/test_*.py` | Python test runner integration |
+
 ## Troubleshooting
 
 ### MCP Server Connection Issues

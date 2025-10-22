@@ -990,6 +990,10 @@ class EnhancedVibeMentorEngine:
             if enable_mcp_sampling and not MCP_SAMPLING_AVAILABLE:
                 logger.warning("MCP sampling requested but components not available")
 
+    def __getattr__(self, name):
+        """Delegate unknown methods to base engine for compatibility."""
+        return getattr(self.base_engine, name)
+
     async def generate_contribution(
         self,
         session: CollaborativeReasoningSession,
@@ -1039,7 +1043,7 @@ class EnhancedVibeMentorEngine:
 
         # ENHANCEMENT: Use technical context as primary driver for response generation
         # Patterns are now optional enhancement, not required for good responses
-        content, contribution_type, confidence = await self._reason_as_persona_enhanced(
+        contribution_type, content, confidence = await self._reason_as_persona_enhanced(
             persona,
             session.topic,
             tech_context,
@@ -1143,10 +1147,24 @@ class EnhancedVibeMentorEngine:
 
         response_type, content, confidence = static_response
 
+        # Debug logging for ctx injection
+        logger.info(
+            "Relevance check: enable_mcp=%s, router=%s, ctx=%s",
+            self.enable_mcp_sampling,
+            self.hybrid_router is not None,
+            ctx is not None,
+        )
+
         if self.enable_mcp_sampling and self.hybrid_router and ctx:
             relevance_context = self._build_relevance_context(tech_context)
             relevance_result = self.relevance_validator.score(
                 query=topic, response=content, context=relevance_context
+            )
+            logger.info(
+                "Relevance validation: score=%.2f, passed=%s, matches=%s",
+                relevance_result.score,
+                relevance_result.passed,
+                ", ".join(relevance_result.matched_terms) or "none",
             )
             if not relevance_result.passed:
                 logger.info(
@@ -1155,18 +1173,35 @@ class EnhancedVibeMentorEngine:
                     relevance_result.score,
                     ", ".join(relevance_result.matched_terms) or "none",
                 )
-                dynamic_response = await self._try_dynamic_generation(
-                    persona,
-                    topic,
-                    tech_context,
-                    patterns,
-                    ctx,
-                    force_decision=True,
-                    fallback_reason="static_relevance_failed",
-                    relevance_result=relevance_result,
+
+                # Try dynamic generation if ctx.sample() is available
+                if hasattr(ctx, 'sample'):
+                    dynamic_response = await self._try_dynamic_generation(
+                        persona,
+                        topic,
+                        tech_context,
+                        patterns,
+                        ctx,
+                        force_decision=True,
+                        fallback_reason="static_relevance_failed",
+                        relevance_result=relevance_result,
+                    )
+                    if dynamic_response:
+                        return dynamic_response
+
+                # Fallback: generate context-aware response without sampling
+                logger.warning(
+                    "Sampling not available - using context-aware fallback for persona %s",
+                    persona.id
                 )
-                if dynamic_response:
-                    return dynamic_response
+                fallback_content = self._generate_context_aware_fallback(
+                    persona, topic, tech_context, patterns
+                )
+                logger.info(
+                    "Generated fallback (first 100 chars): %s",
+                    fallback_content[:100]
+                )
+                return response_type, fallback_content, confidence * 0.8  # Lower confidence for fallback
 
         return response_type, content, confidence
 
@@ -1334,6 +1369,73 @@ class EnhancedVibeMentorEngine:
 
         return None
 
+    def _generate_context_aware_fallback(
+        self,
+        persona: PersonaData,
+        topic: str,
+        tech_context: TechnicalContext,
+        patterns: List[Dict[str, Any]],
+    ) -> str:
+        """Generate context-aware response when sampling unavailable but static response failed relevance."""
+
+        # Extract key context elements
+        decision_points = tech_context.decision_points if tech_context.decision_points else []
+        technologies = tech_context.technologies[:3] if tech_context.technologies else []
+        features = tech_context.specific_features[:3] if tech_context.specific_features else []
+
+        logger.info(
+            "Fallback context: decision_points=%s, technologies=%s, features=%s",
+            decision_points,
+            technologies,
+            features
+        )
+
+        # Build contextual response
+        parts = []
+
+        # Always echo the actual query to maintain relevance
+        # Use full query (not truncated) to ensure all context is preserved
+        parts.append(f"Regarding your question: \"{topic}\"\n\n")
+
+        # Add context-specific intro if available
+        if decision_points:
+            parts.append(f"Key decision points: {', '.join(decision_points)}\n\n")
+        elif features:
+            parts.append(f"For {', '.join(features)}:\n\n")
+
+        # Provide structured guidance based on persona
+        if persona.id == "senior_engineer":
+            parts.append(
+                "\n\nKey considerations:\n"
+                "1. Define success criteria for this specific decision\n"
+                "2. List constraints (time, resources, team capabilities)\n"
+                "3. Evaluate options against your criteria\n"
+                "4. Consider long-term maintenance implications\n"
+                "5. Start with proof-of-concept for promising approaches"
+            )
+        elif persona.id == "product_engineer":
+            parts.append(
+                "\n\nProduct perspective:\n"
+                "- Can we ship a minimal version this iteration?\n"
+                "- What's the fastest path to user feedback?\n"
+                "- Does perfect solve the user problem better than good-enough-now?\n"
+                "- What can we defer without blocking value delivery?"
+            )
+        else:
+            parts.append(
+                "\n\nRecommended approach:\n"
+                "1. Clarify the specific problem you're solving\n"
+                "2. Identify must-have vs nice-to-have requirements\n"
+                "3. Consider simplicity vs flexibility trade-offs\n"
+                "4. Validate assumptions with small experiments"
+            )
+
+        # Add technology-specific note if relevant
+        if technologies:
+            parts.append(f"\n\nNote: When working with {', '.join(technologies)}, prioritize maintainability and team familiarity.")
+
+        return "".join(parts)
+
     def _build_persona_prompt(
         self, persona: PersonaData, intent: str, tech_context: TechnicalContext
     ) -> str:
@@ -1373,3 +1475,20 @@ Avoid generic responses - be specific to their situation.
             prompt += f"\n\n{intent_guidance[intent]}"
 
         return prompt
+
+
+# Global instance for enhanced engine
+_enhanced_mentor_engine: Optional[EnhancedVibeMentorEngine] = None
+
+
+def get_enhanced_mentor_engine() -> EnhancedVibeMentorEngine:
+    """Get or create the global enhanced mentor engine instance with response relevance validation."""
+    global _enhanced_mentor_engine
+    if _enhanced_mentor_engine is None:
+        from .vibe_mentor import get_mentor_engine
+        base_engine = get_mentor_engine()
+        _enhanced_mentor_engine = EnhancedVibeMentorEngine(
+            base_engine=base_engine,
+            enable_mcp_sampling=True  # Enable MCP sampling for response relevance validation
+        )
+    return _enhanced_mentor_engine

@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, Any, Optional, List
+from mcp.server.fastmcp import Context
 from vibe_check.server.core import mcp
 from .context import load_workspace_context
 from .analysis import analyze_query_and_context
@@ -27,6 +28,7 @@ def _register_tool(mcp_instance, tool) -> None:
 @mcp.tool(name="vibe_check_mentor")
 async def vibe_check_mentor(
     query: str,
+    ctx: Context,  # FastMCP context (auto-injected, not from client)
     context: Optional[str] = None,
     session_id: Optional[str] = None,
     reasoning_depth: str = "standard",
@@ -71,6 +73,7 @@ async def vibe_check_mentor(
         phase=phase,
         analysis_result=analysis_result,
         workspace_warning=workspace_warning,
+        ctx=ctx,  # Thread FastMCP context for dynamic generation
     )
 
     return response

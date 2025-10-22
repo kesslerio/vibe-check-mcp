@@ -1,15 +1,16 @@
 import logging
 import secrets
 from typing import Dict, Any, Optional
-from vibe_check.tools.vibe_mentor import get_mentor_engine, _generate_summary
+from vibe_check.tools.vibe_mentor_enhanced import get_enhanced_mentor_engine
+from vibe_check.tools.vibe_mentor import _generate_summary
 from vibe_check.core.vibe_coaching import VibeCoachingFramework, CoachingTone
 
 logger = logging.getLogger(__name__)
 
 
 def get_reasoning_engine():
-    """Returns the mentor engine instance."""
-    return get_mentor_engine()
+    """Returns the enhanced mentor engine instance with response relevance validation."""
+    return get_enhanced_mentor_engine()
 
 
 async def generate_response(
@@ -23,6 +24,7 @@ async def generate_response(
     phase: str,
     analysis_result: Dict[str, Any],
     workspace_warning: str,
+    ctx: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Generates the final response from the mentor."""
 
@@ -85,13 +87,14 @@ async def generate_response(
             persona = session.personas[i]
             session.active_persona_id = persona.id
 
-            contribution = engine.generate_contribution(
+            contribution = await engine.generate_contribution(
                 session=session,
                 persona=persona,
                 detected_patterns=detected_patterns,
                 context=context,
                 project_context=analysis_result.get("project_context"),
                 file_contexts=analysis_result.get("file_contexts"),
+                ctx=ctx,  # Pass FastMCP context for response relevance validation
             )
 
             session.contributions.append(contribution)
