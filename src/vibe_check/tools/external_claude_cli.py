@@ -12,7 +12,15 @@ collect without raising ``ModuleNotFoundError``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import warnings
+
+warnings.warn(
+    "Importing from 'vibe_check.tools.external_claude_cli' is deprecated; "
+    "use 'vibe_check.tools.shared.claude_integration' or "
+    "'vibe_check.tools.analyze_llm_backup' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from .analyze_llm_backup import ExternalClaudeCli  # Legacy compatibility
 from .shared.claude_integration import (
@@ -20,12 +28,6 @@ from .shared.claude_integration import (
     ClaudeCliResult,
     analyze_content_async,
 )
-
-if TYPE_CHECKING:  # pragma: no cover - import-time typing aid only
-    from typing import Any, Dict
-
-    # Maintain type hints for legacy interfaces
-    LegacyResponse = Dict[str, Any]
 
 __all__ = [
     "ExternalClaudeCli",
