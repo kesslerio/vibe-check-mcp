@@ -6,6 +6,12 @@ Tests detection algorithms against realistic examples
 
 import sys
 from pathlib import Path
+
+# Ensure the validation package resolves when the script is executed directly.
+_VALIDATION_ROOT = Path(__file__).resolve().parent
+if str(_VALIDATION_ROOT.parent) not in sys.path:
+    sys.path.insert(0, str(_VALIDATION_ROOT.parent))
+
 from validation.detect_patterns import PatternDetector
 from validation.timing_utils import PerformanceTimer
 

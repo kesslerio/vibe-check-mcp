@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from unittest.mock import MagicMock, patch, AsyncMock
 
+from _pytest.config import Config
+
 # Add src to Python path for imports
 src_path = Path(__file__).parent.parent / "src"
 if str(src_path) not in sys.path:
@@ -26,6 +28,26 @@ if str(src_path) not in sys.path:
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+os.environ.setdefault("VIBE_CHECK_TEST_MODE", "1")
+os.environ.setdefault("GITHUB_TOKEN", "test_token_placeholder")
+os.environ.setdefault("CLAUDE_API_KEY", "test_api_key_placeholder")
+
+
+def pytest_configure(config: Config) -> None:
+    """
+    Disable coverage plugin when running in --collect-only mode.
+
+    The pytest-cov plugin enforces the coverage threshold even during collection
+    runs, which makes `pytest --collect-only` return a non-zero exit code.
+    Removing the plugin ensures collection succeeds while normal test runs
+    retain coverage enforcement.
+    """
+
+    if config.option.collectonly:
+        cov_plugin = config.pluginmanager.getplugin("_cov")
+        if cov_plugin is not None:
+            config.pluginmanager.unregister(cov_plugin)
 
 # Test configuration
 pytest_plugins = ["pytest_asyncio"]
