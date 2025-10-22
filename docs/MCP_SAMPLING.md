@@ -77,6 +77,15 @@ else:
     return DYNAMIC
 ```
 
+### Static Response Validation
+
+Static responses now pass through `ResponseRelevanceValidator` before being returned.  
+If the canned answer does not reference meaningful query terms (tier1/tier2, specified
+technologies, decision points), the engine logs the low relevance score and immediately
+forces a dynamic MCP sample. This guardrail prevents unrelated Stripe/LLM tips from
+appearing when users ask for architecture guidance while preserving fast paths for
+genuinely relevant static replies.
+
 ## Security Measures
 
 ### 1. Secret Redaction

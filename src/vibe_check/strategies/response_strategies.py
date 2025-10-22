@@ -23,6 +23,12 @@ class TechnicalContext:
     problem_type: str
     specific_features: List[str]
     decision_points: List[str]
+    file_references: List[str] = None  # Relevant file paths from workspace context
+
+    def __post_init__(self):
+        """Ensure file_references is never None"""
+        if self.file_references is None:
+            self.file_references = []
 
 
 class ResponseStrategy(ABC):
