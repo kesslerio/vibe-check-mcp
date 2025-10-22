@@ -27,6 +27,7 @@ from vibe_check.strategies.response_strategies import (
     get_strategy_manager,
     TechnicalContext,
 )
+from ..mentor.response_relevance import ResponseRelevanceValidator, RelevanceResult
 from .semantic_engine import SemanticEngine, QueryIntent
 
 # Import MCP sampling components
@@ -962,6 +963,7 @@ class EnhancedVibeMentorEngine:
         self.base_engine = base_engine
         self.context_extractor = ContextExtractor()
         self.enhanced_reasoning = EnhancedPersonaReasoning()
+        self.relevance_validator = ResponseRelevanceValidator()
 
         # Initialize rate limiting for MCP calls
         import time
@@ -1056,6 +1058,42 @@ class EnhancedVibeMentorEngine:
 
         return contribution
 
+    @staticmethod
+    def _build_relevance_context(tech_context: TechnicalContext) -> Dict[str, Any]:
+        """Build lightweight context dict for relevance validation."""
+        context: Dict[str, Any] = {
+            "technologies": tech_context.technologies,
+            "specific_features": tech_context.specific_features,
+            "decision_points": tech_context.decision_points,
+        }
+        if tech_context.problem_type:
+            context["problem_type"] = tech_context.problem_type
+        return context
+
+    def _generate_static_response(
+        self,
+        persona: PersonaData,
+        tech_context: TechnicalContext,
+        patterns: List[Dict[str, Any]],
+        topic: str,
+        previous_contributions: List[ContributionData],
+    ) -> Optional[Tuple[str, str, float]]:
+        """Generate static response for a persona when dynamic generation is unavailable."""
+
+        if persona.id == "senior_engineer":
+            return self.enhanced_reasoning.generate_senior_engineer_response(
+                tech_context, patterns, topic
+            )
+        if persona.id == "product_engineer":
+            return self.enhanced_reasoning.generate_product_engineer_response(
+                tech_context, patterns, topic
+            )
+        if persona.id == "ai_engineer":
+            return self.enhanced_reasoning.generate_ai_engineer_response(
+                tech_context, patterns, topic, previous_contributions
+            )
+        return None
+
     def _find_references(
         self, content: str, contributions: List[ContributionData]
     ) -> List[str]:
@@ -1095,24 +1133,42 @@ class EnhancedVibeMentorEngine:
             if dynamic_response:
                 return dynamic_response
 
-        # Fall back to static responses
-        if persona.id == "senior_engineer":
-            return self.enhanced_reasoning.generate_senior_engineer_response(
-                tech_context, patterns, topic
-            )
-        elif persona.id == "product_engineer":
-            return self.enhanced_reasoning.generate_product_engineer_response(
-                tech_context, patterns, topic
-            )
-        elif persona.id == "ai_engineer":
-            return self.enhanced_reasoning.generate_ai_engineer_response(
-                tech_context, patterns, topic, previous_contributions
+        static_response = self._generate_static_response(
+            persona, tech_context, patterns, topic, previous_contributions
+        )
+        if static_response is None:
+            return self.base_engine._reason_as_persona(
+                persona, topic, patterns, previous_contributions, None
             )
 
-        # Fallback to base behavior
-        return self.base_engine._reason_as_persona(
-            persona, topic, patterns, previous_contributions, None
-        )
+        response_type, content, confidence = static_response
+
+        if self.enable_mcp_sampling and self.hybrid_router and ctx:
+            relevance_context = self._build_relevance_context(tech_context)
+            relevance_result = self.relevance_validator.score(
+                query=topic, response=content, context=relevance_context
+            )
+            if not relevance_result.passed:
+                logger.info(
+                    "Static response rejected for persona %s (score=%.2f, matches=%s)",
+                    persona.id,
+                    relevance_result.score,
+                    ", ".join(relevance_result.matched_terms) or "none",
+                )
+                dynamic_response = await self._try_dynamic_generation(
+                    persona,
+                    topic,
+                    tech_context,
+                    patterns,
+                    ctx,
+                    force_decision=True,
+                    fallback_reason="static_relevance_failed",
+                    relevance_result=relevance_result,
+                )
+                if dynamic_response:
+                    return dynamic_response
+
+        return response_type, content, confidence
 
     async def _try_dynamic_generation(
         self,
@@ -1121,8 +1177,11 @@ class EnhancedVibeMentorEngine:
         tech_context: TechnicalContext,
         patterns: List[Dict[str, Any]],
         ctx: Any,
+        force_decision: bool = False,
+        fallback_reason: Optional[str] = None,
+        relevance_result: Optional[RelevanceResult] = None,
     ) -> Optional[Tuple[str, str, float]]:
-        """Try to generate dynamic response via MCP sampling with security measures"""
+        """Try to generate dynamic response via MCP sampling with security measures."""
 
         # Check rate limiting
         import time
@@ -1157,18 +1216,32 @@ class EnhancedVibeMentorEngine:
             if tech_context.problem_type:
                 intent = tech_context.problem_type
 
-            # Make routing decision
-            route_metrics = self.hybrid_router.decide_route(
-                query=topic,
-                intent=intent,
-                context=context_dict,
-                has_workspace_context=bool(tech_context.file_references),
-                has_static_response=True,
-            )
+            if force_decision and fallback_reason:
+                logger.info(
+                    "Forcing dynamic route for persona %s due to %s (score=%.2f, matches=%s)",
+                    persona.id,
+                    fallback_reason,
+                    relevance_result.score if relevance_result else -1.0,
+                    (
+                        ", ".join(relevance_result.matched_terms)
+                        if relevance_result and relevance_result.matched_terms
+                        else "none"
+                    ),
+                )
 
-            # Only use dynamic for DYNAMIC decisions (not STATIC or HYBRID for now)
-            if route_metrics.decision != RouteDecision.DYNAMIC:
-                return None
+            if not force_decision:
+                # Make routing decision
+                route_metrics = self.hybrid_router.decide_route(
+                    query=topic,
+                    intent=intent,
+                    context=context_dict,
+                    has_workspace_context=bool(tech_context.file_references),
+                    has_static_response=True,
+                )
+
+                # Only use dynamic for DYNAMIC decisions (not STATIC or HYBRID for now)
+                if route_metrics.decision != RouteDecision.DYNAMIC:
+                    return None
 
             # Check cache first
             if self.dynamic_cache:

@@ -26,7 +26,6 @@ def _register_tool(mcp_instance, tool) -> None:
 
 @mcp.tool(name="vibe_check_mentor")
 async def vibe_check_mentor(
-    ctx,  # FastMCP Context for MCP sampling
     query: str,
     context: Optional[str] = None,
     session_id: Optional[str] = None,

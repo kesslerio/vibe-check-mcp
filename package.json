@@ -44,5 +44,8 @@
     "README.md",
     "LICENSE",
     "VERSION"
-  ]
+  ],
+  "devDependencies": {
+    "mcp-test-client": "^1.0.1"
+  }
 }
