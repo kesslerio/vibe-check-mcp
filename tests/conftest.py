@@ -350,32 +350,55 @@ def cleanup_async_globals():
     which was causing "unsupported operand type(s) for +: 'coroutine' and 'coroutine'"
     errors when workers tried to process jobs with mocked or corrupted pr_data.
 
-    Works with both sync and async tests by using asyncio.run() for cleanup.
+    Uses forceful cleanup by directly resetting global state and cancelling tasks.
     Applies to all test files in the suite (unit, integration, etc.) to ensure
     complete isolation between tests.
     """
     yield  # Let test run first
 
-    # Cleanup after each test - use asyncio.run() to handle async shutdown functions
+    # Forceful cleanup - directly reset globals without trying to gracefully shutdown
+    # This works because we're in test mode and don't care about graceful shutdown
     try:
-        from vibe_check.tools.async_analysis.worker import shutdown_global_workers
-        asyncio.run(shutdown_global_workers())
+        # Import and reset worker manager global
+        from vibe_check.tools.async_analysis import worker as worker_module
+        if hasattr(worker_module, '_global_worker_manager') and worker_module._global_worker_manager:
+            manager = worker_module._global_worker_manager
+            # Cancel all worker tasks immediately
+            for task in manager.worker_tasks:
+                if not task.done():
+                    task.cancel()
+            # Clear state
+            manager.workers.clear()
+            manager.worker_tasks.clear()
+            worker_module._global_worker_manager = None
     except Exception:
-        pass  # Ignore if workers not initialized or already cleaned up
+        pass  # Ignore errors
 
     try:
-        from vibe_check.tools.async_analysis.queue_manager import shutdown_global_queue
-        asyncio.run(shutdown_global_queue())
+        # Reset queue manager global
+        from vibe_check.tools.async_analysis import queue_manager as queue_module
+        if hasattr(queue_module, '_global_queue'):
+            queue_module._global_queue = None
     except Exception:
-        pass  # Ignore if queue not initialized or already cleaned up
+        pass  # Ignore errors
 
     try:
+        # Reset integration globals
+        from vibe_check.tools.async_analysis import integration as integration_module
+        if hasattr(integration_module, '_system_initialized'):
+            integration_module._system_initialized = False
+            integration_module._status_tracker = None
+    except Exception:
+        pass  # Ignore errors
+
+    try:
+        # Shutdown sync resource monitor
         from vibe_check.tools.async_analysis.resource_monitor import (
             shutdown_global_resource_monitor,
         )
-        shutdown_global_resource_monitor()  # This one is sync
+        shutdown_global_resource_monitor()
     except Exception:
-        pass  # Ignore if monitor not initialized
+        pass  # Ignore errors
 
 
 @pytest.fixture
