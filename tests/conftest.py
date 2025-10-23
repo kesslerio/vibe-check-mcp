@@ -342,7 +342,7 @@ def setup_test_logging():
 
 
 @pytest.fixture(autouse=True)
-async def cleanup_async_globals():
+def cleanup_async_globals():
     """
     Automatically cleanup global async analysis system between ALL tests.
 
@@ -350,29 +350,30 @@ async def cleanup_async_globals():
     which was causing "unsupported operand type(s) for +: 'coroutine' and 'coroutine'"
     errors when workers tried to process jobs with mocked or corrupted pr_data.
 
+    Works with both sync and async tests by using asyncio.run() for cleanup.
     Applies to all test files in the suite (unit, integration, etc.) to ensure
     complete isolation between tests.
     """
     yield  # Let test run first
 
-    # Cleanup after each test
+    # Cleanup after each test - use asyncio.run() to handle async shutdown functions
     try:
         from vibe_check.tools.async_analysis.worker import shutdown_global_workers
-        await shutdown_global_workers()
+        asyncio.run(shutdown_global_workers())
     except Exception:
-        pass  # Ignore if workers not initialized
+        pass  # Ignore if workers not initialized or already cleaned up
 
     try:
         from vibe_check.tools.async_analysis.queue_manager import shutdown_global_queue
-        await shutdown_global_queue()
+        asyncio.run(shutdown_global_queue())
     except Exception:
-        pass  # Ignore if queue not initialized
+        pass  # Ignore if queue not initialized or already cleaned up
 
     try:
         from vibe_check.tools.async_analysis.resource_monitor import (
             shutdown_global_resource_monitor,
         )
-        shutdown_global_resource_monitor()
+        shutdown_global_resource_monitor()  # This one is sync
     except Exception:
         pass  # Ignore if monitor not initialized
 
