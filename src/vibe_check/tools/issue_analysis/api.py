@@ -173,6 +173,21 @@ def _normalize_async_mode(mode: Optional[str]) -> str:
     return normalized
 
 
+def _normalize_detail_level(detail_level) -> DetailLevel:
+    """
+    Normalize detail_level to DetailLevel enum.
+
+    Handles both string and DetailLevel enum inputs.
+    Falls back to STANDARD for invalid values.
+    """
+    if isinstance(detail_level, DetailLevel):
+        return detail_level
+    try:
+        return DetailLevel(detail_level.lower())
+    except (ValueError, AttributeError):
+        return DetailLevel.STANDARD
+
+
 def _build_vibe_check_payload(
     vibe_result: VibeCheckResult, detail_level: str, mode: str
 ) -> Dict[str, Any]:
@@ -229,11 +244,8 @@ def _run_vibe_check_sync(
             "issue_number": issue_number,
         }
 
-    try:
-        detail_enum = DetailLevel(detail_level.lower())
-    except ValueError:
-        detail_enum = DetailLevel.STANDARD
-
+    detail_enum = _normalize_detail_level(detail_level)
+    detail_level_str = detail_enum.value  # Convert enum to string for JSON serialization
     vibe_mode = (
         VibeCheckMode.COMPREHENSIVE
         if mode == "comprehensive"
@@ -247,12 +259,12 @@ def _run_vibe_check_sync(
         detail_level=detail_enum,
         post_comment=post_comment,
     )
-    response = _build_vibe_check_payload(vibe_result, detail_level, mode)
+    response = _build_vibe_check_payload(vibe_result, detail_level_str, mode)
     response["issue_info"] = {
         "number": issue_number,
         "repository": repository,
         "analysis_mode": mode,
-        "detail_level": detail_level,
+        "detail_level": detail_level_str,  # Use string version for JSON serialization
         "comment_posted": post_comment,
     }
     return response
