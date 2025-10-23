@@ -87,6 +87,8 @@ def apply_security_patches(use_optimized=True):
                     raise ValueError(error)
                 return sanitized
             validated_ws = WorkspaceDataInput(**workspace)
+            if hasattr(validated_ws, "model_dump"):
+                return validated_ws.model_dump()
             return validated_ws.dict()
 
         # Patch 1: Replace PromptTemplate.render with secure version
@@ -270,7 +272,12 @@ def verify_patches():
         rendered = renderer.render_safe(
             "Hello {{ name }}", {"name": "${os.system('rm -rf /')}"}
         )
-        template_secure = "os.system" not in rendered.lower() and "rm -rf" not in rendered.lower()
+        rendered_lower = rendered.lower()
+        template_secure = (
+            "os.system" not in rendered_lower
+            and "rm -rf" not in rendered_lower
+            and "[blocked" in rendered_lower
+        )
 
         prompt_builder_secure = isinstance(module.PromptBuilder, type) and issubclass(
             module.PromptBuilder, SecurePromptBuilder

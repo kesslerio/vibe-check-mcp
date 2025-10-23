@@ -228,9 +228,8 @@ class RateLimiter:
         max_token_rate: Optional[float] = None,
     ):
         effective_rpm = max_requests_per_minute or requests_per_minute
-        burst_capacity_value: float = max_token_rate or burst_capacity
-        self.requests_per_minute = effective_rpm
-        self.burst_capacity = burst_capacity_value
+        self.requests_per_minute = int(effective_rpm)
+        self.burst_capacity = float(max_token_rate) if max_token_rate is not None else float(burst_capacity)
         self.per_user = per_user
         self.max_buckets = max_buckets
         self.retain_buckets = retain_buckets
@@ -292,14 +291,20 @@ class RateLimiter:
 
         return True, None
 
+    async def check_rate_limit(
+        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
+    ) -> Tuple[bool, Optional[float]]:
+        """Async interface used by MCP workflow."""
+        effective_tokens = tokens_used if tokens_used is not None else tokens
+        return await self._check_rate_limit_async(user_id, effective_tokens)
+
     def check_rate_limit_sync(
         self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
     ) -> Tuple[bool, str]:
-        """
-        Provide a synchronous helper for test contexts that cannot await.
-        """
-        effective_tokens = tokens_used if tokens_used is not None else tokens
+        """Provide a synchronous helper for legacy tests."""
+
         async def _runner() -> Tuple[bool, Optional[float]]:
+            effective_tokens = tokens_used if tokens_used is not None else tokens
             return await self._check_rate_limit_async(user_id, effective_tokens)
 
         try:
@@ -308,7 +313,6 @@ class RateLimiter:
             loop = None
 
         if loop and loop.is_running():
-            # Fall back to awaitable to avoid blocking running event loops.
             raise RuntimeError("check_rate_limit_sync cannot run inside an active event loop")
 
         allowed, wait_time = asyncio.run(_runner())
@@ -320,30 +324,6 @@ class RateLimiter:
             else "Rate limit exceeded."
         )
         return False, f"Rate limit exceeded. {wait_segment}"
-
-    def check_rate_limit(
-        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
-    ):
-        """
-        Hybrid interface: synchronous callers receive an evaluated tuple with human friendly messaging,
-        while async contexts can still ``await`` the coroutine result (yielding ``(allowed, wait_time)``).
-        """
-        effective_tokens = tokens_used if tokens_used is not None else tokens
-
-        async def _runner() -> Tuple[bool, Optional[float]]:
-            return await self._check_rate_limit_async(user_id, effective_tokens)
-
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop and loop.is_running():
-            return _runner()
-
-        return self.check_rate_limit_sync(
-            user_id=user_id, tokens=tokens, tokens_used=tokens_used
-        )
 
     def _cleanup_old_buckets(self):
         """Remove inactive buckets to prevent memory leak"""
@@ -627,19 +607,18 @@ class SafeTemplateRenderer:
             text = re.sub(pattern, replacement, text)
 
         lowered = text.lower()
-        dangerous_keywords = [
-            ("os.system", "[BLOCKED_CALL]"),
-            ("__import__", "[BLOCKED_IMPORT]"),
-            ("rm -rf", "[BLOCKED_CMD]"),
-            ("{%","[BLOCKED_JINJA]"),
-            ("%}", "[BLOCKED_JINJA]"),
-            ("${", "[BLOCKED_EXPR]"),
-        ]
+        dangerous_patterns = {
+            r"\b__import__\b": "[BLOCKED_IMPORT]",
+            r"os\.system\s*\(": "[BLOCKED_CALL](",
+            r"rm\s*-rf": "[BLOCKED_CMD]",
+            r"\{\%\s*[^%]+\s*\%\}": "[BLOCKED_JINJA]",
+            r"\$\{\s*os\.system": "[BLOCKED_EXPR]",
+            r"\$\{\s*eval": "[BLOCKED_EXPR]",
+        }
 
-        for keyword, replacement in dangerous_keywords:
-            if keyword in lowered:
-                text = re.sub(re.escape(keyword), replacement, text, flags=re.IGNORECASE)
-                lowered = text.lower()
+        for pattern, replacement in dangerous_patterns.items():
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
 
         return text
 
