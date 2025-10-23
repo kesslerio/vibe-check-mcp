@@ -30,8 +30,7 @@ class TestAnalyzeIssueIntegrationWorkflow:
 
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_legacy_analyzer_to_enhanced_tool_transition(self):
+    def test_legacy_analyzer_to_enhanced_tool_transition(self):
         """Test transition from legacy analyzer to enhanced MCP tool"""
         with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
             # Test that legacy analyzer still works
@@ -81,7 +80,8 @@ class TestAnalyzeIssueIntegrationWorkflow:
                     )
                     mock_get_framework.return_value = mock_framework
 
-                    enhanced_result = await analyze_issue(42, "test/repo", analysis_mode="basic")
+                    # analyze_issue is synchronous, not async
+                    enhanced_result = analyze_issue(42, "test/repo", analysis_mode="basic")
 
                     # Verify enhanced response format
                     assert enhanced_result["status"] == "basic_analysis_complete"
@@ -89,19 +89,18 @@ class TestAnalyzeIssueIntegrationWorkflow:
 
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_workflow_error_handling_and_recovery(self):
+    def test_workflow_error_handling_and_recovery(self):
         """Test error handling and recovery in the integration workflow"""
         with patch("vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid", side_effect=Exception("Hybrid analysis failed")):
-            result = await analyze_issue(issue_number=42)
+            # analyze_issue is synchronous, not async
+            result = analyze_issue(issue_number=42)
 
             # Should handle error gracefully
             assert result["status"] == "enhanced_analysis_error"
             assert "Hybrid analysis failed" in result["error"]
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_workflow_with_different_configurations(self):
+    def test_workflow_with_different_configurations(self):
         """Test workflow with different configuration combinations"""
         # Test configuration combinations
         test_configs = [
@@ -126,8 +125,8 @@ class TestAnalyzeIssueIntegrationWorkflow:
                 mock_comprehensive.return_value = {"status": "comprehensive_analysis_complete"}
                 mock_hybrid.return_value = {"status": "hybrid_analysis_complete"}
 
-                # Test configuration
-                result = await analyze_issue(
+                # Test configuration - analyze_issue is synchronous, not async
+                result = analyze_issue(
                     issue_number=42,
                     analysis_mode=config["mode"],
                     detail_level=config["detail"],

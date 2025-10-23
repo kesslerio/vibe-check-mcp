@@ -23,8 +23,7 @@ class TestEndToEndWorkflow:
     """Integration tests for complete end-to-end workflow"""
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_complete_workflow_basic_mode(self):
+    def test_complete_workflow_basic_mode(self):
         """Test complete workflow in basic (quick) mode"""
 
         mock_basic_result = {
@@ -62,7 +61,8 @@ class TestEndToEndWorkflow:
             mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
             mock_get_analyzer.return_value = mock_analyzer
 
-            result = await analyze_issue(
+            # analyze_issue is synchronous, not async
+            result = analyze_issue(
                 issue_number=42,
                 repository="test/good-repo",
                 analysis_mode="quick",
@@ -88,8 +88,7 @@ class TestEndToEndWorkflow:
             assert enhanced["backward_compatible"] is True
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_complete_workflow_comprehensive_mode(self):
+    def test_complete_workflow_comprehensive_mode(self):
         """Test complete workflow in comprehensive mode"""
 
         mock_comprehensive_result = {
@@ -123,7 +122,8 @@ class TestEndToEndWorkflow:
             )
             mock_get_analyzer.return_value = mock_analyzer
 
-            result = await analyze_issue(
+            # analyze_issue is synchronous, not async
+            result = analyze_issue(
                 issue_number=123,
                 repository="test/complex-project",
                 analysis_mode="comprehensive",
@@ -148,8 +148,7 @@ class TestEndToEndWorkflow:
             assert comment_posting["status"] == "not_implemented"
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_workflow_error_handling_and_recovery(self):
+    def test_workflow_error_handling_and_recovery(self):
         """Test workflow error handling and graceful degradation"""
 
         with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
@@ -160,15 +159,15 @@ class TestEndToEndWorkflow:
             )
             mock_get_analyzer.return_value = mock_analyzer
 
-            result = await analyze_issue(issue_number=42)
+            # analyze_issue is synchronous, not async
+            result = analyze_issue(issue_number=42)
 
             assert result["status"] == "enhanced_analysis_error"
             assert "Hybrid analysis failed" in result["error"]
             assert result["analysis_mode"] == "hybrid"
 
     @pytest.mark.integration
-    @pytest.mark.asyncio
-    async def test_workflow_with_mixed_confidence_patterns(self):
+    def test_workflow_with_mixed_confidence_patterns(self):
         """Test workflow with patterns of varying confidence levels"""
 
         mock_basic_result = {
@@ -224,7 +223,8 @@ class TestEndToEndWorkflow:
             mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
             mock_get_analyzer.return_value = mock_analyzer
 
-            result = await analyze_issue(issue_number=42, analysis_mode="quick")
+            # analyze_issue is synchronous, not async
+            result = analyze_issue(issue_number=42, analysis_mode="quick")
 
             mock_analyzer.analyze_issue_basic.assert_awaited_once()
             assert result["status"] == "basic_analysis_complete"

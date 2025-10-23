@@ -229,10 +229,14 @@ def _run_vibe_check_sync(
             "issue_number": issue_number,
         }
 
-    try:
-        detail_enum = DetailLevel(detail_level.lower())
-    except ValueError:
-        detail_enum = DetailLevel.STANDARD
+    # Handle DetailLevel parameter - can be string or DetailLevel enum
+    if isinstance(detail_level, DetailLevel):
+        detail_enum = detail_level
+    else:
+        try:
+            detail_enum = DetailLevel(detail_level.lower())
+        except ValueError:
+            detail_enum = DetailLevel.STANDARD
 
     vibe_mode = (
         VibeCheckMode.COMPREHENSIVE
