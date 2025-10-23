@@ -35,6 +35,37 @@ from vibe_check.tools.async_analysis.integration import (
     check_analysis_status,
     get_system_status,
 )
+from vibe_check.tools.async_analysis.worker import shutdown_global_workers
+from vibe_check.tools.async_analysis.queue_manager import shutdown_global_queue
+from vibe_check.tools.async_analysis.resource_monitor import shutdown_global_resource_monitor
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_async_globals():
+    """
+    Automatically cleanup global async analysis system between tests.
+
+    This prevents worker loops from previous tests interfering with current tests,
+    which was causing "unsupported operand type(s) for +: 'coroutine' and 'coroutine'"
+    errors when workers tried to process jobs with mocked or corrupted pr_data.
+    """
+    yield  # Let test run first
+
+    # Cleanup after each test
+    try:
+        await shutdown_global_workers()
+    except Exception:
+        pass  # Ignore if workers not initialized
+
+    try:
+        await shutdown_global_queue()
+    except Exception:
+        pass  # Ignore if queue not initialized
+
+    try:
+        shutdown_global_resource_monitor()
+    except Exception:
+        pass  # Ignore if monitor not initialized
 
 
 class TestAsyncAnalysisConfig:
