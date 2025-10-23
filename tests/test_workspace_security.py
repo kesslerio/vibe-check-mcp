@@ -140,7 +140,7 @@ class TestFileReader:
             test_file.write_text(test_content)
 
             content, error = FileReader.read_file(
-                str(test_file), working_directory=tmpdir
+                str(test_file), working_directory=tmpdir, include_error=True
             )
 
             assert content == test_content
@@ -155,7 +155,7 @@ class TestFileReader:
             test_file.write_bytes(test_content.encode("latin-1"))
 
             content, error = FileReader.read_file(
-                str(test_file), working_directory=tmpdir
+                str(test_file), working_directory=tmpdir, include_error=True
             )
 
             assert content is not None
@@ -170,7 +170,7 @@ class TestFileReader:
             test_file.write_text(f"short line\n{long_line}\nanother short line")
 
             content, error = FileReader.read_file(
-                str(test_file), working_directory=tmpdir
+                str(test_file), working_directory=tmpdir, include_error=True
             )
 
             assert content is not None

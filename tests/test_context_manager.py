@@ -111,7 +111,7 @@ class TestFileReader:
         content = "def hello():\n    print('world')"
         test_file.write_text(content)
 
-        result, error = FileReader.read_file(str(test_file))
+        result, error = FileReader.read_file(str(test_file), include_error=True)
         assert result == content
         assert error is None
 
@@ -121,7 +121,7 @@ class TestFileReader:
         # Write file with latin-1 encoding
         test_file.write_bytes("café".encode("latin-1"))
 
-        result, error = FileReader.read_file(str(test_file))
+        result, error = FileReader.read_file(str(test_file), include_error=True)
         assert result is not None
         assert error is None
 
@@ -131,14 +131,14 @@ class TestFileReader:
         long_line = "x" * 2000  # Exceeds MAX_LINE_LENGTH
         test_file.write_text(f"short line\n{long_line}\nanother short line")
 
-        result, error = FileReader.read_file(str(test_file))
+        result, error = FileReader.read_file(str(test_file), include_error=True)
         assert result is not None
         assert "..." in result  # Long line should be truncated
         assert error is None
 
     def test_handle_invalid_path(self):
         """Test handling of invalid file paths"""
-        result, error = FileReader.read_file("/non/existent/file.py")
+        result, error = FileReader.read_file("/non/existent/file.py", include_error=True)
         assert result is None
         assert error is not None
 

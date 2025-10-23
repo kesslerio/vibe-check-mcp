@@ -17,6 +17,13 @@ This negligible overhead makes it safe to run patches in production by default.
 
 Control security patches via the `VIBE_CHECK_SECURITY_PATCHES` environment variable:
 
+### Runtime Behavior (2025-10 hardening)
+
+- Security patches auto-apply when `vibe_check.server` is imported; no manual bootstrap is required.
+- Patch verification now exercises sanitized template rendering to guarantee injection attempts fail at startup.
+- Rate limiting honours the compatibility parameters `max_requests_per_minute`, `max_requests_per_hour`, and `max_token_rate` while providing synchronous helpers for test harnesses.
+- Workspace validation blocks Windows-style drive paths and `~` shortcuts that resolve outside the configured workspace, even if the underlying files are absent.
+
 #### Enable Patches (Default)
 ```bash
 # Explicitly enable (default behavior)

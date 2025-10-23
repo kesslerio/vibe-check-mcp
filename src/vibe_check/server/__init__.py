@@ -12,6 +12,7 @@ example during ``python -c"from vibe_check.server import *"``).
 
 from __future__ import annotations
 
+import logging
 import asyncio
 from typing import Any
 
@@ -32,6 +33,21 @@ from vibe_check.tools.vibe_mentor import get_mentor_engine
 
 analyze_text_demo = demo_analyze_text
 """Backward compatible alias used throughout the test-suite."""
+
+logger = logging.getLogger(__name__)
+
+try:
+    from vibe_check.mentor.mcp_sampling_patch import auto_apply as _auto_apply_security_patches
+except Exception as exc:  # pragma: no cover - defensive guard
+    logger.warning("Security patches unavailable: %s", exc)
+else:
+    try:
+        _PATCHED = _auto_apply_security_patches()
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.error("Failed to apply security patches: %s", exc)
+    else:
+        if not _PATCHED:
+            logger.warning("Security patches did not verify; security regression tests may fail.")
 
 ensure_tools_registered(mcp)
 

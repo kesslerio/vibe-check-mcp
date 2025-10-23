@@ -18,6 +18,7 @@ Performance Features:
 
 import os
 import logging
+from dataclasses import asdict
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from .vibe_mentor_enhanced import (
     ContextExtractor,
     TechnicalContext,
 )
+from vibe_check.tools.vibe_mentor import get_mentor_engine
 from vibe_check.mentor.context_manager import (
     get_context_cache,
     SecurityValidator,
@@ -49,8 +51,10 @@ MAX_CONTEXT_SIZE = 50000  # Maximum total size of context in characters
 class WorkspaceAwareMentorEngine(EnhancedVibeMentorEngine):
     """Extended mentor engine with workspace file reading capabilities"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, base_engine=None):
+        if base_engine is None:
+            base_engine = get_mentor_engine()
+        super().__init__(base_engine=base_engine)
         self.context_cache = get_context_cache()
         self.pattern_detector = PatternDetector()
         self.workspace = SecurityValidator.get_workspace_directory()
@@ -308,22 +312,48 @@ class WorkspaceAwareMentorEngine(EnhancedVibeMentorEngine):
         tech_context = self._enhance_context_with_workspace(tech_context, file_contexts)
 
         # Detect patterns in the query and actual code
-        patterns = []
-        if file_contexts:
-            # Analyze actual code for patterns
-            for fc in file_contexts:
-                # Simple pattern detection in code
-                code_patterns = self.pattern_detector.detect_patterns(fc.content)
-                patterns.extend(code_patterns)
-
-        # Get base analysis
-        result = self.analyze(
-            query=query,
-            context=enhanced_context,
-            session_id=session_id,
-            reasoning_depth=reasoning_depth,
-            continue_session=continue_session,
+        detected_patterns = self.pattern_detector.analyze_text_for_patterns(
+            query, context=enhanced_context
         )
+        if file_contexts:
+            for fc in file_contexts:
+                detected_patterns.extend(
+                    self.pattern_detector.analyze_text_for_patterns(fc.content)
+                )
+
+        # Generate persona contributions using enhanced reasoning
+        session = self.base_engine.create_session(query)
+        original_enhanced_flag = getattr(self.base_engine, "_enhanced_mode", False)
+        self.base_engine._enhanced_mode = False
+        contributions: List[ContributionData] = []
+        try:
+            for persona in session.personas:
+                contribution = self.base_engine.generate_contribution(
+                    session=session,
+                    persona=persona,
+                    detected_patterns=[asdict(p) for p in detected_patterns],
+                    context=enhanced_context,
+                    project_context=None,
+                    file_contexts=file_contexts,
+                )
+                contributions.append(contribution)
+        finally:
+            self.base_engine._enhanced_mode = original_enhanced_flag
+
+        result: Dict[str, Any] = {
+            "analysis": {
+                "contributions": [
+                    {
+                        "persona": contrib.persona_id,
+                        "type": contrib.type,
+                        "content": contrib.content,
+                        "confidence": contrib.confidence,
+                    }
+                    for contrib in contributions
+                ],
+                "detected_patterns": [asdict(p) for p in detected_patterns],
+            }
+        }
 
         # Add workspace-specific information
         result["workspace_info"] = {
