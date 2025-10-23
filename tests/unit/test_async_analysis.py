@@ -11,6 +11,8 @@ import time
 from unittest.mock import AsyncMock, Mock, patch
 from typing import Dict, Any, List
 
+pytestmark = pytest.mark.usefixtures("mock_async_analysis_environment")
+
 from vibe_check.tools.async_analysis.config import (
     AsyncAnalysisConfig,
     AsyncAnalysisMetrics,

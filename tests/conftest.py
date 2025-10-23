@@ -13,6 +13,7 @@ import tempfile
 import json
 import asyncio
 import logging
+from contextlib import ExitStack
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from unittest.mock import MagicMock, patch, AsyncMock
@@ -356,8 +357,7 @@ def cleanup_async_globals():
     """
     yield  # Let test run first
 
-    # Forceful cleanup - directly reset globals without trying to gracefully shutdown
-    # This works because we're in test mode and don't care about graceful shutdown
+    # Forceful cleanup - directly reset globals to guarantee isolation even without graceful shutdown
     try:
         # Import and reset worker manager global
         from vibe_check.tools.async_analysis import worker as worker_module
@@ -402,6 +402,112 @@ def cleanup_async_globals():
         shutdown_global_resource_monitor()
     except Exception:
         pass  # Ignore errors
+
+
+@pytest.fixture
+def mock_async_analysis_environment():
+    """Prevent async analysis system from spawning real background tasks in tests."""
+
+    class DummyMonitor:
+        def __init__(self):
+            self.job_trackers: Dict[str, MagicMock] = {}
+            self.monitoring_active = False
+
+        async def start_monitoring(self, *args, **kwargs):
+            self.monitoring_active = True
+
+        async def stop_monitoring(self):
+            self.monitoring_active = False
+
+        def should_accept_new_job(self) -> tuple[bool, str]:
+            return True, "System ready for test job"
+
+        def register_job(self, job_id: str, process_id: int | None = None) -> MagicMock:
+            tracker = MagicMock()
+            tracker.process_id = process_id
+            tracker.violations = []
+            tracker.get_duration.return_value = 0.0
+            self.job_trackers[job_id] = tracker
+            return tracker
+
+        def unregister_job(self, job_id: str):
+            self.job_trackers.pop(job_id, None)
+
+        def get_system_status(self) -> Dict[str, Any]:
+            return {
+                "monitoring_active": self.monitoring_active,
+                "job_count": len(self.job_trackers),
+                "within_limits": True,
+                "violations": [],
+                "total_violations": 0,
+                "limits": {},
+            }
+
+    dummy_monitor = DummyMonitor()
+    dummy_queue = MagicMock()
+    dummy_queue.queue_analysis = AsyncMock(return_value="test-job-id")
+    dummy_queue.get_queue_status.return_value = {
+        "queue_size": 0,
+        "active_jobs": 0,
+        "max_queue_size": 0,
+        "max_concurrent_workers": 0,
+        "metrics": {},
+        "config": {},
+    }
+    dummy_queue.get_job_status.return_value = None
+    dummy_queue.get_result.return_value = None
+    dummy_queue.active_jobs = {}
+
+    from vibe_check.tools.async_analysis import integration as integration_module
+
+    def get_monitor_stub(*_args, **_kwargs):
+        return dummy_monitor
+
+    def shutdown_monitor_stub():
+        return None
+
+    async def initialize_stub(_config=None):
+        integration_module._system_initialized = True
+        return True
+
+    with ExitStack() as stack:
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.integration.initialize_async_system",
+                new=initialize_stub,
+            )
+        )
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.integration.shutdown_async_system",
+                new=AsyncMock(return_value=None),
+            )
+        )
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.resource_monitor.get_global_resource_monitor",
+                side_effect=get_monitor_stub,
+            )
+        )
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.integration.get_global_queue",
+                new=AsyncMock(return_value=dummy_queue),
+            )
+        )
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.queue_manager.get_global_queue",
+                new=AsyncMock(return_value=dummy_queue),
+            )
+        )
+        stack.enter_context(
+            patch(
+                "vibe_check.tools.async_analysis.resource_monitor.shutdown_global_resource_monitor",
+                new=shutdown_monitor_stub,
+            )
+        )
+        yield
 
 
 @pytest.fixture
