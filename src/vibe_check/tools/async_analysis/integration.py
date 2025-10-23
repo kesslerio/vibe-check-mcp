@@ -185,6 +185,7 @@ async def start_async_analysis(
     except Exception as e:
         # Handle ResourceError from queue_manager
         from .queue_manager import ResourceError
+        import os
 
         if isinstance(e, ResourceError):
             return {
@@ -193,7 +194,9 @@ async def start_async_analysis(
                 "recommendation": "System is at capacity. Try again later or use manual review",
                 "resource_info": "Resource monitoring detected system limits exceeded",
             }
-        logger.error(f"Error starting async analysis: {e}")
+        # Suppress error logs in test mode to avoid confusing output
+        if not os.environ.get("VIBE_CHECK_TEST_MODE"):
+            logger.error(f"Error starting async analysis: {e}")
         return {
             "status": "error",
             "error": f"Failed to queue analysis: {str(e)}",

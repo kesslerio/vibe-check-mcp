@@ -100,7 +100,10 @@ class AsyncAnalysisWorker:
                 logger.info(f"Worker {self.worker_id} cancelled")
                 break
             except Exception as e:
-                logger.error(f"Worker {self.worker_id} error: {e}")
+                # Suppress error logs in test mode to avoid confusing output
+                import os
+                if not os.environ.get("VIBE_CHECK_TEST_MODE"):
+                    logger.error(f"Worker {self.worker_id} error: {e}")
 
                 # If we have a current job, mark it as failed
                 if self.current_job:
