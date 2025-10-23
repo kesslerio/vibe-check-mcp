@@ -363,6 +363,9 @@ def cleanup_async_globals():
         from vibe_check.tools.async_analysis import worker as worker_module
         if hasattr(worker_module, '_global_worker_manager') and worker_module._global_worker_manager:
             manager = worker_module._global_worker_manager
+            # Stop all workers immediately (breaks their while loop)
+            for worker in manager.workers:
+                worker.running = False  # Break the worker loop
             # Cancel all worker tasks immediately
             for task in manager.worker_tasks:
                 if not task.done():

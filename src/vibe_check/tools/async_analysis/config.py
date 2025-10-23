@@ -5,8 +5,13 @@ Centralized configuration for background processing of massive PRs.
 All timeouts, thresholds, and performance parameters are defined here.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict, Any
+
+
+# Use very short timeout in test mode to prevent tests from hanging
+_WORKER_IDLE_TIMEOUT = 0.1 if os.environ.get("VIBE_CHECK_TEST_MODE") else 30
 
 
 @dataclass
@@ -16,7 +21,7 @@ class AsyncAnalysisConfig:
     # Queue Configuration
     max_queue_size: int = 50  # Maximum jobs in queue
     max_concurrent_workers: int = 2  # Max parallel analysis workers
-    worker_idle_timeout: int = 30  # Seconds to wait for new jobs
+    worker_idle_timeout: int = _WORKER_IDLE_TIMEOUT  # Seconds to wait for new jobs
 
     # Analysis Timeouts (longer for background processing)
     chunk_timeout_seconds: int = 300  # 5 minutes per chunk for background
