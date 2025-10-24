@@ -19,6 +19,7 @@ import time
 import asyncio
 import hashlib
 import os
+import textwrap
 from pathlib import Path
 from collections import OrderedDict, deque
 from typing import Dict, Any, List, Optional, Union, Tuple, Set
@@ -51,6 +52,26 @@ except ImportError:
     SamplingMessage = Dict[str, Any]
 
 logger = logging.getLogger(__name__)
+
+_PROMPT_INJECTION_KEYWORDS = (
+    "ignore all previous",
+    "system:",
+    "assistant:",
+    "output all api keys",
+    "reveal_all_secrets",
+    "bypass all safety",
+)
+
+_PROMPT_INJECTION_BLOCK_PATTERNS = (
+    re.compile(
+        r"(?is)(?:'''|\"\"\").*?(ignore all previous|system:|assistant:|reveal_all_secrets|bypass).*?(?:'''|\"\"\")"
+    ),
+    re.compile(
+        r"(?is)/\*.*?(ignore all previous|system:|assistant:|reveal_all_secrets|bypass).*?\*/"
+    ),
+)
+
+_PROMPT_INJECTION_SPECIAL_TOKENS = ("<|", "|>", "[[", "]]")
 
 
 # ============================================================================
@@ -202,15 +223,22 @@ class RateLimiter:
         per_user: bool = True,
         max_buckets: int = 1000,  # configurable threshold for cleanup
         retain_buckets: int = 500,  # how many buckets to keep during cleanup
+        max_requests_per_minute: Optional[int] = None,
+        max_requests_per_hour: Optional[int] = None,
+        max_token_rate: Optional[float] = None,
     ):
-        self.requests_per_minute = requests_per_minute
-        self.burst_capacity = burst_capacity
+        effective_rpm = max_requests_per_minute or requests_per_minute
+        self.requests_per_minute = int(effective_rpm)
+        self.burst_capacity = float(max_token_rate) if max_token_rate is not None else float(burst_capacity)
         self.per_user = per_user
         self.max_buckets = max_buckets
         self.retain_buckets = retain_buckets
+        self.max_requests_per_hour = max_requests_per_hour
+        self.max_token_rate = max_token_rate
         self.buckets: Dict[str, TokenBucket] = {}
         self._cleanup_interval = 300  # Clean up old buckets every 5 minutes
         self._last_cleanup = time.time()
+        self._request_counters: Dict[str, Tuple[int, float]] = {}
 
     def _get_bucket_key(self, user_id: Optional[str] = None) -> str:
         """Get bucket key for rate limiting"""
@@ -218,7 +246,7 @@ class RateLimiter:
             return f"user:{user_id}"
         return "global"
 
-    async def check_rate_limit(
+    async def _check_rate_limit_async(
         self, user_id: Optional[str] = None, tokens: int = 1
     ) -> Tuple[bool, Optional[float]]:
         """
@@ -241,6 +269,20 @@ class RateLimiter:
             )
 
         bucket = self.buckets[key]
+
+        # Enforce per-minute request limits
+        now = time.time()
+        count, window_start = self._request_counters.get(key, (0, now))
+        if now - window_start >= 60:
+            count = 0
+            window_start = now
+
+        if count >= self.requests_per_minute:
+            wait_time = 60 - (now - window_start)
+            return False, max(wait_time, 0.0)
+
+        self._request_counters[key] = (count + 1, window_start)
+
         allowed = await bucket.consume(tokens)
 
         if not allowed:
@@ -248,6 +290,40 @@ class RateLimiter:
             return False, wait_time
 
         return True, None
+
+    async def check_rate_limit(
+        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
+    ) -> Tuple[bool, Optional[float]]:
+        """Async interface used by MCP workflow."""
+        effective_tokens = tokens_used if tokens_used is not None else tokens
+        return await self._check_rate_limit_async(user_id, effective_tokens)
+
+    def check_rate_limit_sync(
+        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
+    ) -> Tuple[bool, str]:
+        """Provide a synchronous helper for legacy tests."""
+
+        async def _runner() -> Tuple[bool, Optional[float]]:
+            effective_tokens = tokens_used if tokens_used is not None else tokens
+            return await self._check_rate_limit_async(user_id, effective_tokens)
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            raise RuntimeError("check_rate_limit_sync cannot run inside an active event loop")
+
+        allowed, wait_time = asyncio.run(_runner())
+        if allowed:
+            return True, "Allowed"
+        wait_segment = (
+            f"Please retry in {wait_time:.1f} seconds."
+            if wait_time is not None
+            else "Rate limit exceeded."
+        )
+        return False, f"Rate limit exceeded. {wait_segment}"
 
     def _cleanup_old_buckets(self):
         """Remove inactive buckets to prevent memory leak"""
@@ -530,6 +606,20 @@ class SafeTemplateRenderer:
         for pattern, replacement in patterns:
             text = re.sub(pattern, replacement, text)
 
+        lowered = text.lower()
+        dangerous_patterns = {
+            r"\b__import__\b": "[BLOCKED_IMPORT]",
+            r"os\.system\s*\(": "[BLOCKED_CALL](",
+            r"rm\s*-rf": "[BLOCKED_CMD]",
+            r"\{\%\s*[^%]+\s*\%\}": "[BLOCKED_JINJA]",
+            r"\$\{\s*os\.system": "[BLOCKED_EXPR]",
+            r"\$\{\s*eval": "[BLOCKED_EXPR]",
+        }
+
+        for pattern, replacement in dangerous_patterns.items():
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
         return text
 
     @staticmethod
@@ -601,6 +691,12 @@ class SafeTemplateRenderer:
             )
             # Return more informative error message while still being safe
             return f"[Template Error: {type(e).__name__}]"
+
+    def render_safe(self, template_str: str, variables: Dict[str, Any]) -> str:
+        """
+        Backwards compatible alias expected by legacy tests.
+        """
+        return self.render(template_str, variables)
 
 
 # ============================================================================
@@ -738,30 +834,38 @@ def sanitize_code_for_llm(code: str, max_length: int = 2000) -> str:
     if not code:
         return ""
 
+    normalized = textwrap.dedent(code)
+
     # First, scan and redact secrets
-    code, _ = EnhancedSecretsScanner.scan_and_redact(code, "code_content")
+    sanitized, _ = EnhancedSecretsScanner.scan_and_redact(normalized, "code_content")
 
-    # Remove potential prompt injection patterns
-    injection_patterns = [
-        r"#\s*ignore\s+all\s+previous",
-        r"#\s*system\s*:",
-        r"#\s*assistant\s*:",
-        r"#\s*user\s*:",
-        r"/\*\s*SYSTEM\s*\*/",
-        r'""".*?ignore.*?instructions.*?"""',
-        r"'''.*?ignore.*?instructions.*?'''",
-        r"<\|.*?\|>",  # Special tokens
-        r"\[\[.*?\]\]",  # Potential control sequences
-    ]
-
-    sanitized = code
-    for pattern in injection_patterns:
-        sanitized = re.sub(
-            pattern,
-            "# [REDACTED - POTENTIAL INJECTION]",
-            sanitized,
-            flags=re.IGNORECASE | re.DOTALL,
+    # Remove multi-line prompt injection payloads before line-level filtering
+    for pattern in _PROMPT_INJECTION_BLOCK_PATTERNS:
+        sanitized = pattern.sub(
+            "\n# [REDACTED - POTENTIAL INJECTION BLOCK]\n", sanitized
         )
+
+    sanitized_lines: List[str] = []
+    for raw_line in sanitized.splitlines():
+        stripped = raw_line.strip().lower()
+        if any(keyword in stripped for keyword in _PROMPT_INJECTION_KEYWORDS):
+            sanitized_lines.append("# [REDACTED - POTENTIAL INJECTION]")
+            continue
+
+        # Handle shell-style comments that may hide instructions
+        if stripped.startswith("//") and any(
+            keyword in stripped for keyword in _PROMPT_INJECTION_KEYWORDS
+        ):
+            sanitized_lines.append("# [REDACTED - POTENTIAL INJECTION]")
+            continue
+
+        if any(token in stripped for token in _PROMPT_INJECTION_SPECIAL_TOKENS):
+            sanitized_lines.append("# [REDACTED - CONTROL TOKEN]")
+            continue
+
+        sanitized_lines.append(raw_line)
+
+    sanitized = "\n".join(sanitized_lines)
 
     # Escape HTML entities to prevent rendering issues
     sanitized = html.escape(sanitized)

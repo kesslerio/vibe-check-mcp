@@ -158,8 +158,16 @@ class SecurityValidator:
             if workspace:
                 working_directory = workspace
 
+            # Handle explicit Windows drive references on non-Windows systems
+            if os.name != "nt" and re.match(r"^[a-zA-Z]:\\", file_path):
+                return (
+                    False,
+                    file_path,
+                    "File is outside working directory",
+                )
+
             # Convert to Path object
-            path = Path(file_path)
+            path = Path(file_path).expanduser()
 
             # If relative, make it relative to working directory
             if not path.is_absolute():
@@ -170,6 +178,20 @@ class SecurityValidator:
                     path = path.resolve()
             else:
                 path = path.resolve()
+
+            # Prevent path traversal - ensure file is within working directory if specified
+            if working_directory:
+                base_dir = Path(working_directory).resolve()
+                try:
+                    # Check if the resolved path is within the base directory
+                    path.relative_to(base_dir)
+                except ValueError:
+                    # If specified, file must be within working directory
+                    return (
+                        False,
+                        str(path),
+                        f"File is outside working directory: {path}",
+                    )
 
             # Check if file exists
             if not path.exists():
@@ -192,20 +214,6 @@ class SecurityValidator:
                     f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE})",
                 )
 
-            # Prevent path traversal - ensure file is within working directory if specified
-            if working_directory:
-                base_dir = Path(working_directory).resolve()
-                try:
-                    # Check if the resolved path is within the base directory
-                    path.relative_to(base_dir)
-                except ValueError:
-                    # If specified, file must be within working directory
-                    return (
-                        False,
-                        str(path),
-                        f"File is outside working directory: {path}",
-                    )
-
             return True, str(path), None
 
         except Exception as e:
@@ -217,13 +225,17 @@ class FileReader:
 
     @staticmethod
     def read_file(
-        file_path: str, working_directory: str = None
-    ) -> Tuple[Optional[str], Optional[str]]:
+        file_path: str,
+        working_directory: str = None,
+        *,
+        include_error: bool = False,
+    ):
         """
         Securely read a file with validation.
 
         Returns:
-            Tuple of (content, error_message)
+            Content string when successful or None when blocked.
+            If include_error=True, returns Tuple[content, error_message].
         """
         # Validate path
         is_valid, resolved_path, error = SecurityValidator.validate_path(
@@ -231,7 +243,9 @@ class FileReader:
         )
         if not is_valid:
             logger.warning(f"Path validation failed: {error}")
-            return None, error
+            if include_error:
+                return None, error
+            return None
 
         try:
             # Read file with encoding detection
@@ -262,19 +276,26 @@ class FileReader:
                         ]
                         content = "\n".join(lines)
 
-                    return content, None
+                    if include_error:
+                        return content, None
+                    return content
 
                 except UnicodeDecodeError:
                     continue
 
-            return (
-                None,
-                f"Could not decode file with any supported encoding: {resolved_path}",
+            error_msg = (
+                f"Could not decode file with any supported encoding: {resolved_path}"
             )
+            if include_error:
+                return None, error_msg
+            return None
 
         except Exception as e:
             logger.error(f"Error reading file {resolved_path}: {str(e)}")
-            return None, f"Error reading file: {str(e)}"
+            error_msg = f"Error reading file: {str(e)}"
+            if include_error:
+                return None, error_msg
+            return None
 
 
 class CodeParser:
@@ -633,7 +654,7 @@ class ContextCache:
 
             # Read file
             content, error = self._file_reader.read_file(
-                file_path, session.working_directory
+                file_path, session.working_directory, include_error=True
             )
             if error:
                 errors.append(f"{file_path}: {error}")

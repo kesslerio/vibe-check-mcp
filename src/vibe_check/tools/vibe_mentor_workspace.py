@@ -18,6 +18,7 @@ Performance Features:
 
 import os
 import logging
+from dataclasses import asdict
 from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
@@ -27,16 +28,14 @@ from .vibe_mentor_enhanced import (
     ContextExtractor,
     TechnicalContext,
 )
+from vibe_check.tools.vibe_mentor import get_mentor_engine
 from vibe_check.mentor.context_manager import (
     get_context_cache,
     SecurityValidator,
     FileContext,
 )
-from vibe_check.mentor.models.session import (
-    CollaborativeReasoningSession,
-    ContributionData,
-)
 from vibe_check.mentor.models.persona import PersonaData
+from vibe_check.mentor.models.session import ContributionData
 from vibe_check.core.pattern_detector import PatternDetector
 
 logger = logging.getLogger(__name__)
@@ -49,8 +48,10 @@ MAX_CONTEXT_SIZE = 50000  # Maximum total size of context in characters
 class WorkspaceAwareMentorEngine(EnhancedVibeMentorEngine):
     """Extended mentor engine with workspace file reading capabilities"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, base_engine=None):
+        if base_engine is None:
+            base_engine = get_mentor_engine()
+        super().__init__(base_engine=base_engine)
         self.context_cache = get_context_cache()
         self.pattern_detector = PatternDetector()
         self.workspace = SecurityValidator.get_workspace_directory()
@@ -308,22 +309,87 @@ class WorkspaceAwareMentorEngine(EnhancedVibeMentorEngine):
         tech_context = self._enhance_context_with_workspace(tech_context, file_contexts)
 
         # Detect patterns in the query and actual code
-        patterns = []
-        if file_contexts:
-            # Analyze actual code for patterns
-            for fc in file_contexts:
-                # Simple pattern detection in code
-                code_patterns = self.pattern_detector.detect_patterns(fc.content)
-                patterns.extend(code_patterns)
-
-        # Get base analysis
-        result = self.analyze(
-            query=query,
-            context=enhanced_context,
-            session_id=session_id,
-            reasoning_depth=reasoning_depth,
-            continue_session=continue_session,
+        detected_patterns = self.pattern_detector.analyze_text_for_patterns(
+            query, context=enhanced_context
         )
+        if file_contexts:
+            for fc in file_contexts:
+                detected_patterns.extend(
+                    self.pattern_detector.analyze_text_for_patterns(fc.content)
+                )
+
+        pattern_payload = [asdict(p) for p in detected_patterns]
+
+        # Session management respecting continuation semantics
+        session_manager = self.base_engine.session_manager
+        active_session = None
+        if continue_session and session_id:
+            active_session = session_manager.get_session(session_id)
+            if active_session:
+                active_session.topic = query
+
+        if not active_session:
+            active_session = self.base_engine.create_session(
+                topic=query, session_id=session_id
+            )
+            session_id = active_session.session_id
+            active_session.contributions.clear()
+            active_session.iteration = 0
+            active_session.stage = "problem-definition"
+            active_session.next_contribution_needed = True
+            active_session.active_persona_id = active_session.personas[0].id
+
+        contribution_counts = {"quick": 1, "standard": 2, "comprehensive": 3}
+        num_contributions = contribution_counts.get(reasoning_depth, 2)
+        contributions: List[ContributionData] = []
+
+        for idx in range(num_contributions):
+            persona = active_session.personas[idx % len(active_session.personas)]
+            active_session.active_persona_id = persona.id
+
+            contribution = self.base_engine.generate_contribution(
+                session=active_session,
+                persona=persona,
+                detected_patterns=pattern_payload,
+                context=enhanced_context,
+                project_context=None,
+                file_contexts=file_contexts,
+            )
+
+            active_session.contributions.append(contribution)
+            contributions.append(contribution)
+
+            if reasoning_depth == "comprehensive" and idx < num_contributions - 1:
+                self.base_engine.advance_stage(active_session)
+
+        active_session.iteration += 1
+        active_session.next_contribution_needed = False
+        self.base_engine.cleanup_old_sessions()
+
+        synthesis = self.base_engine.synthesize_session(active_session)
+
+        result: Dict[str, Any] = {
+            "analysis": {
+                "contributions": [
+                    {
+                        "persona": contrib.persona_id,
+                        "type": contrib.type,
+                        "content": contrib.content,
+                        "confidence": contrib.confidence,
+                    }
+                    for contrib in contributions
+                ],
+                "detected_patterns": pattern_payload,
+                "synthesis": synthesis,
+            },
+            "session_info": {
+                "session_id": active_session.session_id,
+                "stage": active_session.stage,
+                "iteration": active_session.iteration,
+                "can_continue": not active_session.next_contribution_needed,
+            },
+            "reasoning_depth": reasoning_depth,
+        }
 
         # Add workspace-specific information
         result["workspace_info"] = {

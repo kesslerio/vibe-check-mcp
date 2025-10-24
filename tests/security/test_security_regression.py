@@ -218,11 +218,11 @@ class TestSecurityRegressionPR190:
 
         # Should allow first 5 requests
         for i in range(5):
-            allowed, msg = limiter.check_rate_limit(user_id, tokens_used=10)
+            allowed, msg = limiter.check_rate_limit_sync(user_id, tokens_used=10)
             assert allowed, f"Request {i} should be allowed"
 
         # 6th request should be rate limited
-        allowed, msg = limiter.check_rate_limit(user_id, tokens_used=10)
+        allowed, msg = limiter.check_rate_limit_sync(user_id, tokens_used=10)
         assert not allowed, "Should be rate limited after 5 requests"
         assert "rate limit" in msg.lower() or "exceeded" in msg.lower()
 

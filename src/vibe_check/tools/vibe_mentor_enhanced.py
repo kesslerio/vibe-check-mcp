@@ -393,7 +393,18 @@ class ContextExtractor:
         text = re.sub(r"([^\w\s])\1{2,}", r"\1\1", text)
         # Normalize whitespace
         text = re.sub(r"\s+", " ", text)
-        return text.lower().strip()
+        sanitized = text.lower().strip()
+
+        dangerous_sequences = [
+            r"jndi\s*:",
+            r"<\s*script",
+            r"drop\s+table",
+            r"\$\s*\{",
+        ]
+        for pattern in dangerous_sequences:
+            sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE)
+
+        return sanitized.strip()
 
     @classmethod
     def _build_compiled_patterns(cls) -> Dict[str, re.Pattern]:
