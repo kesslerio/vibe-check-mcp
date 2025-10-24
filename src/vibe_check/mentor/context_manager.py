@@ -159,7 +159,7 @@ class SecurityValidator:
                 working_directory = workspace
 
             # Handle explicit Windows drive references on non-Windows systems
-            if re.match(r"^[a-zA-Z]:\\", file_path):
+            if os.name != "nt" and re.match(r"^[a-zA-Z]:\\", file_path):
                 return (
                     False,
                     file_path,
