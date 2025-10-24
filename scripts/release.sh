@@ -37,6 +37,16 @@ PYTHONPATH=src:. pytest tests/unit/ -v --tb=short || {
     fi
 }
 
+# Run targeted security regression suite without coverage gate
+echo "🛡️  Running security regression suite..."
+./scripts/run_security_suite.sh || {
+    echo "⚠️  Security suite failed. Continue with release? (y/n)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
 # Run linting and type checking
 echo "🔍 Running linting and type checks..."
 if command -v black &> /dev/null; then

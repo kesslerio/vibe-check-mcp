@@ -22,7 +22,7 @@ Control security patches via the `VIBE_CHECK_SECURITY_PATCHES` environment varia
 - Security patches auto-apply when `vibe_check.server` is imported; no manual bootstrap is required.
 - Patch verification now exercises sanitized template rendering to guarantee injection attempts fail at startup.
 - Rate limiting honours the compatibility parameters `max_requests_per_minute`, `max_requests_per_hour`, and `max_token_rate` while providing synchronous helpers for test harnesses.
-- Workspace validation blocks Windows-style drive paths and `~` shortcuts that resolve outside the configured workspace, even if the underlying files are absent.
+- Workspace validation blocks Windows-style drive paths on POSIX hosts while deferring to the native Windows resolver when `os.name == "nt"`, and still rejects `~` shortcuts that resolve outside the configured workspace.
 
 #### Enable Patches (Default)
 ```bash
@@ -105,6 +105,11 @@ python -m vibe_check.server 2>&1 | grep "Security patches"
 Run security regression tests:
 ```bash
 pytest tests/security/test_security_regression.py -v
+```
+
+For pre-release verification without triggering the global coverage gate, run:
+```bash
+./scripts/run_security_suite.sh
 ```
 
 ### Related Issues

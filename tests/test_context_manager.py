@@ -28,6 +28,41 @@ from vibe_check.mentor.context_manager import (
 class TestSecurityValidator:
     """Test path validation and security features"""
 
+    def test_windows_drive_blocked_on_posix(self, monkeypatch, tmp_path):
+        """Windows drive prefixes should be rejected on non-Windows hosts."""
+        monkeypatch.setattr(os, "name", "posix", raising=False)
+        monkeypatch.setattr(
+            SecurityValidator,
+            "get_workspace_directory",
+            staticmethod(lambda: None),
+        )
+
+        is_valid, _, error = SecurityValidator.validate_path(
+            "C:\\Users\\example\\secrets.txt", working_directory=str(tmp_path)
+        )
+
+        assert not is_valid
+        assert error is not None
+        assert "outside working directory" in error
+
+    def test_windows_drive_allowed_on_windows(self, monkeypatch, tmp_path):
+        """Windows drive prefixes should flow through on Windows hosts."""
+        monkeypatch.setattr(os, "name", "nt", raising=False)
+        monkeypatch.setattr(
+            SecurityValidator,
+            "get_workspace_directory",
+            staticmethod(lambda: None),
+        )
+
+        # The path won't exist on this environment, but the guard should not block it.
+        is_valid, _, error = SecurityValidator.validate_path(
+            "C:\\Projects\\repo\\file.py", working_directory=str(tmp_path)
+        )
+
+        assert not is_valid
+        assert error is not None
+        assert "outside working directory" not in error
+
     def test_validate_absolute_path(self, tmp_path):
         """Test validation of absolute paths"""
         # Create a test file
