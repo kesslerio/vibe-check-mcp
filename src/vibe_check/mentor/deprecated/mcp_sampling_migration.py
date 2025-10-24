@@ -60,19 +60,31 @@ class SecurePromptTemplate:
 
 
 class SecurePromptBuilder:
-    """Secure replacement for PromptBuilder"""
+    """Secure replacement for PromptBuilder with backward compatibility."""
+
+    _renderer = SafeTemplateRenderer()
+    _templates_initialized = False
+    TEMPLATES: Dict[str, str] = {}
 
     def __init__(self):
-        self.renderer = SafeTemplateRenderer()
-        self._init_templates()
+        # Preserve instance attributes for legacy callers using object instances
+        self.renderer = self.__class__._renderer
+        self.__class__._ensure_templates()
 
-    def _init_templates(self):
-        """Initialize secure templates"""
+    @classmethod
+    def _ensure_templates(cls) -> None:
+        if not cls._templates_initialized:
+            cls._init_templates()
+            cls._templates_initialized = True
+
+    @classmethod
+    def _init_templates(cls) -> None:
+        """Initialize secure templates once per process."""
         # Convert existing templates to Jinja2 format
-        self.TEMPLATES = {}
+        cls.TEMPLATES = {}
 
         # Architecture decision template
-        self.TEMPLATES[
+        cls.TEMPLATES[
             "architecture_decision"
         ] = """
 You are vibe_check_mentor, a senior engineering advisor focused on pragmatic, experience-based guidance.
@@ -107,7 +119,7 @@ Format your response with clear sections:
 """
 
         # Add other templates similarly...
-        self.TEMPLATES[
+        cls.TEMPLATES[
             "code_review"
         ] = """
 You are vibe_check_mentor reviewing code for architectural issues and anti-patterns.
@@ -133,8 +145,53 @@ Provide feedback that is:
 - Includes code examples for fixes
 """
 
+        cls.TEMPLATES[
+            "implementation_guide"
+        ] = """
+You are vibe_check_mentor providing implementation guidance.
+
+Task: {{ query | sanitize | truncate_safe(500) }}
+Technologies: {{ technologies | join(', ') | sanitize }}
+Current Setup: {{ workspace_context | sanitize | truncate_safe(1000) }}
+Constraints: {{ constraints | sanitize }}
+
+Provide a practical implementation guide that:
+1. Breaks down the task into clear steps
+2. Uses the existing tech stack
+3. Avoids over-engineering
+4. Includes error handling
+5. Considers edge cases
+
+Format as:
+- Overview (what we're building)
+- Prerequisites (what's needed)
+- Step-by-step implementation
+- Testing approach
+- Deployment considerations
+"""
+
+        cls.TEMPLATES[
+            "debugging_help"
+        ] = """
+You are vibe_check_mentor helping debug an issue.
+
+Problem: {{ query | sanitize | truncate_safe(500) }}
+Error Context: {{ error_context | sanitize | truncate_safe(500) }}
+Code: {{ code_context | sanitize | truncate_safe(2000) }}
+Stack: {{ technology_stack | sanitize }}
+
+Approach this systematically:
+1. Identify the root cause (not symptoms)
+2. Explain why this happens
+3. Provide the fix
+4. Suggest how to prevent recurrence
+5. Include debugging techniques
+
+Be specific to their actual code and error.
+"""
+
         # General template as fallback
-        self.TEMPLATES[
+        cls.TEMPLATES[
             "general_advice"
         ] = """
 You are vibe_check_mentor, a pragmatic senior engineer.
@@ -156,8 +213,9 @@ Avoid:
 - Theoretical discussions without practical value
 """
 
+    @classmethod
     def build_prompt(
-        self,
+        cls,
         intent: str,
         query: str,
         context: Dict[str, Any],
@@ -165,6 +223,7 @@ Avoid:
     ) -> str:
         """Build a secure prompt using validated inputs and Jinja2"""
         try:
+            cls._ensure_templates()
             # Validate query input
             validated_query = QueryInput(query=query, intent=intent)
 
@@ -174,9 +233,9 @@ Avoid:
                 workspace_data = validated_workspace.model_dump()
 
             # Select template
-            template_key = self._map_intent_to_template(intent)
-            template = self.TEMPLATES.get(
-                template_key, self.TEMPLATES["general_advice"]
+            template_key = cls._map_intent_to_template(intent)
+            template = cls.TEMPLATES.get(
+                template_key, cls.TEMPLATES["general_advice"]
             )
 
             # Prepare variables
@@ -186,7 +245,7 @@ Avoid:
                 "context": str(context),
                 "technologies": context.get("technologies", []),
                 "patterns": context.get("patterns", []),
-                "workspace_context": self._format_workspace_context(workspace_data),
+                "workspace_context": cls._format_workspace_context(workspace_data),
                 "code_context": (
                     workspace_data.get("code", "") if workspace_data else ""
                 ),
@@ -196,17 +255,23 @@ Avoid:
                 "language": (
                     workspace_data.get("language", "") if workspace_data else ""
                 ),
+                "constraints": context.get("constraints", "Not specified")
+                if context
+                else "Not specified",
+                "technology_stack": ", ".join(context.get("technologies", [])),
+                "error_context": context.get("error", "") if context else "",
             }
 
             # Render with Jinja2
-            return self.renderer.render(template, variables)
+            return cls._renderer.render(template, variables)
 
         except Exception as e:
             logger.error(f"Secure prompt building failed: {e}")
             # Return safe fallback
             return f"Query: {query[:500]}\nPlease provide guidance on this topic."
 
-    def _map_intent_to_template(self, intent: str) -> str:
+    @classmethod
+    def _map_intent_to_template(cls, intent: str) -> str:
         """Map intent to template key"""
         intent_lower = intent.lower()
 
@@ -217,11 +282,18 @@ Avoid:
             return "architecture_decision"
         elif any(word in intent_lower for word in ["review", "feedback", "check"]):
             return "code_review"
+        elif any(
+            word in intent_lower for word in ["implement", "build", "create", "develop"]
+        ):
+            return "implementation_guide"
+        elif any(word in intent_lower for word in ["debug", "fix", "error", "issue"]):
+            return "debugging_help"
         else:
             return "general_advice"
 
+    @classmethod
     def _format_workspace_context(
-        self, workspace_data: Optional[Dict[str, Any]]
+        cls, workspace_data: Optional[Dict[str, Any]]
     ) -> str:
         """Format workspace data safely"""
         if not workspace_data:
@@ -231,16 +303,21 @@ Avoid:
 
         if "files" in workspace_data:
             files = workspace_data["files"][:10]  # Limit
-            parts.append(f"Files: {', '.join(files)}")
+            parts.append(f"Files analyzed: {', '.join(files)}")
 
         if "language" in workspace_data:
-            parts.append(f"Language: {workspace_data['language']}")
+            parts.append(f"Primary language: {workspace_data['language']}")
 
         if "frameworks" in workspace_data:
             frameworks = workspace_data["frameworks"][:5]  # Limit
-            parts.append(f"Frameworks: {', '.join(frameworks)}")
+            parts.append(f"Frameworks detected: {', '.join(frameworks)}")
 
-        return " | ".join(parts)
+        if "imports" in workspace_data:
+            imports = workspace_data["imports"][:10]
+            parts.append(f"Key imports: {', '.join(imports)}")
+
+        return "\n".join(parts) if parts else "No specific workspace context"
+
 
 
 class SecureMCPSamplingClient(OriginalMCPSamplingClient):

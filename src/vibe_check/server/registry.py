@@ -95,14 +95,20 @@ def register_all_tools(mcp: FastMCP):
     logger.info("Registering tools based on environment configuration...")
     logger.info("=" * 60)
 
+    dev_mode = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
+    dev_mode_override = os.getenv("VIBE_CHECK_DEV_MODE_OVERRIDE") == "true"
+    diagnostics_enabled = os.getenv("VIBE_CHECK_DIAGNOSTICS") == "true"
+
     # ========== PRODUCTION TOOLS (Always enabled) ==========
     logger.info("📦 Registering PRODUCTION tools...")
 
-    register_system_tools(mcp)  # 2: server_status, get_telemetry_summary
+    register_system_tools(
+        mcp, include_introspection=(diagnostics_enabled or dev_mode or dev_mode_override)
+    )  # server status + telemetry (+ introspection in diagnostics/dev)
     register_text_analysis_tools(mcp, dev_mode=False)  # 1: analyze_text_nollm
     register_project_context_tools(
-        mcp
-    )  # 4: detect_libraries, load_context, create_structure, register_project
+        mcp, dev_mode=(dev_mode or dev_mode_override)
+    )  # 3 production tools + optional dev-only registration helper
     register_github_tools(mcp)  # 3: analyze_issue/pr_nollm, review_pr_comprehensive
     register_integration_decision_tools(mcp)  # 7: integration decision tools
     register_productivity_tools(
@@ -120,7 +126,6 @@ def register_all_tools(mcp: FastMCP):
     logger.info(f"✅ Registered {production_count} production tools")
 
     # ========== DIAGNOSTIC TOOLS (Optional) ==========
-    diagnostics_enabled = os.getenv("VIBE_CHECK_DIAGNOSTICS") == "true"
     if diagnostics_enabled:
         logger.info("🔍 DIAGNOSTICS mode enabled...")
         register_diagnostic_tools(mcp)  # 2: claude_cli_status, claude_cli_diagnostics
@@ -135,8 +140,6 @@ def register_all_tools(mcp: FastMCP):
         logger.info(f"🔍 +{diag_count} diagnostic tools registered")
 
     # ========== DEVELOPMENT TOOLS (Optional) ==========
-    dev_mode = os.getenv("VIBE_CHECK_DEV_MODE") == "true"
-    dev_mode_override = os.getenv("VIBE_CHECK_DEV_MODE_OVERRIDE") == "true"
     dev_count = 0
 
     if dev_mode or dev_mode_override:

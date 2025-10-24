@@ -35,9 +35,14 @@ def _register_tool(mcp_instance, tool) -> None:
     manager = getattr(mcp_instance, "_tool_manager", None)
     tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
 
-    if manager and hasattr(manager, "_tools"):
-        if tool_name in manager._tools:
-            return
+    if manager:
+        existing = getattr(manager, "_tools", None)
+        if existing is not None:
+            try:
+                if tool_name in existing:
+                    return
+            except TypeError:
+                pass
 
     mcp_instance.add_tool(tool)
 

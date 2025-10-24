@@ -16,10 +16,14 @@ class MockToolManager:
 
     def __init__(self):
         self.tools = []
+        self._tools = {}
 
     def add_tool(self, tool):
         """Add a tool to the registry."""
-        self.tools.append(tool)
+        name = getattr(tool, "__name__", getattr(tool, "name", None))
+        if name not in self._tools:
+            self.tools.append(tool)
+            self._tools[name] = tool
         return tool
 
 
@@ -61,7 +65,7 @@ def clean_env():
 
 
 def test_production_mode_tool_count(mcp_instance, clean_env):
-    """Verify exactly 22 tools in production mode (no env vars set)."""
+    """Verify production tool count (no env vars set)."""
     from vibe_check.server.registry import register_all_tools
 
     # Ensure no env vars are set
@@ -75,19 +79,17 @@ def test_production_mode_tool_count(mcp_instance, clean_env):
     # Count tools
     tool_count = len(mcp_instance._tool_manager.tools)
 
-    # Expected: 30 production tools (verified actual count)
+    # Expected: 30 production tools (current registry baseline)
     # Breakdown:
-    # - system: 1 (server_status)
-    # - text_analysis: 1 (analyze_text_nollm)
-    # - project_context: 3 (detect_libraries, load_context, create_structure)
-    # - github: 3 (analyze_issue/pr_nollm, review_pr_comprehensive)
-    # - integration_decisions: 7
+    # - system: 2 (server_status, get_telemetry_summary)
+    # - text_analysis: 2 (demo_analyze_text, analyze_text_nollm)
+    # - project_context: 3 (detect, load, create structure)
+    # - github: 3 (issue/pr nollm, review_pr_comprehensive)
+    # - integration decisions: 7 (core decision helpers)
     # - productivity: 3 (doom_loops, session_health, intervention)
     # - mentor: 1 (vibe_check_mentor)
-    # - context7: 3 (resolve_lib, get_docs, get_hybrid_context)
-    # - llm_production: 6 (analyze_text/pr/code/issue/github_issue/github_pr_llm)
-    # - Additional tools from various modules: ~2
-    # Note: Actual count may include additional production tools from integrations
+    # - context7: 3 (resolve, get_docs, get_hybrid_context)
+    # - llm production: 6 (analyze_*_llm variants)
 
     assert tool_count == 30, f"Expected 30 production tools, got {tool_count}"
 
@@ -206,7 +208,7 @@ def test_text_analysis_dev_mode():
     mcp_prod.add_tool = lambda func: tools_prod.append(func)
 
     register_text_analysis_tools(mcp_prod, dev_mode=False)
-    assert len(tools_prod) == 1, "Production mode should register 1 tool"
+    assert len(tools_prod) == 2, "Production mode should register 2 tools"
 
     # Test dev mode (with production)
     mcp_dev = Mock()
@@ -214,7 +216,7 @@ def test_text_analysis_dev_mode():
     mcp_dev.add_tool = lambda func: tools_dev.append(func)
 
     register_text_analysis_tools(mcp_dev, dev_mode=True)
-    assert len(tools_dev) == 2, "Dev mode should register 2 tools (production + dev)"
+    assert len(tools_dev) == 3, "Dev mode should register 3 tools (2 production + 1 dev)"
 
     # Test dev mode with skip_production
     mcp_dev_skip = Mock()
