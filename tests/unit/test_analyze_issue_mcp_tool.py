@@ -145,131 +145,109 @@ class TestAnalyzeIssueMCPTool:
         )
         assert enhanced["claude_cli_enabled"] is False
 
-    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
-    def test_analyze_issue_comprehensive_mode(self, mock_get_analyzer):
-        """Test analyze_issue MCP tool in comprehensive mode"""
-        # Setup mock analyzer with comprehensive result
-        mock_analyzer = MagicMock()
-        mock_analyzer.claude_cli_enabled = True
-        mock_analyzer.analyze_issue_comprehensive = AsyncMock(
-            return_value={
-                "status": "comprehensive_analysis_complete",
-                "analysis_timestamp": "2024-01-01T00:00:00Z",
-                "issue_info": {
-                    "number": 123,
-                    "title": "Test Issue",
-                "author": "testuser",
-                "created_at": "2024-01-01T00:00:00Z",
+    @patch("vibe_check.tools.issue_analysis.api._run_vibe_check_sync")
+    def test_analyze_issue_comprehensive_mode(self, mock_run_vibe_check):
+        """Test analyze_issue MCP tool in comprehensive mode."""
+
+        mock_run_vibe_check.return_value = {
+            "status": "vibe_check_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 123,
                 "repository": "owner/repo",
-                "url": "https://github.com/owner/repo/issues/123",
-                "labels": [],
+                "analysis_mode": "comprehensive",
+                "detail_level": "comprehensive",
+                "comment_posted": True,
             },
-            "comprehensive_analysis": {
-                "success": True,
-                "claude_output": "Comprehensive analysis content",
-                "execution_time_seconds": 2.5,
-                "cost_tracking": {"cost_usd": 0.01},
-            },
-                "enhanced_features": {
-                    "claude_cli_integration": True,
-                    "sophisticated_reasoning": True,
-                },
-            }
-        )
-        mock_get_analyzer.return_value = mock_analyzer
+            "vibe_check": {"overall_vibe": "positive"},
+        }
 
-        result = asyncio.run(
-            analyze_issue(
-                issue_number=123,
-                repository="owner/repo",
-                analysis_mode="comprehensive",
-                detail_level="comprehensive",
-                post_comment=True,
-            )
+        result = analyze_issue(
+            issue_number=123,
+            repository="owner/repo",
+            analysis_mode="comprehensive",
+            detail_level="comprehensive",
+            post_comment=True,
         )
 
-        # Verify analyzer call
-        mock_analyzer.analyze_issue_comprehensive.assert_awaited_once_with(
+        mock_run_vibe_check.assert_called_once_with(
             issue_number=123,
             repository="owner/repo",
             detail_level="comprehensive",
+            mode="comprehensive",
+            post_comment=True,
         )
+        assert result["issue_info"]["analysis_mode"] == "comprehensive"
+        assert result["issue_info"]["detail_level"] == "comprehensive"
 
-        # Verify comprehensive response structure
-        assert result["status"] == "comprehensive_analysis_complete"
-        assert "comprehensive_analysis" in result
-        assert "enhanced_features" in result
-        assert result["enhanced_analysis"]["analysis_mode"] == "comprehensive"
+    @patch("vibe_check.tools.issue_analysis.api._run_vibe_check_sync")
+    def test_analyze_issue_default_parameters(self, mock_run_vibe_check, mock_basic_result):
+        """Test analyze_issue with default parameters."""
 
-    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
-    def test_analyze_issue_default_parameters(self, mock_get_analyzer, mock_basic_result):
-        """Test analyze_issue with default parameters"""
-        mock_analyzer = MagicMock()
-        mock_analyzer.claude_cli_enabled = False
-        mock_analyzer.analyze_issue_hybrid = AsyncMock(
-            return_value={
-                "status": "hybrid_analysis_complete",
-                "analysis_timestamp": "2024-01-01T00:00:00Z",
-                "issue_info": {"number": 42, "repository": None},
-                "pattern_detection": {
-                    "patterns_detected": mock_basic_result["patterns_detected"],
-                    "confidence_summary": mock_basic_result["confidence_summary"],
-                    "recommended_actions": mock_basic_result["recommended_actions"],
-                },
-                "claude_cli_analysis": {
-                    "status": "enhancement_unavailable",
-                    "message": "ExternalClaudeCli not available - pattern detection only",
-                },
-                "hybrid_summary": {"pattern_detection_summary": "1 patterns detected"},
-                "enhanced_features": {"pattern_detection": True, "hybrid_analysis": True},
-                "analysis_metadata": {
-                    "framework_version": "2.0 - Hybrid pattern detection + Claude CLI",
-                    "external_claude_available": False,
-                },
-            }
-        )
-        mock_get_analyzer.return_value = mock_analyzer
+        mock_run_vibe_check.return_value = {
+            "status": "vibe_check_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 42,
+                "repository": None,
+                "analysis_mode": "hybrid",
+                "detail_level": "standard",
+                "comment_posted": False,
+            },
+            "vibe_check": mock_basic_result,
+        }
 
-        result = asyncio.run(analyze_issue(issue_number=42))
+        result = analyze_issue(issue_number=42)
 
-        # Verify defaults - should call hybrid mode
-        mock_analyzer.analyze_issue_hybrid.assert_awaited_once_with(
+        mock_run_vibe_check.assert_called_once_with(
             issue_number=42,
             repository=None,
             detail_level="standard",
+            mode="hybrid",
+            post_comment=False,
         )
+        assert result["issue_info"]["analysis_mode"] == "hybrid"
+        assert result["issue_info"]["detail_level"] == "standard"
 
-        # Verify enhanced analysis metadata
-        enhanced = result["enhanced_analysis"]
-        assert enhanced["analysis_mode"] == "hybrid"
+    @patch("vibe_check.tools.issue_analysis.api._run_vibe_check_sync")
+    def test_analyze_issue_invalid_detail_level(self, mock_run_vibe_check, mock_basic_result):
+        """Invalid detail level should fall back to standard."""
 
-    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
-    def test_analyze_issue_invalid_detail_level(self, mock_get_analyzer, mock_basic_result):
-        """Test analyze_issue with invalid detail level"""
-        mock_analyzer = MagicMock()
-        mock_analyzer.claude_cli_enabled = False
-        sanitized_result = deepcopy(mock_basic_result)
-        sanitized_result["analysis_metadata"]["detail_level"] = "standard"
-        mock_analyzer.analyze_issue_hybrid = AsyncMock(return_value=sanitized_result)
-        mock_get_analyzer.return_value = mock_analyzer
+        mocked_response = {
+            "status": "vibe_check_complete",
+            "analysis_timestamp": "2024-01-01T00:00:00Z",
+            "issue_info": {
+                "number": 42,
+                "repository": None,
+                "analysis_mode": "hybrid",
+                "detail_level": "standard",
+                "comment_posted": False,
+            },
+            "vibe_check": mock_basic_result,
+        }
+        mock_run_vibe_check.return_value = mocked_response
 
-        result = asyncio.run(analyze_issue(issue_number=42, detail_level="invalid_level"))
+        result = analyze_issue(issue_number=42, detail_level="invalid_level")
 
-        # Should use standard as default
-        mock_analyzer.analyze_issue_hybrid.assert_awaited_once()
-        assert result["status"] == sanitized_result["status"]
-        assert result["analysis_metadata"]["detail_level"] == "standard"
+        mock_run_vibe_check.assert_called_once_with(
+            issue_number=42,
+            repository=None,
+            detail_level="invalid_level",
+            mode="hybrid",
+            post_comment=False,
+        )
+        assert result["issue_info"]["detail_level"] == "standard"
 
     @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
     def test_analyze_issue_error_handling(self, mock_get_analyzer):
         """Test analyze_issue error handling"""
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze_issue_hybrid = AsyncMock(
+        mock_analyzer.analyze_issue_basic = AsyncMock(
             side_effect=Exception("Analysis error")
         )
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = asyncio.run(analyze_issue(issue_number=42))
+        result = asyncio.run(analyze_issue(issue_number=42, analysis_mode="basic"))
 
         # Verify error response
         assert result["status"] == "enhanced_analysis_error"

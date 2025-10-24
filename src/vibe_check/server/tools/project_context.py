@@ -8,21 +8,33 @@ from vibe_check.config.vibe_check_config import create_vibe_check_directory
 logger = logging.getLogger(__name__)
 
 
-def register_project_context_tools(mcp_instance):
-    """Registers project context tools with the MCP server."""
+def register_project_context_tools(mcp_instance, dev_mode: bool = False):
+    """Registers project context tools with the MCP server.
+
+    Args:
+        mcp_instance: FastMCP server instance
+        dev_mode: When true, register developer-focused helpers in addition to the
+            production defaults.
+    """
     _register_tool(mcp_instance, detect_project_libraries)
     _register_tool(mcp_instance, load_project_context)
     _register_tool(mcp_instance, create_vibe_check_directory_structure)
-    _register_tool(mcp_instance, register_project_for_vibe_check)
+    if dev_mode:
+        _register_tool(mcp_instance, register_project_for_vibe_check)
 
 
 def _register_tool(mcp_instance, tool) -> None:
     manager = getattr(mcp_instance, "_tool_manager", None)
     tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
 
-    if manager and hasattr(manager, "_tools"):
-        if tool_name in manager._tools:
-            return
+    if manager:
+        existing = getattr(manager, "_tools", None)
+        if existing is not None:
+            try:
+                if tool_name in existing:
+                    return
+            except TypeError:
+                pass
 
     mcp_instance.add_tool(tool)
 

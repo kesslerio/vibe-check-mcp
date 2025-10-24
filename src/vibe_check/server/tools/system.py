@@ -7,11 +7,18 @@ from vibe_check.mentor.telemetry import get_telemetry_collector
 logger = logging.getLogger(__name__)
 
 
-def register_system_tools(mcp_instance):
-    """Registers system tools with the MCP server."""
+def register_system_tools(mcp_instance, include_introspection: bool = False):
+    """Registers system tools with the MCP server.
+
+    Args:
+        mcp_instance: FastMCP instance
+        include_introspection: When true, expose introspection helpers such as
+            `list_registered_tools` for diagnostics/development scenarios.
+    """
     _register_tool(mcp_instance, server_status)
     _register_tool(mcp_instance, get_telemetry_summary)
-    _register_tool(mcp_instance, list_registered_tools)
+    if include_introspection:
+        _register_tool(mcp_instance, list_registered_tools)
 
 
 def _register_tool(mcp_instance, tool) -> None:
@@ -20,9 +27,15 @@ def _register_tool(mcp_instance, tool) -> None:
     manager = getattr(mcp_instance, "_tool_manager", None)
     tool_name = getattr(tool, "__name__", getattr(tool, "name", None))
 
-    if manager and hasattr(manager, "_tools"):
-        if tool_name in manager._tools:
-            return
+    if manager:
+        existing = getattr(manager, "_tools", None)
+        if existing is not None:
+            try:
+                if tool_name in existing:
+                    return
+            except TypeError:
+                # Some mocks provide _tools as a non-iterable sentinel; ignore
+                pass
 
     mcp_instance.add_tool(tool)
 
