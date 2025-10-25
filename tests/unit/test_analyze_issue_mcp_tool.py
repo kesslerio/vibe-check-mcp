@@ -19,7 +19,7 @@ import pytest
 # Add src to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from vibe_check.tools.analyze_issue import analyze_issue
+from vibe_check.tools.analyze_issue import analyze_issue, analyze_issue_async
 import vibe_check.tools.analyze_issue as analyze_issue_module
 from vibe_check.tools.legacy.vibe_check_framework import (
     VibeCheckMode,
@@ -88,7 +88,7 @@ class TestAnalyzeIssueMCPTool:
             },
         }
 
-    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    @patch("vibe_check.tools.issue_analysis.api.get_enhanced_github_analyzer")
     def test_analyze_issue_quick_mode(self, mock_get_analyzer, mock_basic_result):
         """Test analyze_issue MCP tool in basic mode"""
         # Setup mock analyzer
@@ -98,7 +98,7 @@ class TestAnalyzeIssueMCPTool:
         mock_get_analyzer.return_value = mock_analyzer
 
         result = asyncio.run(
-            analyze_issue(
+            analyze_issue_async(
                 issue_number=42,
                 repository="test/repo",
                 analysis_mode="basic",
@@ -238,7 +238,7 @@ class TestAnalyzeIssueMCPTool:
         )
         assert result["issue_info"]["detail_level"] == "standard"
 
-    @patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer")
+    @patch("vibe_check.tools.issue_analysis.api.get_enhanced_github_analyzer")
     def test_analyze_issue_error_handling(self, mock_get_analyzer):
         """Test analyze_issue error handling"""
         mock_analyzer = MagicMock()
@@ -247,7 +247,9 @@ class TestAnalyzeIssueMCPTool:
         )
         mock_get_analyzer.return_value = mock_analyzer
 
-        result = asyncio.run(analyze_issue(issue_number=42, analysis_mode="basic"))
+        result = asyncio.run(
+            analyze_issue_async(issue_number=42, analysis_mode="basic")
+        )
 
         # Verify error response
         assert result["status"] == "enhanced_analysis_error"
