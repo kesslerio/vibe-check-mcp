@@ -21,6 +21,7 @@ from vibe_check.tools.analyze_issue import (
     analyze_issue,
     get_github_analyzer,
 )
+from vibe_check.tools.issue_analysis import IssueLabel
 from vibe_check.tools.legacy.vibe_check_framework import (
     VibeCheckMode,
     VibeLevel,
@@ -28,6 +29,10 @@ from vibe_check.tools.legacy.vibe_check_framework import (
 )
 from vibe_check.core.educational_content import DetailLevel
 from vibe_check.core.pattern_detector import DetectionResult
+from vibe_check.tools.issue_analysis.github_client import GitHubIssueClient
+
+
+ORIGINAL_FETCH_ISSUE_DATA = GitHubIssueClient.fetch_issue_data
 
 
 class TestGitHubIssueAnalyzer:
@@ -47,23 +52,34 @@ class TestGitHubIssueAnalyzer:
             "body": "We need to build a custom HTTP server to handle API requests instead of using the SDK.",
             "author": "testuser",
             "created_at": "2025-01-01T00:00:00Z",
+            "updated_at": "2025-01-02T00:00:00Z",
             "state": "open",
-            "labels": ["feature", "P1"],
+            "labels": [
+                {"name": "feature"},
+                {"name": "P1"},
+                {"name": "area:integration"},
+            ],
             "url": "https://github.com/test/repo/issues/42",
+            "html_url": "https://github.com/test/repo/issues/42",
             "repository": "test/repo",
+            "user": {"login": "testuser"},
         }
 
     @pytest.fixture
     def analyzer(self, mock_github_token):
         """Create analyzer instance for testing"""
-        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
+        with patch(
+            "vibe_check.tools.issue_analysis.github_client.Github"
+        ) as mock_github:
             analyzer = GitHubIssueAnalyzer(mock_github_token)
             analyzer.github_client.github_client = mock_github.return_value
             return analyzer
 
     def test_analyzer_initialization(self, mock_github_token):
         """Test proper analyzer initialization"""
-        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
+        with patch(
+            "vibe_check.tools.issue_analysis.github_client.Github"
+        ) as mock_github:
             analyzer = GitHubIssueAnalyzer(mock_github_token)
 
             # Verify GitHub client initialization
@@ -73,7 +89,9 @@ class TestGitHubIssueAnalyzer:
 
     def test_analyzer_initialization_without_token(self):
         """Test analyzer initialization without GitHub token"""
-        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
+        with patch(
+            "vibe_check.tools.issue_analysis.github_client.Github"
+        ) as mock_github:
             analyzer = GitHubIssueAnalyzer()
 
             # Should use default GitHub() constructor
@@ -96,16 +114,16 @@ class TestGitHubIssueAnalyzer:
         mock_labels = []
         for label in sample_issue_data["labels"]:
             mock_label = MagicMock()
-            mock_label.name = label
+            mock_label.name = label["name"]
             mock_labels.append(mock_label)
         mock_issue.labels = mock_labels
-        mock_issue.html_url = sample_issue_data["url"]
+        mock_issue.html_url = sample_issue_data["html_url"]
 
         analyzer.github_client.github_client.get_repo.return_value = mock_repo
         mock_repo.get_issue.return_value = mock_issue
 
         # Test fetching issue data
-        result = analyzer.github_client.fetch_issue_data(42, "test/repo")
+        result = ORIGINAL_FETCH_ISSUE_DATA(analyzer.github_client, 42, "test/repo")
 
         # Verify result structure
         assert result is not None
@@ -114,32 +132,47 @@ class TestGitHubIssueAnalyzer:
         assert result["body"] == sample_issue_data["body"]
         assert result["author"] == sample_issue_data["author"]
         assert result["state"] == sample_issue_data["state"]
-        assert len(result["labels"]) == 2
-        assert result["url"] == sample_issue_data["url"]
+        assert len(result["labels"]) == len(sample_issue_data["labels"])
+        assert {label.name for label in result["labels"]} == {
+            label["name"] for label in sample_issue_data["labels"]
+        }
+        assert result["url"] == sample_issue_data["html_url"]
 
         # Verify GitHub API calls
-        analyzer.github_client.github_client.get_repo.assert_called_once_with("test/repo")
+        analyzer.github_client.github_client.get_repo.assert_called_once_with(
+            "test/repo"
+        )
         mock_repo.get_issue.assert_called_once_with(42)
 
     def test_fetch_issue_data_github_exception(self, analyzer):
         """Test issue data fetching with GitHub exception"""
         # Configure mock to raise exception
-        analyzer.github_client.github_client.get_repo.side_effect = GithubException(404, "Not Found")
+        analyzer.github_client.github_client.get_repo.side_effect = GithubException(
+            404, "Not Found"
+        )
 
         # Test exception handling - should raise exception
         with pytest.raises(GithubException):
-            analyzer.github_client.fetch_issue_data(999, "nonexistent/repo")
+            ORIGINAL_FETCH_ISSUE_DATA(analyzer.github_client, 999, "nonexistent/repo")
 
     def test_fetch_issue_data_invalid_repo(self, analyzer):
         """Test issue data fetching with invalid repository format"""
         # Test with invalid repository format - should raise ValueError
-        with pytest.raises(ValueError, match="Repository must be in format 'owner/repo'"):
-            analyzer.github_client.fetch_issue_data(42, "invalid-repo-format")
+        with pytest.raises(
+            ValueError, match="Repository must be in format 'owner/repo'"
+        ):
+            ORIGINAL_FETCH_ISSUE_DATA(analyzer.github_client, 42, "invalid-repo-format")
 
     def test_analyze_issue_with_pattern_detection(self, analyzer, sample_issue_data):
         """Test issue analysis with pattern detection"""
         # Mock issue fetching
-        analyzer.github_client.fetch_issue_data = MagicMock(return_value=sample_issue_data)
+        issue_payload = dict(sample_issue_data)
+        issue_payload["author"] = sample_issue_data["user"]["login"]
+        issue_payload["labels"] = [
+            IssueLabel(name=label["name"]) for label in sample_issue_data["labels"]
+        ]
+        issue_payload["url"] = sample_issue_data["html_url"]
+        analyzer.github_client.fetch_issue_data = MagicMock(return_value=issue_payload)
 
         # Mock pattern detection
         mock_detection_result = DetectionResult(
@@ -168,7 +201,24 @@ class TestGitHubIssueAnalyzer:
         assert "analysis_metadata" in result
 
         # Verify issue data is included
-        assert result["issue_info"] == sample_issue_data
+        expected_issue_info = {
+            "number": sample_issue_data["number"],
+            "title": sample_issue_data["title"],
+            "body": sample_issue_data["body"],
+            "author": sample_issue_data["user"]["login"],
+            "created_at": sample_issue_data["created_at"],
+            "state": sample_issue_data["state"],
+            "labels": [
+                {"name": label["name"]} for label in sample_issue_data["labels"]
+            ],
+            "url": sample_issue_data["html_url"],
+            "repository": sample_issue_data["repository"],
+        }
+        actual_issue_info = dict(result["issue_info"])
+        actual_issue_info["labels"] = [
+            {"name": label.name} for label in result["issue_info"]["labels"]
+        ]
+        assert actual_issue_info == expected_issue_info
 
         # Verify patterns are formatted correctly
         patterns = result["patterns_detected"]
@@ -183,14 +233,18 @@ class TestGitHubIssueAnalyzer:
     def test_analyze_issue_with_fetch_failure(self, analyzer):
         """Test issue analysis when issue fetching fails"""
         # Mock failed issue fetching
-        analyzer.github_client.fetch_issue_data = MagicMock(side_effect=Exception("Fetch failed"))
+        analyzer.github_client.fetch_issue_data = MagicMock(
+            side_effect=Exception("Fetch failed")
+        )
 
         # Test analysis with fetch failure
         result = analyzer.analyze_issue(999, "test/repo")
 
         # Should return error response when fetching fails
         assert result["status"] == "basic_analysis_error"
-        analyzer.github_client.fetch_issue_data.assert_called_once_with(999, "test/repo")
+        analyzer.github_client.fetch_issue_data.assert_called_once_with(
+            999, "test/repo"
+        )
 
     def test_pattern_detection_integration(self, analyzer, sample_issue_data):
         """Test integration with pattern detection system"""
@@ -239,7 +293,7 @@ class TestGitHubIssueAnalyzer:
         mock_repo.get_issue.return_value = mock_issue
         analyzer.github_client.github_client.get_repo.return_value = mock_repo
 
-        result = analyzer.github_client.fetch_issue_data(123, "test/repo")
+        result = ORIGINAL_FETCH_ISSUE_DATA(analyzer.github_client, 123, "test/repo")
 
         # Verify transformation
         assert result["number"] == 123
@@ -250,8 +304,9 @@ class TestGitHubIssueAnalyzer:
         assert result["state"] == "open"
         assert len(result["labels"]) == 2
         assert "bug" in [label.name for label in result["labels"]]
-        assert "P1" in result["labels"]
+        assert "P1" in [label.name for label in result["labels"]]
         assert result["url"] == "https://github.com/test/repo/issues/123"
+        assert result["repository"] == "test/repo"
 
     def _create_mock_issue(self, issue_data):
         """Helper method to create mock GitHub issue object"""
@@ -262,8 +317,13 @@ class TestGitHubIssueAnalyzer:
         mock_issue.user.login = issue_data["author"]
         mock_issue.created_at.isoformat.return_value = issue_data["created_at"]
         mock_issue.state = issue_data["state"]
-        mock_issue.labels = [MagicMock(name=label) for label in issue_data["labels"]]
-        mock_issue.html_url = issue_data["url"]
+        label_mocks = []
+        for label in issue_data["labels"]:
+            mock_label = MagicMock()
+            mock_label.name = label["name"] if isinstance(label, dict) else label
+            label_mocks.append(mock_label)
+        mock_issue.labels = label_mocks
+        mock_issue.html_url = issue_data["html_url"]
         return mock_issue
 
 
