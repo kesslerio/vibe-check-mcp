@@ -47,7 +47,7 @@ class TestAsyncAnalysisIntegration:
 
         with patch(
             "vibe_check.tools.async_analysis.integration.get_global_queue",
-            new=AsyncMock(return_value=mock_queue_instance)
+            new=AsyncMock(return_value=mock_queue_instance),
         ):
 
             with patch(
@@ -113,7 +113,7 @@ class TestAsyncAnalysisIntegration:
 
         with patch(
             "vibe_check.tools.async_analysis.integration.get_global_queue",
-            new=AsyncMock(return_value=mock_queue_instance)
+            new=AsyncMock(return_value=mock_queue_instance),
         ):
 
             with patch(

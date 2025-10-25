@@ -65,7 +65,7 @@ class TestClaudeCliExecutorIssue240:
             # Verify environment logging calls were made
             assert mock_debug.call_count >= 3
             call_messages = [args[0] for args, kwargs in mock_debug.call_args_list]
-            
+
             assert any("PATH" in msg for msg in call_messages)
             assert any("Current working directory" in msg for msg in call_messages)
             assert any("MCP environment indicators" in msg for msg in call_messages)
@@ -90,6 +90,7 @@ class TestClaudeCliExecutorIssue240:
             assert mock_warning.call_count >= 1
             call_messages = [args[0] for args, kwargs in mock_warning.call_args_list]
             assert any("not executable" in msg for msg in call_messages)
+
     @patch("shutil.which")
     @patch("os.path.exists")
     def test_find_claude_cli_not_found_logs_error(self, mock_exists, mock_which):
@@ -108,7 +109,7 @@ class TestClaudeCliExecutorIssue240:
             assert mock_error.call_count >= 3
             call_messages = [args[0] for args, kwargs in mock_error.call_args_list]
             error_output = " ".join(call_messages)
-            
+
             assert "Claude CLI not found" in error_output
             assert "Current PATH" in error_output
             assert "To fix" in error_output

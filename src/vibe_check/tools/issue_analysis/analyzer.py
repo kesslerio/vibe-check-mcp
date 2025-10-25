@@ -87,7 +87,11 @@ class EnhancedGitHubIssueAnalyzer:
         Returns:
             Comprehensive analysis prompt optimized for issue analysis
         """
-        labels_str = ", ".join(str(label) for label in issue_data["labels"]) if issue_data["labels"] else "None"
+        labels_str = (
+            ", ".join(str(label) for label in issue_data["labels"])
+            if issue_data["labels"]
+            else "None"
+        )
 
         return f"""# GitHub Issue Comprehensive Analysis
 

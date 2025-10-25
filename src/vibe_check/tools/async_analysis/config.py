@@ -7,11 +7,11 @@ All timeouts, thresholds, and performance parameters are defined here.
 
 import os
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 # Use very short timeout in test mode to prevent tests from hanging
-_WORKER_IDLE_TIMEOUT = 0.1 if os.environ.get("VIBE_CHECK_TEST_MODE") else 30
+_WORKER_IDLE_TIMEOUT: int = int(0.1 if os.environ.get("VIBE_CHECK_TEST_MODE") else 30)
 
 
 @dataclass
@@ -42,7 +42,7 @@ class AsyncAnalysisConfig:
     async_threshold_files: int = 30  # Files to trigger async processing
 
     # Progress Tracking
-    progress_checkpoints: Dict[str, int] = None
+    progress_checkpoints: Optional[Dict[str, int]] = None
 
     def __post_init__(self):
         """Set default progress checkpoints."""

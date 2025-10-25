@@ -53,9 +53,7 @@ class TestMCPProtocolIntegration:
     @pytest.mark.asyncio
     async def test_tool_registration_compliance(self, mock_mcp_server):
         """Test that tools are registered with proper MCP compliance"""
-        with patch(
-            "vibe_check.server.core.FastMCP", return_value=mock_mcp_server
-        ):
+        with patch("vibe_check.server.core.FastMCP", return_value=mock_mcp_server):
             from vibe_check import server
 
             # Should have registered tools

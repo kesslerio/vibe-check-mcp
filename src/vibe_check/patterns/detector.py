@@ -99,7 +99,10 @@ class PatternDetector:
         matches.extend(self._detect_god_object(tree))
 
         sanitized_lines = _sanitize_lines_cached(sanitized)
-        if len(sanitized_lines) >= self._duplicate_window * self._duplicate_min_occurrences:
+        if (
+            len(sanitized_lines)
+            >= self._duplicate_window * self._duplicate_min_occurrences
+        ):
             matches.extend(self._detect_copy_paste(sanitized_lines))
 
         raw_lines = _split_lines_cached(sanitized)
@@ -120,7 +123,9 @@ class PatternDetector:
             if not isinstance(node, ast.ClassDef):
                 continue
 
-            method_count = sum(isinstance(body_item, ast.FunctionDef) for body_item in node.body)
+            method_count = sum(
+                isinstance(body_item, ast.FunctionDef) for body_item in node.body
+            )
             if method_count < self._god_method_threshold:
                 continue
 
@@ -131,14 +136,22 @@ class PatternDetector:
 
             confidence = min(
                 1.0,
-                (class_length / self._god_line_threshold + method_count / self._god_method_threshold) / 2,
+                (
+                    class_length / self._god_line_threshold
+                    + method_count / self._god_method_threshold
+                )
+                / 2,
             )
             matches.append(
                 PatternMatch(
                     pattern="god_object",
                     severity=normalize_severity(SeverityLevel.CRITICAL.value),
                     confidence=round(confidence, 2),
-                    details={"class_name": node.name, "lines": class_length, "methods": method_count},
+                    details={
+                        "class_name": node.name,
+                        "lines": class_length,
+                        "methods": method_count,
+                    },
                 )
             )
         return matches
@@ -168,7 +181,9 @@ class PatternDetector:
             return []
 
         confidence = min(1.0, len(duplicates) / self._duplicate_confidence_divisor)
-        examples = ["\n".join(window) for window in duplicates[: self._duplicate_report_limit]]
+        examples = [
+            "\n".join(window) for window in duplicates[: self._duplicate_report_limit]
+        ]
         return [
             PatternMatch(
                 pattern="copy_paste_programming",
@@ -202,7 +217,11 @@ class PatternDetector:
             f"{value!r} (line {line})"
             for line, value in (numeric_hits + string_hits)[: self._magic_sample_limit]
         ]
-        severity = SeverityLevel.CAUTION if total < self._magic_elevated_threshold else SeverityLevel.WARNING
+        severity = (
+            SeverityLevel.CAUTION
+            if total < self._magic_elevated_threshold
+            else SeverityLevel.WARNING
+        )
         return [
             PatternMatch(
                 pattern="magic_literals",
@@ -229,23 +248,37 @@ class PatternDetector:
 
             length = end - node.lineno + 1
             complexity = self._estimate_complexity(node)
-            if length < self._long_method_lines and complexity < self._long_method_complexity:
+            if (
+                length < self._long_method_lines
+                and complexity < self._long_method_complexity
+            ):
                 continue
 
             severity = SeverityLevel.WARNING
-            if complexity >= self._long_method_complexity * 1.5 or length >= self._long_method_lines * 2:
+            if (
+                complexity >= self._long_method_complexity * 1.5
+                or length >= self._long_method_lines * 2
+            ):
                 severity = SeverityLevel.CRITICAL
 
             confidence = min(
                 1.0,
-                (length / self._long_method_lines + complexity / self._long_method_complexity) / 2,
+                (
+                    length / self._long_method_lines
+                    + complexity / self._long_method_complexity
+                )
+                / 2,
             )
             matches.append(
                 PatternMatch(
                     pattern="long_method",
                     severity=normalize_severity(severity.value),
                     confidence=round(confidence, 2),
-                    details={"function_name": node.name, "lines": length, "complexity": complexity},
+                    details={
+                        "function_name": node.name,
+                        "lines": length,
+                        "complexity": complexity,
+                    },
                 )
             )
         return matches
@@ -297,7 +330,7 @@ class PatternDetector:
             if (
                 not stripped
                 or stripped.startswith(COMMENT_PREFIXES)
-                or stripped.startswith(("\"\"\"", "'''"))
+                or stripped.startswith(('"""', "'''"))
                 or self._looks_like_constant(stripped)
             ):
                 continue
@@ -356,7 +389,9 @@ class PatternDetector:
 
         max_line = getattr(node, "lineno", 0)
         for child in ast.walk(node):
-            child_line = getattr(child, "end_lineno", getattr(child, "lineno", max_line))
+            child_line = getattr(
+                child, "end_lineno", getattr(child, "lineno", max_line)
+            )
             max_line = max(max_line, child_line)
         return max_line - getattr(node, "lineno", max_line) + 1
 
@@ -382,4 +417,3 @@ class PatternDetector:
 
 
 __all__ = ["PatternDetector", "PatternMatch"]
-

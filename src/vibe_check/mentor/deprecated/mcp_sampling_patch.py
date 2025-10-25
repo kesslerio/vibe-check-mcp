@@ -77,7 +77,7 @@ def apply_security_patches(use_optimized=True):
             return validated_query.query
 
         def _validate_workspace_payload(
-            workspace: Optional[Dict[str, Any]]
+            workspace: Optional[Dict[str, Any]],
         ) -> Optional[Dict[str, Any]]:
             if not workspace:
                 return None

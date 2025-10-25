@@ -115,11 +115,15 @@ class TestAdaptivePromptSizing:
         assert size_analysis["overall_size"] == "VERY_LARGE"
 
         # Create the full data content and check its size
-        full_data_content = pr_tool._create_standard_pr_data(large_pr_data, review_context)
+        full_data_content = pr_tool._create_standard_pr_data(
+            large_pr_data, review_context
+        )
         assert len(full_data_content) > 50000
 
         # Now create the summary and check its size
-        summary_data_content = pr_tool._create_large_pr_data(large_pr_data, review_context)
+        summary_data_content = pr_tool._create_large_pr_data(
+            large_pr_data, review_context
+        )
         assert len(summary_data_content) < len(full_data_content)
 
     def test_summary_content_creation(self, pr_tool, large_pr_data, review_context):
@@ -231,7 +235,12 @@ class TestAdaptivePromptSizing:
             mock_analyze.return_value = mock_result
 
             result = await pr_tool._run_claude_analysis(
-                prompt_content, data_content, 73, large_pr_data, size_analysis, review_context
+                prompt_content,
+                data_content,
+                73,
+                large_pr_data,
+                size_analysis,
+                review_context,
             )
 
             # Verify summary mode was used

@@ -249,7 +249,9 @@ Fixes #456 #789 #1011
         combined_content = f"{prompt_content}\n\n{data_content}"
 
         # Verify content was created (actual size may vary based on implementation)
-        assert len(combined_content) > 5000, f"Test PR should have substantial content, got {len(combined_content)} chars"
+        assert (
+            len(combined_content) > 5000
+        ), f"Test PR should have substantial content, got {len(combined_content)} chars"
 
         # Mock the external Claude CLI to simulate successful analysis
         with patch.object(pr_tool.external_claude, "analyze_content") as mock_analyze:
@@ -324,10 +326,14 @@ This PR represents a comprehensive architectural modernization with excellent en
             content_arg = call_args["content"]
 
             # Should contain summary mode indicators
-            assert "Large PR" in content_arg or "Summary Analysis" in content_arg, "Should indicate large PR handling"
+            assert (
+                "Large PR" in content_arg or "Summary Analysis" in content_arg
+            ), "Should indicate large PR handling"
 
             # Verify content was created
-            assert len(content_arg) > 1000, "Should have substantial content for analysis"
+            assert (
+                len(content_arg) > 1000
+            ), "Should have substantial content for analysis"
 
     def test_large_pr_data_setup_validation(self, realistic_large_pr_data):
         """Validate that our test data actually represents a large PR scenario."""
@@ -373,7 +379,9 @@ This PR represents a comprehensive architectural modernization with excellent en
             assert info in summary_content, f"Critical information missing: {info}"
 
         # Verify analysis guidance is included (check for key phrases that should be present)
-        assert "Large PR" in summary_content or "Summary Analysis" in summary_content, "Should indicate large PR handling"
+        assert (
+            "Large PR" in summary_content or "Summary Analysis" in summary_content
+        ), "Should indicate large PR handling"
         assert len(summary_content) > 1000, "Summary should have substantial content"
 
     @pytest.mark.asyncio
@@ -392,12 +400,16 @@ This PR represents a comprehensive architectural modernization with excellent en
         timeout = pr_tool._calculate_adaptive_timeout(combined_size, 123)
 
         # For large content, timeout should be reasonable (implementation may vary)
-        assert timeout >= 60, f"Large PR timeout should be at least 1 minute, got {timeout}s"
+        assert (
+            timeout >= 60
+        ), f"Large PR timeout should be at least 1 minute, got {timeout}s"
         assert timeout <= 600, f"Timeout should be ≤10 minutes, got {timeout}s"
 
         # Verify it's larger than timeout for small content
         small_timeout = pr_tool._calculate_adaptive_timeout(1000, 123)
-        assert timeout >= small_timeout, "Large content should get at least same timeout as small content"
+        assert (
+            timeout >= small_timeout
+        ), "Large content should get at least same timeout as small content"
 
     @pytest.mark.asyncio
     async def test_error_handling_with_large_pr(

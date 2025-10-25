@@ -35,7 +35,9 @@ def _count_registered_tools(mcp: FastMCP) -> int:
                 except RuntimeError:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
-                        logger.debug("Active event loop detected - deferring tool count")
+                        logger.debug(
+                            "Active event loop detected - deferring tool count"
+                        )
                         return 0
                     tools = loop.run_until_complete(tools)
             return len(tools)
@@ -103,7 +105,8 @@ def register_all_tools(mcp: FastMCP):
     logger.info("📦 Registering PRODUCTION tools...")
 
     register_system_tools(
-        mcp, include_introspection=(diagnostics_enabled or dev_mode or dev_mode_override)
+        mcp,
+        include_introspection=(diagnostics_enabled or dev_mode or dev_mode_override),
     )  # server status + telemetry (+ introspection in diagnostics/dev)
     register_text_analysis_tools(mcp, dev_mode=False)  # 1: analyze_text_nollm
     register_project_context_tools(

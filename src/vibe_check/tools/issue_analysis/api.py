@@ -89,9 +89,7 @@ async def _analyze_issue_async(
         }
         mode = mode_aliases.get(requested_mode, requested_mode)
         if mode not in ["basic", "comprehensive", "hybrid"]:
-            logger.warning(
-                f"Invalid analysis mode '{analysis_mode}', using 'hybrid'"
-            )
+            logger.warning(f"Invalid analysis mode '{analysis_mode}', using 'hybrid'")
             mode = "hybrid"
 
         # Normalize detail level so downstream code always receives a string
@@ -218,7 +216,9 @@ def _build_vibe_check_payload(
         response["vibe_check"]["claude_reasoning"] = vibe_result.claude_reasoning
         response["claude_reasoning"] = vibe_result.claude_reasoning
     if vibe_result.clear_thought_analysis:
-        response["vibe_check"]["clear_thought_analysis"] = vibe_result.clear_thought_analysis
+        response["vibe_check"][
+            "clear_thought_analysis"
+        ] = vibe_result.clear_thought_analysis
         response["clear_thought_analysis"] = vibe_result.clear_thought_analysis
 
     metadata = technical_analysis.setdefault("analysis_metadata", {})
@@ -245,11 +245,11 @@ def _run_vibe_check_sync(
         }
 
     detail_enum = _normalize_detail_level(detail_level)
-    detail_level_str = detail_enum.value  # Convert enum to string for JSON serialization
+    detail_level_str = (
+        detail_enum.value
+    )  # Convert enum to string for JSON serialization
     vibe_mode = (
-        VibeCheckMode.COMPREHENSIVE
-        if mode == "comprehensive"
-        else VibeCheckMode.QUICK
+        VibeCheckMode.COMPREHENSIVE if mode == "comprehensive" else VibeCheckMode.QUICK
     )
 
     vibe_result = framework.check_issue_vibes(

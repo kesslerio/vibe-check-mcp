@@ -452,7 +452,9 @@ class TestGracefulDegradation:
     async def test_execute_with_fallback_success(self):
         """Test successful execution without fallback."""
         # Disable retries/backoff so the test remains deterministic
-        config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
+        config = FallbackConfig(
+            max_retries=1, retry_delay_seconds=0, exponential_backoff=False
+        )
         manager = GracefulDegradationManager(config)
 
         async def primary_func(**kwargs):
@@ -477,7 +479,9 @@ class TestGracefulDegradation:
     async def test_execute_with_fallback_failure(self):
         """Test fallback execution after primary failure."""
         # Disable retries/backoff so timing assertions stay predictable
-        config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
+        config = FallbackConfig(
+            max_retries=1, retry_delay_seconds=0, exponential_backoff=False
+        )
         manager = GracefulDegradationManager(config)
 
         async def primary_func(**kwargs):

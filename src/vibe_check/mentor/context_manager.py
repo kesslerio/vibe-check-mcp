@@ -143,7 +143,7 @@ class SecurityValidator:
 
     @staticmethod
     def validate_path(
-        file_path: str, working_directory: str = None
+        file_path: str, working_directory: str | None = None
     ) -> Tuple[bool, str, Optional[str]]:
         """
         Validate a file path for security issues.
@@ -226,7 +226,7 @@ class FileReader:
     @staticmethod
     def read_file(
         file_path: str,
-        working_directory: str = None,
+        working_directory: str | None = None,
         *,
         include_error: bool = False,
     ):
@@ -309,7 +309,12 @@ class CodeParser:
         Returns:
             Dict with classes, functions, imports
         """
-        result = {"classes": [], "functions": [], "imports": [], "docstrings": {}}
+        result: Dict[str, Any] = {
+            "classes": [],
+            "functions": [],
+            "imports": [],
+            "docstrings": {},
+        }
 
         try:
             tree = ast.parse(content)
@@ -356,7 +361,7 @@ class CodeParser:
         """
         Parse JavaScript/TypeScript file to extract structure.
         """
-        result = {
+        result: Dict[str, Any] = {
             "classes": [],
             "functions": [],
             "imports": [],
@@ -387,7 +392,7 @@ class CodeParser:
         """
         Parse Go file to extract structure.
         """
-        result = {
+        result: Dict[str, Any] = {
             "functions": [],
             "types": [],
             "interfaces": [],
@@ -411,7 +416,7 @@ class CodeParser:
         """
         Parse Rust file to extract structure.
         """
-        result = {
+        result: Dict[str, Any] = {
             "functions": [],
             "structs": [],
             "enums": [],
@@ -437,7 +442,7 @@ class CodeParser:
         """
         Parse Java file to extract structure.
         """
-        result = {
+        result: Dict[str, Any] = {
             "classes": [],
             "interfaces": [],
             "methods": [],
@@ -465,7 +470,12 @@ class CodeParser:
         Generic parser for other programming languages.
         Uses common patterns across many languages.
         """
-        result = {"functions": [], "classes": [], "comments": [], "todos": []}
+        result: Dict[str, Any] = {
+            "functions": [],
+            "classes": [],
+            "comments": [],
+            "todos": [],
+        }
 
         # Common patterns across languages
         # Functions: function, func, fn, def, sub
@@ -495,7 +505,7 @@ class CodeParser:
         Returns:
             Dict mapping relevance type to list of (line_number, line_content) tuples
         """
-        relevant = {
+        relevant: Dict[str, List[Tuple[int, str]]] = {
             "direct_mentions": [],
             "related_functions": [],
             "related_classes": [],
@@ -598,7 +608,7 @@ class ContextCache:
         self._code_parser = CodeParser()
 
     def get_or_create_session(
-        self, session_id: str, working_directory: str = None
+        self, session_id: str, working_directory: str | None = None
     ) -> SessionContext:
         """Get existing session or create new one"""
         # Clean expired sessions
@@ -625,8 +635,8 @@ class ContextCache:
         self,
         session_id: str,
         file_paths: List[str],
-        working_directory: str = None,
-        query: str = None,
+        working_directory: str | None = None,
+        query: str | None = None,
     ) -> Tuple[List[FileContext], List[str]]:
         """
         Add files to a session context.
@@ -826,7 +836,7 @@ class ContextCache:
         return list(set(files))  # Remove duplicates
 
     def find_project_containing_files(
-        self, file_names: List[str], search_dirs: List[str] = None
+        self, file_names: List[str], search_dirs: List[str] | None = None
     ) -> Optional[str]:
         """Find a project directory containing the specified files"""
         if not file_names:

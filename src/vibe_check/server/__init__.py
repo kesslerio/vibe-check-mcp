@@ -37,7 +37,9 @@ analyze_text_demo = demo_analyze_text
 logger = logging.getLogger(__name__)
 
 try:
-    from vibe_check.mentor.mcp_sampling_patch import auto_apply as _auto_apply_security_patches
+    from vibe_check.mentor.mcp_sampling_patch import (
+        auto_apply as _auto_apply_security_patches,
+    )
 except Exception as exc:  # pragma: no cover - defensive guard
     logger.warning("Security patches unavailable: %s", exc)
 else:
@@ -47,7 +49,9 @@ else:
         logger.error("Failed to apply security patches: %s", exc)
     else:
         if not _PATCHED:
-            logger.warning("Security patches did not verify; security regression tests may fail.")
+            logger.warning(
+                "Security patches did not verify; security regression tests may fail."
+            )
 
 ensure_tools_registered(mcp)
 

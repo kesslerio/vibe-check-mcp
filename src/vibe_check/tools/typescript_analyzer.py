@@ -23,7 +23,7 @@ class TypeScriptAnalysis:
     api_boundary_anys: int = 0
     simple_anys: int = 0  # Easy to fix (e.g., any[])
     complex_anys: int = 0  # Requires type guards
-    sample_usages: List[str] = None
+    sample_usages: Optional[List[str]] = None
     risk_assessment: str = "low"
 
     def __post_init__(self):
@@ -136,7 +136,8 @@ class TypeScriptAnyAnalyzer:
                 analysis.api_boundary_anys += file_analysis.get("any_count", 0)
 
             # Collect samples
-            analysis.sample_usages.extend(file_analysis.get("samples", [])[:2])
+            if analysis.sample_usages is not None:
+                analysis.sample_usages.extend(file_analysis.get("samples", [])[:2])
 
         # Risk assessment
         if analysis.production_anys > 50:

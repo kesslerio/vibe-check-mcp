@@ -173,7 +173,9 @@ class TestFileReader:
 
     def test_handle_invalid_path(self):
         """Test handling of invalid file paths"""
-        result, error = FileReader.read_file("/non/existent/file.py", include_error=True)
+        result, error = FileReader.read_file(
+            "/non/existent/file.py", include_error=True
+        )
         assert result is None
         assert error is not None
 

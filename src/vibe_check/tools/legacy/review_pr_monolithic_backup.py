@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 MAX_PROMPT_SIZE = 50000
 
+
 class PRReviewTool:
     """
     Comprehensive PR review tool that replicates review-pr.sh functionality.
@@ -526,7 +527,9 @@ class PRReviewTool:
                 resolved_cmd = shutil.which(candidate_cmd) or candidate_cmd
 
             self.claude_cmd = resolved_cmd
-            logger.info("✅ External Claude CLI integration available at %s", candidate_cmd)
+            logger.info(
+                "✅ External Claude CLI integration available at %s", candidate_cmd
+            )
             return True
 
         except Exception as e:

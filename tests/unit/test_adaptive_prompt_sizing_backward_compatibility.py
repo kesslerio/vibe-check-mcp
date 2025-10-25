@@ -42,7 +42,12 @@ class TestAdaptivePromptSizingBackwardCompatibility:
                 "base_branch": "main",
                 "body": "Fixed a small typo in the README file.",
             },
-            "statistics": {"files_count": 1, "additions": 1, "deletions": 1, "total_changes": 2},
+            "statistics": {
+                "files_count": 1,
+                "additions": 1,
+                "deletions": 1,
+                "total_changes": 2,
+            },
             "diff": """diff --git a/README.md b/README.md
 index abc123..def456 100644
 --- a/README.md
@@ -93,7 +98,12 @@ index abc123..def456 100644
 
 Fixes #123""",
             },
-            "statistics": {"files_count": 8, "additions": 350, "deletions": 25, "total_changes": 375},
+            "statistics": {
+                "files_count": 8,
+                "additions": 350,
+                "deletions": 25,
+                "total_changes": 375,
+            },
             "diff": "+" * 15000,  # 15k chars - well under 50k threshold
             "files": [
                 {"path": "src/models/user.py", "additions": 85, "deletions": 0},
@@ -205,7 +215,12 @@ Fixes #123""",
                 "base_branch": "main",
                 "body": "Testing boundary behavior",
             },
-            "statistics": {"files_count": 1, "additions": 100, "deletions": 50, "total_changes": 150},
+            "statistics": {
+                "files_count": 1,
+                "additions": 100,
+                "deletions": 50,
+                "total_changes": 150,
+            },
             "diff": base_content + ("x" * padding_needed),
             "files": [{"path": "test.py", "additions": 100, "deletions": 50}],
             "comments": [],
@@ -220,7 +235,9 @@ Fixes #123""",
 
         # Test just under threshold
         size_analysis = pr_tool._classify_pr_size(boundary_pr_data)
-        data_content = pr_tool._create_pr_data_content(boundary_pr_data, size_analysis, review_context)
+        data_content = pr_tool._create_pr_data_content(
+            boundary_pr_data, size_analysis, review_context
+        )
         prompt_content = "Analyze this pull request comprehensively"
         combined_size = len(f"{prompt_content}\n\n{data_content}")
 
@@ -243,7 +260,9 @@ Fixes #123""",
         with patch.object(pr_tool.external_claude, "analyze_content") as mock_analyze:
             mock_result = MagicMock()
             mock_result.success = True
-            mock_result.output = "Mock analysis for small PR that is long enough to pass the checks."
+            mock_result.output = (
+                "Mock analysis for small PR that is long enough to pass the checks."
+            )
             mock_result.execution_time = 3.0
             mock_result.cost_usd = 0.005
             mock_analyze.return_value = mock_result
@@ -293,7 +312,9 @@ Fixes #123""",
         with patch.object(pr_tool.external_claude, "analyze_content") as mock_analyze:
             mock_result = MagicMock()
             mock_result.success = True
-            mock_result.output = "Mock analysis for medium PR that is long enough to pass the checks."
+            mock_result.output = (
+                "Mock analysis for medium PR that is long enough to pass the checks."
+            )
             mock_result.execution_time = 8.0
             mock_result.cost_usd = 0.015
             mock_analyze.return_value = mock_result

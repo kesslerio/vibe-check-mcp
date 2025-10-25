@@ -57,6 +57,7 @@ def pytest_configure(config: Config) -> None:
         if cov_plugin is not None:
             config.pluginmanager.unregister(cov_plugin)
 
+
 # Test configuration
 pytest_plugins = ["pytest_asyncio"]
 TEST_DATA_DIR = Path(__file__).parent / "data"
@@ -69,7 +70,6 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
-
 
 
 @pytest.fixture
@@ -257,7 +257,9 @@ def mock_default_github_operations(sample_issue_data, sample_pr_data, sample_pr_
         "author": sample_issue_data["user"]["login"],
         "created_at": sample_issue_data["created_at"],
         "state": sample_issue_data["state"],
-        "labels": [IssueLabel(name=label["name"]) for label in sample_issue_data["labels"]],
+        "labels": [
+            IssueLabel(name=label["name"]) for label in sample_issue_data["labels"]
+        ],
         "url": sample_issue_data["html_url"],
         "repository": issue_repo,
     }
@@ -481,7 +483,11 @@ def cleanup_async_globals():
     try:
         # Import and reset worker manager global
         from vibe_check.tools.async_analysis import worker as worker_module
-        if hasattr(worker_module, '_global_worker_manager') and worker_module._global_worker_manager:
+
+        if (
+            hasattr(worker_module, "_global_worker_manager")
+            and worker_module._global_worker_manager
+        ):
             manager = worker_module._global_worker_manager
             # Stop all workers immediately (breaks their while loop)
             for worker in manager.workers:
@@ -500,7 +506,8 @@ def cleanup_async_globals():
     try:
         # Reset queue manager global
         from vibe_check.tools.async_analysis import queue_manager as queue_module
-        if hasattr(queue_module, '_global_queue'):
+
+        if hasattr(queue_module, "_global_queue"):
             queue_module._global_queue = None
     except Exception:
         pass  # Ignore errors
@@ -508,7 +515,8 @@ def cleanup_async_globals():
     try:
         # Reset integration globals
         from vibe_check.tools.async_analysis import integration as integration_module
-        if hasattr(integration_module, '_system_initialized'):
+
+        if hasattr(integration_module, "_system_initialized"):
             integration_module._system_initialized = False
             integration_module._status_tracker = None
     except Exception:

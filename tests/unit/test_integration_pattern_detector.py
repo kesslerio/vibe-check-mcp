@@ -21,8 +21,6 @@ from vibe_check.tools.integration_pattern_analysis import (
 )
 
 
-
-
 @pytest.fixture
 def mock_anti_patterns_file():
     """Mock the anti_patterns and case study file loading."""
@@ -145,6 +143,7 @@ def mock_anti_patterns_file():
     with patch("builtins.open", side_effect=mock_open_side_effect):
         with patch("pathlib.Path.exists", return_value=True):
             yield
+
 
 class TestRealWorldScenarios:
     """Test with real-world integration scenarios"""

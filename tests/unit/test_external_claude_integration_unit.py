@@ -29,6 +29,7 @@ from vibe_check.tools.analyze_llm.llm_models import (
 
 from vibe_check.tools.analyze_llm_backup import register_external_claude_tools
 
+
 class TestExternalClaudeModels:
     """Test suite for Pydantic models."""
 

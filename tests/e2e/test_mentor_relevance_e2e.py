@@ -11,7 +11,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js not available")
-@pytest.mark.skipif(shutil.which("timeout") is None, reason="timeout command not available")
+@pytest.mark.skipif(
+    shutil.which("timeout") is None, reason="timeout command not available"
+)
 def test_mentor_relevance_e2e():
     assert SCRIPT_PATH.exists(), f"Missing scenario script: {SCRIPT_PATH}"
 

@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 class LibraryDetectionConfig:
     """Configuration for library detection settings"""
 
-    languages: List[str] = None
+    languages: List[str] | None = None
     depth: str = "imports_only"  # "imports_only" or "full_dependency_tree"
     max_files_to_scan: int = 1000
     timeout_seconds: int = 30
-    exclude_patterns: List[str] = None
+    exclude_patterns: List[str] | None = None
 
     def __post_init__(self):
         if self.languages is None:
@@ -35,8 +35,8 @@ class LibraryDetectionConfig:
 class ProjectDocsConfig:
     """Configuration for project documentation parsing"""
 
-    paths: List[str] = None
-    exclude_patterns: List[str] = None
+    paths: List[str] | None = None
+    exclude_patterns: List[str] | None = None
     max_file_size_kb: int = 500
 
     def __post_init__(self):
@@ -63,9 +63,9 @@ class ContextLoadingConfig:
 
     enabled: bool = True
     cache_duration_minutes: int = 60
-    library_detection: LibraryDetectionConfig = None
-    project_docs: ProjectDocsConfig = None
-    performance: PerformanceConfig = None
+    library_detection: LibraryDetectionConfig | None = None
+    project_docs: ProjectDocsConfig | None = None
+    performance: PerformanceConfig | None = None
 
     def __post_init__(self):
         if self.library_detection is None:
@@ -82,7 +82,7 @@ class LibraryOverride:
 
     version: str
     patterns: List[str]
-    exceptions: List[str] = None
+    exceptions: List[str] | None = None
     architecture: Optional[str] = None
 
     def __post_init__(self):
@@ -94,10 +94,10 @@ class LibraryOverride:
 class VibeCheckConfig:
     """Complete .vibe-check/config.json configuration"""
 
-    context_loading: ContextLoadingConfig = None
-    libraries: Dict[str, LibraryOverride] = None
-    project_patterns: Dict[str, str] = None
-    exceptions: List[str] = None
+    context_loading: ContextLoadingConfig | None = None
+    libraries: Dict[str, LibraryOverride] | None = None
+    project_patterns: Dict[str, str] | None = None
+    exceptions: List[str] | None = None
 
     def __post_init__(self):
         if self.context_loading is None:
@@ -281,6 +281,11 @@ class VibeCheckConfigLoader:
         """Validate configuration and return list of errors"""
         errors = []
 
+        # Ensure config is initialized properly via __post_init__
+        assert config.context_loading is not None
+        assert config.context_loading.performance is not None
+        assert config.context_loading.library_detection is not None
+
         # Validate performance settings
         if config.context_loading.performance.max_files_to_scan <= 0:
             errors.append("max_files_to_scan must be positive")
@@ -293,6 +298,7 @@ class VibeCheckConfigLoader:
 
         # Validate library detection
         supported_languages = ["python", "javascript", "typescript", "go", "rust"]
+        assert config.context_loading.library_detection.languages is not None
         for lang in config.context_loading.library_detection.languages:
             if lang not in supported_languages:
                 errors.append(f"Unsupported language: {lang}")
