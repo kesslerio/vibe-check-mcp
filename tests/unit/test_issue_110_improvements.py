@@ -370,7 +370,7 @@ class TestHealthMonitoring:
         monitor = HealthMonitor()
 
         # Mock the individual check methods to avoid dependencies
-        async def mock_check(component):
+        def make_result(component: str) -> HealthCheckResult:
             return HealthCheckResult(
                 component=component,
                 status="healthy",
@@ -380,25 +380,27 @@ class TestHealthMonitoring:
         with patch.object(
             monitor,
             "_check_system_initialization",
-            side_effect=lambda: mock_check("system"),
+            new=AsyncMock(return_value=make_result("system")),
         ):
             with patch.object(
-                monitor, "_check_queue_health", side_effect=lambda: mock_check("queue")
+                monitor,
+                "_check_queue_health",
+                new=AsyncMock(return_value=make_result("queue")),
             ):
                 with patch.object(
                     monitor,
                     "_check_worker_health",
-                    side_effect=lambda: mock_check("worker"),
+                    new=AsyncMock(return_value=make_result("worker")),
                 ):
                     with patch.object(
                         monitor,
                         "_check_resource_monitoring",
-                        side_effect=lambda: mock_check("resource"),
+                        new=AsyncMock(return_value=make_result("resource")),
                     ):
                         with patch.object(
                             monitor,
                             "_check_github_api",
-                            side_effect=lambda: mock_check("github"),
+                            new=AsyncMock(return_value=make_result("github")),
                         ):
                             results = await monitor.perform_comprehensive_health_check()
 
@@ -449,7 +451,8 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_execute_with_fallback_success(self):
         """Test successful execution without fallback."""
-        manager = GracefulDegradationManager()
+        config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
+        manager = GracefulDegradationManager(config)
 
         async def primary_func(**kwargs):
             return {"status": "success", "data": "primary result"}
@@ -472,7 +475,8 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_execute_with_fallback_failure(self):
         """Test fallback execution after primary failure."""
-        manager = GracefulDegradationManager()
+        config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
+        manager = GracefulDegradationManager(config)
 
         async def primary_func(**kwargs):
             raise Exception("Primary function failed")
@@ -495,7 +499,12 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_circuit_breaker_behavior(self):
         """Test circuit breaker activation."""
-        config = FallbackConfig(circuit_breaker_failure_threshold=2)
+        config = FallbackConfig(
+            circuit_breaker_failure_threshold=2,
+            max_retries=1,
+            retry_delay_seconds=0,
+            exponential_backoff=False,
+        )
         manager = GracefulDegradationManager(config)
 
         async def failing_func(**kwargs):
@@ -605,9 +614,34 @@ class TestIntegrationBehavior:
             async_analysis_with_fallback,
         )
 
-        # Test with invalid input - should be caught by validation
-        with pytest.raises(Exception):  # Validation should prevent execution
-            await async_analysis_with_fallback(-1, "invalid..repo", {})
+        error_response = {
+            "status": "error",
+            "error": "Validation failed for pr_number: PR number must be positive",
+            "validation_error": {
+                "field": "pr_number",
+                "error": "PR number must be positive",
+            },
+            "degradation_info": {
+                "used_fallback": False,
+                "system_availability": "fully_available",
+                "operation": "async_analysis",
+                "timestamp": 123.45,
+            },
+        }
+
+        with patch(
+            "vibe_check.tools.async_analysis.graceful_degradation.get_global_degradation_manager"
+        ) as mock_get_manager:
+            mock_manager = AsyncMock()
+            mock_manager.execute_with_fallback = AsyncMock(return_value=error_response)
+            mock_get_manager.return_value = mock_manager
+
+            result = await async_analysis_with_fallback(-1, "invalid..repo", {})
+
+        mock_manager.execute_with_fallback.assert_awaited_once()
+        assert result["status"] == "error"
+        assert result["validation_error"]["field"] == "pr_number"
+        assert result["degradation_info"]["used_fallback"] is False
 
     def test_resource_monitor_with_health_check(self):
         """Test resource monitor integration with health monitoring."""

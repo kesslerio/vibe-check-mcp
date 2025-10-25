@@ -71,20 +71,6 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture(autouse=True)
-def tolerant_asyncio_run():
-    """Allow tests to call asyncio.run with synchronous results for backward compatibility."""
-
-    original_run = asyncio.run
-
-    def _run_with_tolerance(coro, *args, **kwargs):
-        if not asyncio.iscoroutine(coro):
-            return coro
-        return original_run(coro, *args, **kwargs)
-
-    with patch("asyncio.run", _run_with_tolerance):
-        yield
-
 
 @pytest.fixture
 def mock_github_token():
@@ -529,11 +515,18 @@ def cleanup_async_globals():
         pass  # Ignore errors
 
     try:
-        # Shutdown sync resource monitor
-        from vibe_check.tools.async_analysis.resource_monitor import (
-            shutdown_global_resource_monitor,
-        )
-        shutdown_global_resource_monitor()
+        # Shutdown resource monitor eagerly to avoid lingering tasks
+        from vibe_check.tools.async_analysis import resource_monitor as resource_module
+
+        monitor = getattr(resource_module, "_global_monitor", None)
+        if monitor is not None:
+            try:
+                asyncio.run(monitor.stop_monitoring())
+            except RuntimeError:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.run_until_complete(monitor.stop_monitoring())
+            resource_module._global_monitor = None
     except Exception:
         pass  # Ignore errors
 
