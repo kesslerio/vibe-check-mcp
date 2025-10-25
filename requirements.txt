@@ -7,7 +7,7 @@
 
 # Core MCP Integration
 fastmcp==2.8.1
-mcp==1.9.4
+mcp==1.10.0
 uvicorn==0.34.3
 aiohttp>=3.10.0
 
