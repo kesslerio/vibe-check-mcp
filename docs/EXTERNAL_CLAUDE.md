@@ -37,14 +37,18 @@ analysis work begins. The detection pipeline is shared across the
 3. **Executable validation** – when a concrete binary is located we execute
    `claude --version` with a five-second timeout. Permission or missing-binary
    failures trigger the structured fallback path instead of raising.
-4. **Tool hand-off** – when validation succeeds we surface the resolved
-   command through `PRReviewTool.claude_cmd` for backwards-compatible tests and
-   monitoring.
+4. **Tool hand-off** – when validation succeeds we assign
+   `PRReviewTool.claude_cmd` to the resolved binary path so legacy checks and
+   telemetry can see the exact executable used.
 5. **Graceful fallback** – failures return a deterministic
    `ClaudeCliResult` with `success=False` and `sdk_metadata["fallback"] = True`.
 
 Set `MOCK_CLAUDE_CLI=1` to skip real subprocess execution while preserving the
 tool-call counter and response shape for tests and local development.
+
+**State reset** – `claude_cmd` is cleared to `None` at the start of each
+availability probe so a previous successful detection cannot mask a newly
+missing or broken CLI installation.
 
 ## Usage
 

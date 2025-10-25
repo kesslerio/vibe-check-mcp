@@ -507,7 +507,14 @@ class PRReviewTool:
                 version_output = (result.stdout or "").strip()
                 if version_output:
                     logger.debug("Claude CLI version check output: %s", version_output)
-            except (subprocess.CalledProcessError, FileNotFoundError, PermissionError) as exc:
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "⚠️ External Claude CLI validation failed (exit %s): %s",
+                    exc.returncode,
+                    (exc.stderr or exc.stdout or "<no output>").strip(),
+                )
+                return False
+            except (FileNotFoundError, PermissionError) as exc:
                 logger.warning(
                     "⚠️ External Claude CLI validation failed (%s) - using fallback analysis",
                     exc,
