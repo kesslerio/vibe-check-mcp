@@ -16,9 +16,11 @@ Features:
 """
 
 import logging
+import os
 import re
 import subprocess
 import json
+import shutil
 import time
 import select
 import sys
@@ -470,9 +472,10 @@ class PRReviewTool:
         logger.info("🔍 Checking external Claude CLI integration availability...")
 
         try:
-            # Check environment for Docker
-            import os
+            # Reset detected command before probing availability
+            self.claude_cmd = None
 
+            # Check environment for Docker
             docker_env_exists = os.path.exists("/.dockerenv")
             docker_env_var = os.environ.get("RUNNING_IN_DOCKER")
 
@@ -482,35 +485,49 @@ class PRReviewTool:
                 )
                 return False
 
-            # Use our external Claude CLI integration to check availability
+            # Resolve configured Claude CLI path (handles env overrides)
             claude_path = self.external_claude._find_claude_cli()
 
-            if claude_path and claude_path != "claude":
-                logger.info(
-                    f"✅ External Claude CLI integration available at {claude_path}"
+            if not claude_path:
+                logger.warning(
+                    "⚠️ External Claude CLI integration not available - will use fallback analysis"
                 )
-                return True
-            elif claude_path == "claude":
-                # Test if default claude command works
-                try:
-                    result = subprocess.run(
-                        ["claude", "--version"],
-                        capture_output=True,
-                        text=True,
-                        timeout=5,
-                    )
-                    if result.returncode == 0:
-                        logger.info(
-                            "✅ External Claude CLI integration available (default claude command)"
-                        )
-                        return True
-                except Exception:
-                    pass
+                return False
 
-            logger.warning(
-                "⚠️ External Claude CLI integration not available - will use fallback analysis"
-            )
-            return False
+            candidate_cmd = claude_path
+
+            try:
+                result = subprocess.run(
+                    [candidate_cmd, "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=True,
+                )
+                version_output = (result.stdout or "").strip()
+                if version_output:
+                    logger.debug("Claude CLI version check output: %s", version_output)
+            except subprocess.CalledProcessError as exc:
+                logger.warning(
+                    "⚠️ External Claude CLI validation failed (exit %s): %s",
+                    exc.returncode,
+                    (exc.stderr or exc.stdout or "<no output>").strip(),
+                )
+                return False
+            except (FileNotFoundError, PermissionError) as exc:
+                logger.warning(
+                    "⚠️ External Claude CLI validation failed (%s) - using fallback analysis",
+                    exc,
+                )
+                return False
+
+            resolved_cmd = candidate_cmd
+            if not os.path.isabs(candidate_cmd):
+                resolved_cmd = shutil.which(candidate_cmd) or candidate_cmd
+
+            self.claude_cmd = resolved_cmd
+            logger.info("✅ External Claude CLI integration available at %s", candidate_cmd)
+            return True
 
         except Exception as e:
             logger.error(f"❌ Claude CLI check failed with exception: {e}")

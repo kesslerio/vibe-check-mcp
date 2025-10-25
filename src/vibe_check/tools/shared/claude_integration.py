@@ -202,38 +202,38 @@ Promote good engineering practices through constructive analysis.""",
         )
 
         # Check for custom CLI name from environment variable
-        custom_cli_name = os.environ.get("CLAUDE_CLI_NAME")
-        if custom_cli_name:
+        cli_name = "claude"
+        custom_cli_env = os.environ.get("CLAUDE_CLI_NAME")
+        if custom_cli_env:
             logger.debug(
-                f"[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_name}"
+                f"[Debug] Using custom Claude CLI name from CLAUDE_CLI_NAME: {custom_cli_env}"
             )
 
-            # If it's an absolute path, use it directly
-            if os.path.isabs(custom_cli_name):
+            if os.path.isabs(custom_cli_env):
                 logger.debug(
-                    f"[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_name}"
+                    f"[Debug] CLAUDE_CLI_NAME is an absolute path: {custom_cli_env}"
                 )
-                if os.path.exists(custom_cli_name) and os.access(
-                    custom_cli_name, os.X_OK
-                ):
-                    logger.info(f"[Info] Using custom Claude CLI: {custom_cli_name}")
-                    return custom_cli_name
-                else:
-                    logger.error(
-                        f"[Error] Custom Claude CLI path not found or not executable: {custom_cli_name}"
-                    )
-                    raise FileNotFoundError(
-                        f"Claude CLI not found at custom path: {custom_cli_name}"
-                    )
+                expanded_custom = os.path.expanduser(custom_cli_env)
+                if os.path.exists(expanded_custom):
+                    if os.access(expanded_custom, os.X_OK):
+                        logger.info(
+                            f"[Info] Using custom Claude CLI: {expanded_custom}"
+                        )
+                    else:
+                        logger.warning(
+                            f"[Warning] Custom Claude CLI path not executable: {expanded_custom}"
+                        )
+                    return expanded_custom
 
-            # If it contains path separators (relative path), reject it
-            if "/" in custom_cli_name or "\\\\" in custom_cli_name:
-                raise ValueError(
-                    f"Invalid CLAUDE_CLI_NAME: Relative paths are not allowed. "
-                    f"Use either a simple name (e.g., 'claude') or an absolute path"
+                logger.error(
+                    f"[Error] Custom Claude CLI path not found: {expanded_custom}"
                 )
-
-        cli_name = custom_cli_name or "claude"
+            elif "/" in custom_cli_env or "\\\\" in custom_cli_env:
+                logger.warning(
+                    f"[Warning] Ignoring CLAUDE_CLI_NAME={custom_cli_env} because relative paths are not supported"
+                )
+            else:
+                cli_name = custom_cli_env
 
         # Try local install path: ~/.claude/local/claude (ALWAYS prefer this - Issue #240)
         user_path = os.path.expanduser("~/.claude/local/claude")

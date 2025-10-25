@@ -24,6 +24,32 @@ Claude installation without blocking the main event loop.
 - **New API**: `run_claude_analysis(prompt, context)` which returns a
   dictionary summarising success, output, and metadata for higher-level tools.
 
+## Availability Checks and Fallback Flow
+
+External integrations probe for Claude Code availability before any expensive
+analysis work begins. The detection pipeline is shared across the
+`ExternalClaudeCli`, `ClaudeCliExecutor`, and the legacy `PRReviewTool`:
+
+1. **Path resolution** – prefer `~/.claude/local/claude`, honour
+   `CLAUDE_CLI_NAME`/`CLAUDE_CLI_PATH`, and fall back to `claude` on `PATH`.
+2. **Detailed logging** – log current `PATH`, working directory, and MCP
+   environment hints to make CI debugging straightforward (Issue #240).
+3. **Executable validation** – when a concrete binary is located we execute
+   `claude --version` with a five-second timeout. Permission or missing-binary
+   failures trigger the structured fallback path instead of raising.
+4. **Tool hand-off** – when validation succeeds we assign
+   `PRReviewTool.claude_cmd` to the resolved binary path so legacy checks and
+   telemetry can see the exact executable used.
+5. **Graceful fallback** – failures return a deterministic
+   `ClaudeCliResult` with `success=False` and `sdk_metadata["fallback"] = True`.
+
+Set `MOCK_CLAUDE_CLI=1` to skip real subprocess execution while preserving the
+tool-call counter and response shape for tests and local development.
+
+**State reset** – `claude_cmd` is cleared to `None` at the start of each
+availability probe so a previous successful detection cannot mask a newly
+missing or broken CLI installation.
+
 ## Usage
 
 ```python

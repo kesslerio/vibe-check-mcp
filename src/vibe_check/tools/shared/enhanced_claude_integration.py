@@ -21,10 +21,8 @@ from typing import Dict, Any, List, Optional
 
 from .claude_integration import ClaudeCliExecutor
 from vibe_check.config.vibe_check_config import VibeCheckConfigLoader, VibeCheckConfig
-from vibe_check.tools.contextual_documentation import (
-    get_context_manager,
-    AnalysisContext,
-)
+from vibe_check.tools import contextual_documentation
+from vibe_check.tools.contextual_documentation import AnalysisContext
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +171,9 @@ class EnhancedClaudeCliExecutor(ClaudeCliExecutor):
 
         # Load fresh context
         try:
-            context_manager = get_context_manager(str(self.project_root))
+            context_manager = contextual_documentation.get_context_manager(
+                str(self.project_root)
+            )
             self._context_cache = context_manager.get_project_context(
                 force_refresh=force_refresh
             )
