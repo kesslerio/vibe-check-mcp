@@ -451,6 +451,7 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_execute_with_fallback_success(self):
         """Test successful execution without fallback."""
+        # Disable retries/backoff so the test remains deterministic
         config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
         manager = GracefulDegradationManager(config)
 
@@ -475,6 +476,7 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_execute_with_fallback_failure(self):
         """Test fallback execution after primary failure."""
+        # Disable retries/backoff so timing assertions stay predictable
         config = FallbackConfig(max_retries=1, retry_delay_seconds=0, exponential_backoff=False)
         manager = GracefulDegradationManager(config)
 
@@ -499,6 +501,7 @@ class TestGracefulDegradation:
     @pytest.mark.asyncio
     async def test_circuit_breaker_behavior(self):
         """Test circuit breaker activation."""
+        # Deterministic retry window keeps the circuit-breaker assertions stable
         config = FallbackConfig(
             circuit_breaker_failure_threshold=2,
             max_retries=1,
