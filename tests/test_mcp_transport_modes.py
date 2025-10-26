@@ -155,7 +155,9 @@ class TestServerIntegration:
         )
 
         assert result.returncode == 0
-        output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        output_lines = [
+            line.strip() for line in result.stdout.splitlines() if line.strip()
+        ]
         assert output_lines[-1] == "stdio"
 
         # Test with Docker environment
@@ -177,7 +179,9 @@ class TestServerIntegration:
         )
 
         assert result.returncode == 0
-        output_lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        output_lines = [
+            line.strip() for line in result.stdout.splitlines() if line.strip()
+        ]
         assert output_lines[-1] == "streamable-http"
 
     def _find_free_port(self) -> int:

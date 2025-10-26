@@ -216,7 +216,9 @@ def test_text_analysis_dev_mode():
     mcp_dev.add_tool = lambda func: tools_dev.append(func)
 
     register_text_analysis_tools(mcp_dev, dev_mode=True)
-    assert len(tools_dev) == 3, "Dev mode should register 3 tools (2 production + 1 dev)"
+    assert (
+        len(tools_dev) == 3
+    ), "Dev mode should register 3 tools (2 production + 1 dev)"
 
     # Test dev mode with skip_production
     mcp_dev_skip = Mock()

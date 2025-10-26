@@ -24,7 +24,7 @@ class SessionSynthesizer:
         """
 
         # Group contributions by type
-        contributions_by_type = {}
+        contributions_by_type: Dict[str, Any] = {}
         for contrib in session.contributions:
             if contrib.type not in contributions_by_type:
                 contributions_by_type[contrib.type] = []

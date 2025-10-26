@@ -40,6 +40,7 @@ from pydantic import BaseModel
 
 # Compatibility shim for legacy asyncio.coroutine usage in tests
 if not hasattr(asyncio, "coroutine"):
+
     def _legacy_coroutine(func):
         async def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
@@ -106,7 +107,6 @@ class ClaudeCliResult:
             "timestamp": time.time(),
         }
         return payload
-
 
 
 class ExternalClaudeCli:
@@ -195,7 +195,9 @@ class ExternalClaudeCli:
             env.pop(var, None)
 
         env["CLAUDE_EXTERNAL_EXECUTION"] = "true"
-        env["CLAUDE_TASK_ID"] = f"external-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+        env["CLAUDE_TASK_ID"] = (
+            f"external-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+        )
         if self._mock_mode:
             env["MOCK_CLAUDE_CLI"] = "1"
         return env
@@ -464,6 +466,8 @@ class ExternalClaudeCli:
                 "raw": result.sdk_metadata,
             },
         }
+
+
 # GitHub helper functions
 def _get_github_token() -> Optional[str]:
     """Get GitHub token from environment or gh CLI."""
@@ -1201,7 +1205,9 @@ def register_external_claude_tools(mcp: FastMCP) -> None:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5)
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=5
+                )
                 version_info = {
                     "stdout": stdout.decode().strip(),
                     "stderr": stderr.decode().strip(),

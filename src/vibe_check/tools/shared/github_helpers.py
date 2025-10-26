@@ -239,7 +239,13 @@ def sanitize_github_urls_in_response(data: Any) -> Any:
         result = {}
         for key, value in data.items():
             # Process URL-like fields (url, *_url, link, *_link, urls)
-            if key.endswith("_url") or key == "url" or key.endswith("_link") or key == "link" or key == "urls":
+            if (
+                key.endswith("_url")
+                or key == "url"
+                or key.endswith("_link")
+                or key == "link"
+                or key == "urls"
+            ):
                 if isinstance(value, str):
                     result[key] = convert_api_url_to_frontend(value)
                 else:

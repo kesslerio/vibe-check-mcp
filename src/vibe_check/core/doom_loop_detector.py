@@ -95,7 +95,7 @@ class DoomLoopDetector:
         self.detection_patterns = self._initialize_detection_patterns()
         self.intervention_strategies = self._initialize_interventions()
 
-    def start_session(self, session_id: str = None) -> str:
+    def start_session(self, session_id: Optional[str] = None) -> str:
         """Start a new MCP session for tracking"""
         if session_id is None:
             session_id = f"session_{int(time.time())}"
@@ -112,7 +112,7 @@ class DoomLoopDetector:
         tool_name: str,
         content: str = "",
         context: str = "",
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Track an MCP tool call for pattern analysis"""
         if not self.current_session:
@@ -541,9 +541,10 @@ class DoomLoopDetector:
         if any(re.search(pattern, full_text) for pattern in action_plan_patterns):
             positive_signals += 1
 
-        if len(re.findall(r"step\s*\d+", full_text)) >= 2 or len(
-            re.findall(r"\b[0-9]+\.\s", full_text)
-        ) >= 2:
+        if (
+            len(re.findall(r"step\s*\d+", full_text)) >= 2
+            or len(re.findall(r"\b[0-9]+\.\s", full_text)) >= 2
+        ):
             positive_signals += 1
 
         if re.search(

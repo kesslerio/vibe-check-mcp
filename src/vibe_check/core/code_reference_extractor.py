@@ -14,7 +14,7 @@ Includes improvements from PR #154 code review:
 
 import re
 import logging
-from typing import Dict, List, Optional, NamedTuple, Set
+from typing import Dict, List, Optional, NamedTuple, Set, Any, Union
 from dataclasses import dataclass
 import os.path
 
@@ -443,7 +443,7 @@ class CodeReferenceExtractor:
         self, references: List[CodeReference]
     ) -> Dict[str, List[int]]:
         """Get files mapped to their referenced line numbers."""
-        file_lines = {}
+        file_lines: Dict[str, List[int]] = {}
         for ref in references:
             if ref.type in ["file_path", "stack_trace"] and ref.line_number:
                 if ref.value not in file_lines:
@@ -452,7 +452,7 @@ class CodeReferenceExtractor:
         return file_lines
 
 
-def extract_code_references_from_issue(issue_text: str) -> Dict[str, List[str]]:
+def extract_code_references_from_issue(issue_text: str) -> Dict[str, Any]:
     """
     Simple function for extracting code references - minimal POC.
 

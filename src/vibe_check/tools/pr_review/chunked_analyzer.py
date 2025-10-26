@@ -482,7 +482,7 @@ class ChunkedAnalyzer:
 
             except asyncio.TimeoutError as e:
                 logger.warning(
-                    f"Chunk {chunk.chunk_id} analysis timed out", 
+                    f"Chunk {chunk.chunk_id} analysis timed out",
                     extra={"chunk_id": chunk.chunk_id, "error": str(e)},
                 )
 

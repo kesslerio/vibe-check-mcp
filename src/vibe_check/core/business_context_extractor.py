@@ -11,7 +11,7 @@ Helps prevent premature pattern matching by understanding user intent.
 
 import re
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any
 from enum import Enum
 import logging
 
@@ -54,7 +54,7 @@ class BusinessContext:
     confidence: float
     indicators: List[str]
     questions_needed: List[str]
-    metadata: Dict[str, any]
+    metadata: Dict[str, Any]
 
     @property
     def is_completion_report(self) -> bool:
@@ -203,7 +203,7 @@ class BusinessContextExtractor:
                 # Explicit planning phase - skip ambiguity detection
                 context_type = ContextType.PLANNING_DISCUSSION
                 confidence = ConfidenceLevel.HIGH.value
-                questions = []
+                questions: List[str] = []
                 detected_patterns = [
                     f"explicit_phase: planning (confidence: {confidence})"
                 ]
@@ -340,7 +340,7 @@ class BusinessContextExtractor:
             )
 
         # Get the primary type - prioritize completion/review over process
-        primary_type = max(scores, key=scores.get)
+        primary_type = max(scores, key=lambda x: scores[x])
 
         # Special handling for mixed signals
         if (
@@ -444,7 +444,7 @@ class BusinessContextExtractor:
 
         return questions[:2]  # Limit to 2 most relevant questions
 
-    def _extract_metadata(self, text: str) -> Dict[str, any]:
+    def _extract_metadata(self, text: str) -> Dict[str, Any]:
         """Extract relevant metadata from the text"""
         metadata = {}
 

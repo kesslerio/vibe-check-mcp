@@ -181,7 +181,9 @@ class TestAnalyzeIssueMCPTool:
         assert result["issue_info"]["detail_level"] == "comprehensive"
 
     @patch("vibe_check.tools.issue_analysis.api._run_vibe_check_sync")
-    def test_analyze_issue_default_parameters(self, mock_run_vibe_check, mock_basic_result):
+    def test_analyze_issue_default_parameters(
+        self, mock_run_vibe_check, mock_basic_result
+    ):
         """Test analyze_issue with default parameters."""
 
         mock_run_vibe_check.return_value = {
@@ -210,7 +212,9 @@ class TestAnalyzeIssueMCPTool:
         assert result["issue_info"]["detail_level"] == "standard"
 
     @patch("vibe_check.tools.issue_analysis.api._run_vibe_check_sync")
-    def test_analyze_issue_invalid_detail_level(self, mock_run_vibe_check, mock_basic_result):
+    def test_analyze_issue_invalid_detail_level(
+        self, mock_run_vibe_check, mock_basic_result
+    ):
         """Invalid detail level should fall back to standard."""
 
         mocked_response = {

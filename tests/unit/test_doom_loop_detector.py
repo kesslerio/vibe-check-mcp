@@ -244,6 +244,7 @@ class TestDoomLoopAnalysisTools:
         """Test session health analysis with no active session"""
         # Reset any existing session
         from vibe_check.core import doom_loop_detector
+
         doom_loop_detector._doom_loop_detector = None
 
         result = get_session_health_analysis()

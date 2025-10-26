@@ -234,9 +234,7 @@ Avoid:
 
             # Select template
             template_key = cls._map_intent_to_template(intent)
-            template = cls.TEMPLATES.get(
-                template_key, cls.TEMPLATES["general_advice"]
-            )
+            template = cls.TEMPLATES.get(template_key, cls.TEMPLATES["general_advice"])
 
             # Prepare variables
             variables = {
@@ -255,9 +253,11 @@ Avoid:
                 "language": (
                     workspace_data.get("language", "") if workspace_data else ""
                 ),
-                "constraints": context.get("constraints", "Not specified")
-                if context
-                else "Not specified",
+                "constraints": (
+                    context.get("constraints", "Not specified")
+                    if context
+                    else "Not specified"
+                ),
                 "technology_stack": ", ".join(context.get("technologies", [])),
                 "error_context": context.get("error", "") if context else "",
             }
@@ -292,9 +292,7 @@ Avoid:
             return "general_advice"
 
     @classmethod
-    def _format_workspace_context(
-        cls, workspace_data: Optional[Dict[str, Any]]
-    ) -> str:
+    def _format_workspace_context(cls, workspace_data: Optional[Dict[str, Any]]) -> str:
         """Format workspace data safely"""
         if not workspace_data:
             return "No workspace context available"
@@ -317,7 +315,6 @@ Avoid:
             parts.append(f"Key imports: {', '.join(imports)}")
 
         return "\n".join(parts) if parts else "No specific workspace context"
-
 
 
 class SecureMCPSamplingClient(OriginalMCPSamplingClient):

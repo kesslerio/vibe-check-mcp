@@ -56,9 +56,9 @@ class TestMentorInterruptMode:
             )
 
             # Verify expected output markers
-            assert "✅ All interrupt mode tests passed!" in result.stdout, (
-                "Expected success message not found in output"
-            )
+            assert (
+                "✅ All interrupt mode tests passed!" in result.stdout
+            ), "Expected success message not found in output"
 
         except subprocess.TimeoutExpired as e:
             pytest.fail(
@@ -76,7 +76,11 @@ class TestMentorInterruptMode:
         try:
             # Check if mcp-test-client can be imported (ESM package)
             result = subprocess.run(
-                ["node", "-e", "import('mcp-test-client').then(() => process.exit(0)).catch(() => process.exit(1))"],
+                [
+                    "node",
+                    "-e",
+                    "import('mcp-test-client').then(() => process.exit(0)).catch(() => process.exit(1))",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=5,

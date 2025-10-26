@@ -226,7 +226,7 @@ class FeedbackCategorizer:
         Returns:
             Summary with recommendations and statistics
         """
-        summary = {
+        summary: Dict[str, Any] = {
             "total_items": len(review_items),
             "categories": {
                 "CRITICAL": [],
@@ -244,7 +244,8 @@ class FeedbackCategorizer:
 
         # Categorize items
         for item in review_items:
-            summary["categories"][item.category].append(
+            categories: Dict[str, List[Dict[str, Any]]] = summary["categories"]
+            categories[item.category].append(
                 {
                     "content": item.content,
                     "rationale": item.rationale,
@@ -252,16 +253,18 @@ class FeedbackCategorizer:
                 }
             )
 
+            action_summary: Dict[str, int] = summary["action_summary"]
             if item.action_required:
-                summary["action_summary"]["must_fix_before_merge"] += 1
+                action_summary["must_fix_before_merge"] += 1
             elif item.follow_up_worthy:
-                summary["action_summary"]["potential_follow_ups"] += 1
+                action_summary["potential_follow_ups"] += 1
             else:
-                summary["action_summary"]["can_ignore"] += 1
+                action_summary["can_ignore"] += 1
 
         # Generate decision recommendation
-        critical_count = len(summary["categories"]["CRITICAL"])
-        important_count = len(summary["categories"]["IMPORTANT"])
+        categories = summary["categories"]
+        critical_count = len(categories["CRITICAL"])
+        important_count = len(categories["IMPORTANT"])
 
         if critical_count > 0:
             summary["decision_recommendation"] = (

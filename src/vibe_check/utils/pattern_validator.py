@@ -7,7 +7,7 @@ consistency and correctness.
 
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 try:
     from jsonschema import validate, ValidationError
@@ -20,7 +20,7 @@ except ImportError:
 class PatternValidator:
     """Validates pattern definitions against schema"""
 
-    def __init__(self, schema_path: str = None):
+    def __init__(self, schema_path: Optional[str] = None):
         """
         Initialize validator with schema
 
@@ -35,7 +35,7 @@ class PatternValidator:
         if schema_path is None:
             # Default to schema in data directory
             current_dir = Path(__file__).parent
-            schema_path = (
+            schema_path = str(
                 current_dir.parent.parent.parent / "data" / "pattern_schema.json"
             )
 
@@ -120,7 +120,7 @@ class PatternValidator:
         if not patterns:
             return {"total_patterns": 0}
 
-        summary = {
+        summary: Dict[str, Any] = {
             "total_patterns": len(patterns),
             "severities": {},
             "categories": {},
@@ -130,16 +130,17 @@ class PatternValidator:
 
         for pattern_id, pattern in patterns.items():
             # Count severities
-            severity = pattern.get("severity", "medium")
+            pattern_dict: Dict[str, Any] = pattern  # type: ignore
+            severity = pattern_dict.get("severity", "medium")
             summary["severities"][severity] = summary["severities"].get(severity, 0) + 1
 
             # Count categories
-            category = pattern.get("category", "process")
+            category = pattern_dict.get("category", "process")
             summary["categories"][category] = summary["categories"].get(category, 0) + 1
 
             # Count indicators
-            indicator_count = len(pattern.get("indicators", []))
-            neg_indicator_count = len(pattern.get("negative_indicators", []))
+            indicator_count = len(pattern_dict.get("indicators", []))
+            neg_indicator_count = len(pattern_dict.get("negative_indicators", []))
             summary["indicator_counts"][pattern_id] = {
                 "positive": indicator_count,
                 "negative": neg_indicator_count,
@@ -147,7 +148,7 @@ class PatternValidator:
             }
 
             # Threshold distribution
-            threshold = pattern.get("detection_threshold", 0.5)
+            threshold = pattern_dict.get("detection_threshold", 0.5)
             summary["threshold_distribution"].append(
                 {"pattern": pattern_id, "threshold": threshold}
             )

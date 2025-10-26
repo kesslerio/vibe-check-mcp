@@ -229,7 +229,11 @@ class RateLimiter:
     ):
         effective_rpm = max_requests_per_minute or requests_per_minute
         self.requests_per_minute = int(effective_rpm)
-        self.burst_capacity = float(max_token_rate) if max_token_rate is not None else float(burst_capacity)
+        self.burst_capacity = (
+            float(max_token_rate)
+            if max_token_rate is not None
+            else float(burst_capacity)
+        )
         self.per_user = per_user
         self.max_buckets = max_buckets
         self.retain_buckets = retain_buckets
@@ -292,14 +296,20 @@ class RateLimiter:
         return True, None
 
     async def check_rate_limit(
-        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
+        self,
+        user_id: Optional[str] = None,
+        tokens: int = 1,
+        tokens_used: Optional[int] = None,
     ) -> Tuple[bool, Optional[float]]:
         """Async interface used by MCP workflow."""
         effective_tokens = tokens_used if tokens_used is not None else tokens
         return await self._check_rate_limit_async(user_id, effective_tokens)
 
     def check_rate_limit_sync(
-        self, user_id: Optional[str] = None, tokens: int = 1, tokens_used: Optional[int] = None
+        self,
+        user_id: Optional[str] = None,
+        tokens: int = 1,
+        tokens_used: Optional[int] = None,
     ) -> Tuple[bool, str]:
         """Provide a synchronous helper for legacy tests."""
 
@@ -313,7 +323,9 @@ class RateLimiter:
             loop = None
 
         if loop and loop.is_running():
-            raise RuntimeError("check_rate_limit_sync cannot run inside an active event loop")
+            raise RuntimeError(
+                "check_rate_limit_sync cannot run inside an active event loop"
+            )
 
         allowed, wait_time = asyncio.run(_runner())
         if allowed:

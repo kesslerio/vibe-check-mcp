@@ -7,7 +7,7 @@ Implements Phase 1 of issue #101.
 """
 
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class MetricsHooks:
 
     @staticmethod
     def track_fallback_usage(
-        fallback_type: str, pr_data: Dict[str, Any], error_context: str = None
+        fallback_type: str, pr_data: Dict[str, Any], error_context: Optional[str] = None
     ):
         """Track when fallback analysis is used."""
         logger.info(

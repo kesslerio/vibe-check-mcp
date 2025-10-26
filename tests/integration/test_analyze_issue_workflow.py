@@ -27,12 +27,12 @@ from vibe_check.core.educational_content import DetailLevel
 class TestAnalyzeIssueIntegrationWorkflow:
     """Integration tests for complete analyze_issue workflow"""
 
-
-
     @pytest.mark.integration
     def test_legacy_analyzer_to_enhanced_tool_transition(self):
         """Test transition from legacy analyzer to enhanced MCP tool"""
-        with patch("vibe_check.tools.issue_analysis.github_client.Github") as mock_github:
+        with patch(
+            "vibe_check.tools.issue_analysis.github_client.Github"
+        ) as mock_github:
             # Test that legacy analyzer still works
             analyzer = GitHubIssueAnalyzer("test_token")
 
@@ -81,17 +81,20 @@ class TestAnalyzeIssueIntegrationWorkflow:
                     mock_get_framework.return_value = mock_framework
 
                     # analyze_issue is synchronous, not async
-                    enhanced_result = analyze_issue(42, "test/repo", analysis_mode="basic")
+                    enhanced_result = analyze_issue(
+                        42, "test/repo", analysis_mode="basic"
+                    )
 
                     # Verify enhanced response format
                     assert enhanced_result["status"] == "basic_analysis_complete"
 
-
-
     @pytest.mark.integration
     def test_workflow_error_handling_and_recovery(self):
         """Test error handling and recovery in the integration workflow"""
-        with patch("vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid", side_effect=Exception("Hybrid analysis failed")):
+        with patch(
+            "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid",
+            side_effect=Exception("Hybrid analysis failed"),
+        ):
             # analyze_issue is synchronous, not async
             result = analyze_issue(issue_number=42)
 
@@ -117,12 +120,18 @@ class TestAnalyzeIssueIntegrationWorkflow:
         ]
 
         for config in test_configs:
-            with patch("vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_basic") as mock_basic, \
-                 patch("vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_comprehensive") as mock_comprehensive, \
-                 patch("vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid") as mock_hybrid:
+            with patch(
+                "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_basic"
+            ) as mock_basic, patch(
+                "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_comprehensive"
+            ) as mock_comprehensive, patch(
+                "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid"
+            ) as mock_hybrid:
 
                 mock_basic.return_value = {"status": "basic_analysis_complete"}
-                mock_comprehensive.return_value = {"status": "comprehensive_analysis_complete"}
+                mock_comprehensive.return_value = {
+                    "status": "comprehensive_analysis_complete"
+                }
                 mock_hybrid.return_value = {"status": "hybrid_analysis_complete"}
 
                 # Test configuration - analyze_issue is synchronous, not async

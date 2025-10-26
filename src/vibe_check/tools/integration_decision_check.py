@@ -265,9 +265,7 @@ class IntegrationKnowledgeBase:
             feature_lower = feature.lower()
             for flag in red_flags:
                 if flag.lower() in feature_lower:
-                    message = (
-                        f"Custom {feature} (official alternative available)"
-                    )
+                    message = f"Custom {feature} (official alternative available)"
                     if message not in seen_flags:
                         detected_flags.append(message)
                         seen_flags.add(message)
@@ -282,9 +280,7 @@ class IntegrationKnowledgeBase:
             for indicator in custom_indicators:
                 indicator_words = indicator.lower().split()
                 if all(word in feature_lower for word in indicator_words):
-                    message = (
-                        f"Custom {feature} (matches indicator '{indicator}' for unnecessary custom work)"
-                    )
+                    message = f"Custom {feature} (matches indicator '{indicator}' for unnecessary custom work)"
                     if message not in seen_flags:
                         detected_flags.append(message)
                         seen_flags.add(message)
@@ -296,7 +292,7 @@ class IntegrationKnowledgeBase:
     ) -> Dict[str, Any]:
         """Analyze how well official solutions cover custom features."""
         official_features = technology_info.get("features", [])
-        coverage_analysis = {
+        coverage_analysis: Dict[str, Any] = {
             "covered_by_official": [],
             "gaps": [],
             "coverage_percentage": 0,
@@ -575,7 +571,7 @@ def analyze_integration_text(text: str) -> Dict[str, Any]:
         indicator for indicator in custom_indicators if indicator in text_lower
     ]
 
-    results = {
+    results: Dict[str, Any] = {
         "detected_technologies": detected_technologies,
         "detected_custom_work": detected_custom_work,
         "recommendations": [],

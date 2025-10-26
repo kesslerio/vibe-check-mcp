@@ -62,7 +62,10 @@ class TestIntegrationKnowledgeBase:
         kb = IntegrationKnowledgeBase()
         assert kb.knowledge == {}
 
-    @patch("vibe_check.tools.integration_decision_check.IntegrationKnowledgeBase._search_technology_info", return_value={})
+    @patch(
+        "vibe_check.tools.integration_decision_check.IntegrationKnowledgeBase._search_technology_info",
+        return_value={},
+    )
     def test_get_technology_info(self, mock_search, sample_knowledge_base):
         """Test retrieving technology information."""
         with patch.object(
@@ -307,7 +310,10 @@ class TestOfficialAlternativesCheck:
         assert len(result.red_flags_detected) == 0
         assert "✅ RESEARCH" in result.recommendation
 
-    @patch("vibe_check.tools.integration_decision_check.IntegrationKnowledgeBase._search_technology_info", return_value={})
+    @patch(
+        "vibe_check.tools.integration_decision_check.IntegrationKnowledgeBase._search_technology_info",
+        return_value={},
+    )
     @patch.object(IntegrationKnowledgeBase, "_load_knowledge_base")
     def test_check_unknown_technology(self, mock_load, mock_search):
         """Test checking unknown technology."""

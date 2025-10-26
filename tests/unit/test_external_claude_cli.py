@@ -21,7 +21,11 @@ from pathlib import Path
 import pytest
 
 # Import the class under test
-from vibe_check.tools.shared.claude_integration import ClaudeCliExecutor, ClaudeCliResult, analyze_content_async
+from vibe_check.tools.shared.claude_integration import (
+    ClaudeCliExecutor,
+    ClaudeCliResult,
+    analyze_content_async,
+)
 
 
 class TestClaudeCliExecutor:
@@ -106,8 +110,6 @@ class TestClaudeCliExecutor:
         # Should return general prompt
         general_prompt = self.cli._get_system_prompt("general")
         assert prompt == general_prompt
-
-
 
     @pytest.mark.asyncio
     async def test_execute_claude_cli_success_json(self):
@@ -209,7 +211,10 @@ class TestClaudeCliExecutor:
             success=True, output="Analysis complete", task_type="code_analysis"
         )
 
-        with patch("vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async", return_value=mock_result) as mock_execute:
+        with patch(
+            "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async",
+            return_value=mock_result,
+        ) as mock_execute:
             result = await analyze_content_async(
                 content="Test code content",
                 task_type="code_analysis",
@@ -229,7 +234,10 @@ class TestClaudeCliExecutor:
             success=True, output="Analysis complete", task_type="general"
         )
 
-        with patch("vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async", return_value=mock_result) as mock_execute:
+        with patch(
+            "vibe_check.tools.shared.claude_integration.ClaudeCliExecutor.execute_async",
+            return_value=mock_result,
+        ) as mock_execute:
             result = await analyze_content_async(
                 content="Test content", task_type="general"
             )
@@ -238,8 +246,6 @@ class TestClaudeCliExecutor:
         args, kwargs = mock_execute.call_args
         assert "Content to analyze:" in kwargs["prompt"]
         assert "Test content" in kwargs["prompt"]
-
-
 
     def test_claude_cli_result_to_dict(self):
         """Test ClaudeCliResult to_dict conversion."""

@@ -55,10 +55,14 @@ class TestEndToEndWorkflow:
             },
         }
 
-        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+        with patch(
+            "vibe_check.tools.analyze_issue.get_enhanced_github_analyzer"
+        ) as mock_get_analyzer:
             mock_analyzer = MagicMock()
             mock_analyzer.claude_cli_enabled = False
-            mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
+            mock_analyzer.analyze_issue_basic = AsyncMock(
+                return_value=mock_basic_result
+            )
             mock_get_analyzer.return_value = mock_analyzer
 
             # analyze_issue is synchronous, not async
@@ -79,7 +83,10 @@ class TestEndToEndWorkflow:
 
             assert result["status"] == "basic_analysis_complete"
             assert result["issue_info"]["repository"] == "test/good-repo"
-            assert result["recommended_actions"] == mock_basic_result["recommended_actions"]
+            assert (
+                result["recommended_actions"]
+                == mock_basic_result["recommended_actions"]
+            )
             assert result["analysis_metadata"]["detail_level"] == "brief"
 
             enhanced = result["enhanced_analysis"]
@@ -114,7 +121,9 @@ class TestEndToEndWorkflow:
             },
         }
 
-        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+        with patch(
+            "vibe_check.tools.analyze_issue.get_enhanced_github_analyzer"
+        ) as mock_get_analyzer:
             mock_analyzer = MagicMock()
             mock_analyzer.claude_cli_enabled = True
             mock_analyzer.analyze_issue_comprehensive = AsyncMock(
@@ -151,7 +160,9 @@ class TestEndToEndWorkflow:
     def test_workflow_error_handling_and_recovery(self):
         """Test workflow error handling and graceful degradation"""
 
-        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+        with patch(
+            "vibe_check.tools.analyze_issue.get_enhanced_github_analyzer"
+        ) as mock_get_analyzer:
             mock_analyzer = MagicMock()
             mock_analyzer.claude_cli_enabled = True
             mock_analyzer.analyze_issue_hybrid = AsyncMock(
@@ -217,10 +228,14 @@ class TestEndToEndWorkflow:
             },
         }
 
-        with patch("vibe_check.tools.analyze_issue.get_enhanced_github_analyzer") as mock_get_analyzer:
+        with patch(
+            "vibe_check.tools.analyze_issue.get_enhanced_github_analyzer"
+        ) as mock_get_analyzer:
             mock_analyzer = MagicMock()
             mock_analyzer.claude_cli_enabled = False
-            mock_analyzer.analyze_issue_basic = AsyncMock(return_value=mock_basic_result)
+            mock_analyzer.analyze_issue_basic = AsyncMock(
+                return_value=mock_basic_result
+            )
             mock_get_analyzer.return_value = mock_analyzer
 
             # analyze_issue is synchronous, not async
@@ -241,9 +256,7 @@ class TestEndToEndWorkflow:
             assert infra_pattern["confidence"] == 0.6
 
             doc_pattern = next(
-                p
-                for p in patterns
-                if p["pattern_type"] == "documentation_neglect"
+                p for p in patterns if p["pattern_type"] == "documentation_neglect"
             )
             assert doc_pattern["detected"] is False
             assert doc_pattern["confidence"] == 0.3

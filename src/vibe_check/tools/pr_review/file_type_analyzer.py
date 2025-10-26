@@ -167,7 +167,7 @@ class FileTypeAnalyzer:
         """
         file_type_groups = self._group_files_by_type(files)
 
-        analysis = {
+        analysis: Dict[str, Any] = {
             "file_types_found": list(file_type_groups.keys()),
             "type_specific_analysis": {},
             "review_focus_summary": [],
@@ -178,7 +178,7 @@ class FileTypeAnalyzer:
             guidelines = self.REVIEW_GUIDELINES.get(file_type, {})
 
             # Extract filenames with logging for fallbacks
-            files = []
+            file_names: List[str] = []
             for f in file_list:
                 filename = f.get("filename")
                 if not filename:
@@ -187,10 +187,10 @@ class FileTypeAnalyzer:
                         logger.debug(f"Using 'name' fallback for file: {filename}")
                     else:
                         logger.debug("No filename or name found, using 'unknown'")
-                files.append(filename)
+                file_names.append(filename)
 
             analysis["type_specific_analysis"][file_type] = {
-                "files": files,
+                "files": file_names,
                 "count": len(file_list),
                 "focus_areas": guidelines.get("focus_areas", []),
                 "common_issues": guidelines.get("common_issues", []),
@@ -198,7 +198,8 @@ class FileTypeAnalyzer:
 
             # Add to review focus summary
             if guidelines.get("focus_areas"):
-                analysis["review_focus_summary"].extend(
+                review_focus_summary: List[str] = analysis["review_focus_summary"]
+                review_focus_summary.extend(
                     [
                         f"{file_type.upper()}: {area}"
                         for area in guidelines["focus_areas"][:2]  # Top 2 focus areas
@@ -208,7 +209,7 @@ class FileTypeAnalyzer:
             # Identify priority checks
             if file_type in ["api", "config", "sql"]:
                 # Extract filenames with logging for security-sensitive files
-                security_files = []
+                security_files: List[str] = []
                 for f in file_list:
                     filename = f.get("filename")
                     if not filename:
@@ -218,7 +219,8 @@ class FileTypeAnalyzer:
                         )
                     security_files.append(filename)
 
-                analysis["priority_checks"].append(
+                priority_checks: List[Dict[str, Any]] = analysis["priority_checks"]
+                priority_checks.append(
                     {
                         "type": file_type,
                         "reason": "Security-sensitive file type",
@@ -232,7 +234,7 @@ class FileTypeAnalyzer:
         self, files: List[Dict[str, Any]]
     ) -> Dict[str, List[Dict]]:
         """Group files by their detected type."""
-        file_groups = {}
+        file_groups: Dict[str, List[Dict]] = {}
 
         for file_data in files:
             filename = file_data.get("filename", "")
@@ -289,9 +291,7 @@ class FileTypeAnalyzer:
         # No match found in patterns, return 'other'
         return "other"
 
-    def _detect_additional_types(
-        self, filename: str, primary_type: str
-    ) -> List[str]:
+    def _detect_additional_types(self, filename: str, primary_type: str) -> List[str]:
         """Detect secondary file type categories (e.g., React components)."""
 
         extras: List[str] = []
@@ -303,7 +303,17 @@ class FileTypeAnalyzer:
             if "component" in name_lower or "/components/" in name_lower:
                 extras.append("react")
 
-        if any(keyword in name_lower for keyword in ["/api/", "routes.py", "api.py", "controller.py", "endpoints.py", "views.py"]):
+        if any(
+            keyword in name_lower
+            for keyword in [
+                "/api/",
+                "routes.py",
+                "api.py",
+                "controller.py",
+                "endpoints.py",
+                "views.py",
+            ]
+        ):
             extras.append("api")
 
         test_indicators = ["test_", "_test.", ".test.", ".spec.", "/tests/", "test/"]

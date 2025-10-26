@@ -326,9 +326,7 @@ def _generate_fallback_analysis(
             "Automated analysis of PR "
             f"{metadata.get('number', pr_number)} - {metadata.get('title', 'Untitled PR')}"
         ),
-        "size_assessment": (
-            f"PR classified as {size_label} with {strategy} strategy"
-        ),
+        "size_assessment": (f"PR classified as {size_label} with {strategy} strategy"),
         "files_analysis": (
             f"Modified {files_count} files with {total_changes} total changes"
         ),

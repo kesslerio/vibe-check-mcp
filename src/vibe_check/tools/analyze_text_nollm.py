@@ -68,7 +68,10 @@ def analyze_text_demo(
         # Validate detail_level
         from ..core.educational_content import DetailLevel
 
-        if isinstance(detail_level, str) and detail_level.upper() in DetailLevel.__members__:
+        if (
+            isinstance(detail_level, str)
+            and detail_level.upper() in DetailLevel.__members__
+        ):
             detail_enum = DetailLevel[detail_level.upper()]
         else:
             detail_enum = DetailLevel.STANDARD
@@ -122,7 +125,9 @@ def analyze_text_demo(
 
             # Add contextual analysis if available
             if context and result.detected:
-                contextual_rec = context.get_contextual_recommendation(result.pattern_type)
+                contextual_rec = context.get_contextual_recommendation(
+                    result.pattern_type
+                )
                 if contextual_rec != result.pattern_type:
                     pattern_data["contextual_recommendation"] = contextual_rec
                     contextual_recommendations.append(contextual_rec)

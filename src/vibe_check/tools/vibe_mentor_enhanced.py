@@ -1186,7 +1186,7 @@ class EnhancedVibeMentorEngine:
                 )
 
                 # Try dynamic generation if ctx.sample() is available
-                if hasattr(ctx, 'sample'):
+                if hasattr(ctx, "sample"):
                     dynamic_response = await self._try_dynamic_generation(
                         persona,
                         topic,
@@ -1203,16 +1203,19 @@ class EnhancedVibeMentorEngine:
                 # Fallback: generate context-aware response without sampling
                 logger.warning(
                     "Sampling not available - using context-aware fallback for persona %s",
-                    persona.id
+                    persona.id,
                 )
                 fallback_content = self._generate_context_aware_fallback(
                     persona, topic, tech_context, patterns
                 )
                 logger.info(
-                    "Generated fallback (first 100 chars): %s",
-                    fallback_content[:100]
+                    "Generated fallback (first 100 chars): %s", fallback_content[:100]
                 )
-                return response_type, fallback_content, confidence * 0.8  # Lower confidence for fallback
+                return (
+                    response_type,
+                    fallback_content,
+                    confidence * 0.8,
+                )  # Lower confidence for fallback
 
         return response_type, content, confidence
 
@@ -1390,15 +1393,21 @@ class EnhancedVibeMentorEngine:
         """Generate context-aware response when sampling unavailable but static response failed relevance."""
 
         # Extract key context elements
-        decision_points = tech_context.decision_points if tech_context.decision_points else []
-        technologies = tech_context.technologies[:3] if tech_context.technologies else []
-        features = tech_context.specific_features[:3] if tech_context.specific_features else []
+        decision_points = (
+            tech_context.decision_points if tech_context.decision_points else []
+        )
+        technologies = (
+            tech_context.technologies[:3] if tech_context.technologies else []
+        )
+        features = (
+            tech_context.specific_features[:3] if tech_context.specific_features else []
+        )
 
         logger.info(
             "Fallback context: decision_points=%s, technologies=%s, features=%s",
             decision_points,
             technologies,
-            features
+            features,
         )
 
         # Build contextual response
@@ -1406,7 +1415,7 @@ class EnhancedVibeMentorEngine:
 
         # Always echo the actual query to maintain relevance
         # Use full query (not truncated) to ensure all context is preserved
-        parts.append(f"Regarding your question: \"{topic}\"\n\n")
+        parts.append(f'Regarding your question: "{topic}"\n\n')
 
         # Add context-specific intro if available
         if decision_points:
@@ -1443,7 +1452,9 @@ class EnhancedVibeMentorEngine:
 
         # Add technology-specific note if relevant
         if technologies:
-            parts.append(f"\n\nNote: When working with {', '.join(technologies)}, prioritize maintainability and team familiarity.")
+            parts.append(
+                f"\n\nNote: When working with {', '.join(technologies)}, prioritize maintainability and team familiarity."
+            )
 
         return "".join(parts)
 
@@ -1497,9 +1508,10 @@ def get_enhanced_mentor_engine() -> EnhancedVibeMentorEngine:
     global _enhanced_mentor_engine
     if _enhanced_mentor_engine is None:
         from .vibe_mentor import get_mentor_engine
+
         base_engine = get_mentor_engine()
         _enhanced_mentor_engine = EnhancedVibeMentorEngine(
             base_engine=base_engine,
-            enable_mcp_sampling=True  # Enable MCP sampling for response relevance validation
+            enable_mcp_sampling=True,  # Enable MCP sampling for response relevance validation
         )
     return _enhanced_mentor_engine

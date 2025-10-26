@@ -162,9 +162,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
 
         self.assertIsNone(context)
 
-    @patch(
-        "vibe_check.tools.contextual_documentation.get_context_manager"
-    )
+    @patch("vibe_check.tools.contextual_documentation.get_context_manager")
     def test_get_cached_analysis_context(self, mock_get_context_manager):
         """Test cached analysis context loading"""
         # Mock context manager and analysis context
@@ -190,9 +188,7 @@ class TestEnhancedClaudeCliExecutor(unittest.TestCase):
         # Should only call get_project_context once due to caching
         mock_manager.get_project_context.assert_called_once()
 
-    @patch(
-        "vibe_check.tools.contextual_documentation.get_context_manager"
-    )
+    @patch("vibe_check.tools.contextual_documentation.get_context_manager")
     def test_load_library_context(self, mock_get_context_manager):
         """Test loading library-specific context"""
         self._create_test_config(enabled=True, library_detection_enabled=True)
@@ -335,9 +331,7 @@ class TestContextInjectionIntegration(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     @patch("subprocess.run")
-    @patch(
-        "vibe_check.tools.contextual_documentation.get_context_manager"
-    )
+    @patch("vibe_check.tools.contextual_documentation.get_context_manager")
     def test_end_to_end_context_injection(
         self, mock_get_context_manager, mock_subprocess
     ):

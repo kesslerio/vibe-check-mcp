@@ -69,9 +69,7 @@ class TestPRReviewExternalClaude:
         }
 
         # Default analysis context used by multiple tests
-        self.default_size_analysis = self.pr_tool._classify_pr_size(
-            self.mock_pr_data
-        )
+        self.default_size_analysis = self.pr_tool._classify_pr_size(self.mock_pr_data)
         self.default_review_context = self.pr_tool._detect_re_review(
             self.mock_pr_data, False
         )

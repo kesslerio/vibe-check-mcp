@@ -10,7 +10,7 @@ import threading
 import logging
 from enum import Enum
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class VibeLevel(str, Enum):
@@ -60,7 +60,7 @@ class VibeMessages:
 class VibeConfig:
     """Configuration manager for vibe language settings."""
 
-    def __init__(self, level: VibeLevel = None):
+    def __init__(self, level: Optional[VibeLevel] = None):
         """
         Initialize vibe configuration.
 

@@ -160,7 +160,9 @@ class TestSecurityRegressionPR190:
         assert "BEGIN RSA PRIVATE KEY" not in sanitized
 
         # Should see redaction markers
-        assert "[REDACTED" in sanitized or findings  # Should have findings or redactions
+        assert (
+            "[REDACTED" in sanitized or findings
+        )  # Should have findings or redactions
 
     @pytest.mark.critical
     def test_unrestricted_file_access_prevention(self):
@@ -397,7 +399,9 @@ class TestSecurityRegressionPR190:
                 assert "Traceback" not in error_str
 
     @pytest.mark.medium
-    @pytest.mark.skip(reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism")
+    @pytest.mark.skip(
+        reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism"
+    )
     def test_authentication_requirement(self):
         """
         Test MEDIUM-3: Missing Authentication
@@ -407,7 +411,9 @@ class TestSecurityRegressionPR190:
         pass
 
     @pytest.mark.medium
-    @pytest.mark.skip(reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism")
+    @pytest.mark.skip(
+        reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism"
+    )
     def test_cache_poisoning_prevention(self):
         """
         Test MEDIUM-4: Cache Poisoning
@@ -419,7 +425,9 @@ class TestSecurityRegressionPR190:
     # ==================== INTEGRATION TESTS ====================
 
     @pytest.mark.integration
-    @pytest.mark.skip(reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism")
+    @pytest.mark.skip(
+        reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism"
+    )
     async def test_complete_security_pipeline(self):
         """
         Integration test: Verify complete security pipeline works end-to-end
@@ -428,7 +436,9 @@ class TestSecurityRegressionPR190:
         pass
 
     @pytest.mark.integration
-    @pytest.mark.skip(reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism")
+    @pytest.mark.skip(
+        reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism"
+    )
     def test_security_patches_applied_on_import(self):
         """
         Test that security patches are automatically applied when module is imported
@@ -437,7 +447,9 @@ class TestSecurityRegressionPR190:
         pass
 
     @pytest.mark.integration
-    @pytest.mark.skip(reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism")
+    @pytest.mark.skip(
+        reason="Requires refactored MCPSamplingClient - tests deprecated patching mechanism"
+    )
     async def test_security_monitoring_and_logging(self):
         """
         Test that security events are properly logged for monitoring
