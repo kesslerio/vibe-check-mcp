@@ -92,15 +92,16 @@ class TestAnalyzeIssueIntegrationWorkflow:
     def test_workflow_error_handling_and_recovery(self):
         """Test error handling and recovery in the integration workflow"""
         with patch(
-            "vibe_check.tools.analyze_issue.EnhancedGitHubIssueAnalyzer.analyze_issue_hybrid",
-            side_effect=Exception("Hybrid analysis failed"),
+            "vibe_check.tools.issue_analysis.api.get_vibe_check_framework",
+            side_effect=Exception("Vibe check framework initialization failed"),
         ):
             # analyze_issue is synchronous, not async
+            # Using analysis_mode="hybrid" which routes to vibe check framework
             result = analyze_issue(issue_number=42)
 
             # Should handle error gracefully
-            assert result["status"] == "enhanced_analysis_error"
-            assert "Hybrid analysis failed" in result["error"]
+            assert result["status"] == "vibe_check_error"
+            assert "Vibe check framework initialization failed" in result["error"]
 
     @pytest.mark.integration
     def test_workflow_with_different_configurations(self):
