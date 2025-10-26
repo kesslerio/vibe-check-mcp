@@ -1158,64 +1158,58 @@ class EnhancedVibeMentorEngine:
 
         response_type, content, confidence = static_response
 
-        # Debug logging for ctx injection
+        # ALWAYS validate relevance, regardless of MCP sampling availability
+        # This ensures responses are contextually appropriate even without dynamic generation
+        relevance_context = self._build_relevance_context(tech_context)
+        relevance_result = self.relevance_validator.score(
+            query=topic, response=content, context=relevance_context
+        )
         logger.info(
-            "Relevance check: enable_mcp=%s, router=%s, ctx=%s",
-            self.enable_mcp_sampling,
-            self.hybrid_router is not None,
-            ctx is not None,
+            "Relevance validation: score=%.2f, passed=%s, matches=%s",
+            relevance_result.score,
+            relevance_result.passed,
+            ", ".join(relevance_result.matched_terms) or "none",
         )
 
-        if self.enable_mcp_sampling and self.hybrid_router and ctx:
-            relevance_context = self._build_relevance_context(tech_context)
-            relevance_result = self.relevance_validator.score(
-                query=topic, response=content, context=relevance_context
-            )
+        if not relevance_result.passed:
             logger.info(
-                "Relevance validation: score=%.2f, passed=%s, matches=%s",
+                "Static response rejected for persona %s (score=%.2f, matches=%s)",
+                persona.id,
                 relevance_result.score,
-                relevance_result.passed,
                 ", ".join(relevance_result.matched_terms) or "none",
             )
-            if not relevance_result.passed:
-                logger.info(
-                    "Static response rejected for persona %s (score=%.2f, matches=%s)",
-                    persona.id,
-                    relevance_result.score,
-                    ", ".join(relevance_result.matched_terms) or "none",
-                )
 
-                # Try dynamic generation if ctx.sample() is available
-                if hasattr(ctx, "sample"):
-                    dynamic_response = await self._try_dynamic_generation(
-                        persona,
-                        topic,
-                        tech_context,
-                        patterns,
-                        ctx,
-                        force_decision=True,
-                        fallback_reason="static_relevance_failed",
-                        relevance_result=relevance_result,
-                    )
-                    if dynamic_response:
-                        return dynamic_response
+            # Try dynamic generation if available
+            if self.enable_mcp_sampling and self.hybrid_router and ctx and hasattr(ctx, "sample"):
+                dynamic_response = await self._try_dynamic_generation(
+                    persona,
+                    topic,
+                    tech_context,
+                    patterns,
+                    ctx,
+                    force_decision=True,
+                    fallback_reason="static_relevance_failed",
+                    relevance_result=relevance_result,
+                )
+                if dynamic_response:
+                    return dynamic_response
 
-                # Fallback: generate context-aware response without sampling
-                logger.warning(
-                    "Sampling not available - using context-aware fallback for persona %s",
-                    persona.id,
-                )
-                fallback_content = self._generate_context_aware_fallback(
-                    persona, topic, tech_context, patterns
-                )
-                logger.info(
-                    "Generated fallback (first 100 chars): %s", fallback_content[:100]
-                )
-                return (
-                    response_type,
-                    fallback_content,
-                    confidence * 0.8,
-                )  # Lower confidence for fallback
+            # Fallback: generate context-aware response without sampling
+            logger.warning(
+                "Sampling not available - using context-aware fallback for persona %s",
+                persona.id,
+            )
+            fallback_content = self._generate_context_aware_fallback(
+                persona, topic, tech_context, patterns
+            )
+            logger.info(
+                "Generated fallback (first 100 chars): %s", fallback_content[:100]
+            )
+            return (
+                response_type,
+                fallback_content,
+                confidence * 0.8,
+            )  # Lower confidence for fallback
 
         return response_type, content, confidence
 

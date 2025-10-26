@@ -41,7 +41,7 @@ async def load_workspace_context(
         logger.warning(
             "   Currently providing generic advice without seeing your actual code"
         )
-        workspace_warning = '\n\n⚠️ **Note**: WORKSPACE not configured. To enable code-specific advice, reconfigure with:\n```bash\nclaude mcp add vibe-check-local -e WORKSPACE=\\"\/path\/to\/project" ...\n```'
+        workspace_warning = '\n\n⚠️ **Note**: WORKSPACE not configured. To enable code-specific advice, reconfigure with:\n```bash\nclaude mcp add vibe-check-local -e WORKSPACE="/path/to/project" ...\n```'
 
     # Generate session_id if not provided
     if not session_id:
