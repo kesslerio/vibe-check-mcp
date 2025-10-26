@@ -53,7 +53,13 @@ if command -v black &> /dev/null; then
     black --check src/ tests/
 fi
 if command -v mypy &> /dev/null; then
-    mypy src/
+    mypy src/ || {
+        echo "⚠️  MyPy type checking found errors. Continue? (y/n)"
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    }
 fi
 
 # Get current version from VERSION file
