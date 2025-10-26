@@ -37,7 +37,9 @@ from .utils import get_version  # Import the new function
 # Configure logging with safe file handler (handle read-only filesystems in MCP mode)
 def _setup_logging():
     """Setup logging with graceful fallback for read-only filesystems."""
-    handlers = [logging.StreamHandler()]
+    # CRITICAL: Send logs to stderr, not stdout, to preserve stdout for JSON-RPC protocol
+    # in stdio transport mode (used by Codex, Claude CLI, etc)
+    handlers = [logging.StreamHandler(sys.stderr)]
 
     # Try to add file handler in a writable location
     try:

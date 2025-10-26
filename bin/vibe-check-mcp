@@ -12,21 +12,48 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# CRITICAL: Detect if --stdio flag is present (MCP mode)
+# In stdio mode, ALL output except JSON-RPC must go to stderr to avoid protocol corruption
+IS_STDIO=false
+for arg in "$@"; do
+    if [ "$arg" = "--stdio" ]; then
+        IS_STDIO=true
+        break
+    fi
+done
+
 # Function to print colored output
+# Redirects to stderr in stdio mode to preserve stdout for JSON-RPC protocol
 print_status() {
-    echo -e "${BLUE}[vibe-check-mcp]${NC} $1"
+    if [ "$IS_STDIO" = true ]; then
+        echo -e "${BLUE}[vibe-check-mcp]${NC} $1" >&2
+    else
+        echo -e "${BLUE}[vibe-check-mcp]${NC} $1"
+    fi
 }
 
 print_success() {
-    echo -e "${GREEN}[vibe-check-mcp]${NC} $1"
+    if [ "$IS_STDIO" = true ]; then
+        echo -e "${GREEN}[vibe-check-mcp]${NC} $1" >&2
+    else
+        echo -e "${GREEN}[vibe-check-mcp]${NC} $1"
+    fi
 }
 
 print_warning() {
-    echo -e "${YELLOW}[vibe-check-mcp]${NC} $1"
+    if [ "$IS_STDIO" = true ]; then
+        echo -e "${YELLOW}[vibe-check-mcp]${NC} $1" >&2
+    else
+        echo -e "${YELLOW}[vibe-check-mcp]${NC} $1"
+    fi
 }
 
 print_error() {
-    echo -e "${RED}[vibe-check-mcp]${NC} $1"
+    if [ "$IS_STDIO" = true ]; then
+        echo -e "${RED}[vibe-check-mcp]${NC} $1" >&2
+    else
+        echo -e "${RED}[vibe-check-mcp]${NC} $1"
+    fi
 }
 
 # Get the directory where this script is located
