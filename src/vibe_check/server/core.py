@@ -1,6 +1,7 @@
 import logging
 import sys
 from .utils import get_version  # Import the new function
+from .compat import enable_legacy_initialized_notification
 
 try:
     # Use official MCP server FastMCP for better Claude Code compatibility
@@ -27,6 +28,9 @@ def get_mcp_instance() -> FastMCP:
     version = get_version()  # Get version dynamically
 
     import os
+
+    if enable_legacy_initialized_notification():
+        logger.info("Enabled legacy MCP initialization compatibility")
 
     # Prevent pydantic-settings from automatically loading .env files
     # by temporarily changing the working directory during FastMCP initialization
